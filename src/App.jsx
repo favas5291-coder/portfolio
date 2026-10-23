@@ -1,13 +1,12 @@
-import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { profile, chapters, skillGroups, skills, project } from './data/portfolio';
 import { useExperience } from './hooks/useExperience';
 import ForgeFallback from './components/ForgeFallback';
-const ForgeScene = lazy(() => import('./scene/ForgeScene'));
 
 class SceneBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch() { this.props.onError(); }
+  componentDidCatch() { this.props.onError('The 3D renderer could not start. You can retry.'); }
   render() { return this.state.failed ? null : this.props.children; }
 }
 function Arrow({ down = false }) { return <svg aria-hidden="true" viewBox="0 0 24 24" className={down ? 'arrow down' : 'arrow'}><path d="M5 19 19 5M5 5h14v14"/></svg>; }
@@ -69,16 +68,18 @@ function Contact() {
 }
 export default function App() {
   const e = useExperience();
+  const ForgeScene = useMemo(() => lazy(() => import('./scene/ForgeScene')), [e.attempt]);
   const percent = e.loading.total ? Math.round(e.loading.loaded/e.loading.total*100) : null;
-  return <div className={`portfolio ${e.mode === 'three' && e.sceneReady ? 'has-three' : 'has-poster'} ${e.mode === 'static' ? 'static-mode' : 'motion-mode'}`} data-chapter={e.active}>
+  return <div className={`portfolio ${e.mode === 'three' && e.sceneReady ? 'has-three' : 'has-poster'} ${e.mode === 'static' ? 'static-mode' : 'motion-mode'}`} data-chapter={e.active} data-scene-status={e.sceneStatus} data-motion={e.reduced?'gentle':'full'}>
     <a href="#main" className="skip-link">Skip to content</a>
-    <div className="world"><ForgeFallback/>{e.initialized && e.mode==='three' && <SceneBoundary key={e.mode} onError={e.fallback}><Suspense fallback={null}><ForgeScene motion={e.motion} onReady={e.ready} onError={e.fallback} onProgress={e.loadProgress} onSelect={e.setSelected}/></Suspense></SceneBoundary>}<div className="world-vignette"/></div>
+    <div className="world"><ForgeFallback/>{e.initialized && e.mode==='three' && <SceneBoundary key={e.attempt} onError={e.fallback}><Suspense fallback={null}><ForgeScene motion={e.motion} onReady={e.ready} onRecovering={e.recovering} onError={e.fallback} onProgress={e.loadProgress} onSelect={e.setSelected}/></Suspense></SceneBoundary>}<div className="world-vignette"/></div>
     <div className="film-grain" aria-hidden="true"/>
     <Header experience={e}/>
     <main id="main" tabIndex="-1"><Hero experience={e}/><About/><Skills experience={e}/><Projects/><Contact/></main>
     <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><span className="mono">BUILT WITH INTENTION.</span><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a></footer>
-    <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <button className="view-toggle" onClick={e.toggleMode} disabled={e.reduced || e.webglUnavailable} aria-pressed={e.mode==='static'}>{e.reduced?'Reduced motion':e.webglUnavailable?'2D view':e.mode==='three'?'Switch to 2D':'Enable 3D'}<span className="view-dot"/></button>}</div>
-    {e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">ASSEMBLING THE FORGE {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.fallback}>Skip 3D <span aria-hidden="true">↗</span></button></div>}
+    <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <div className="experience-options"><button className="view-toggle" onClick={e.toggleMotion} aria-pressed={!e.reduced}>{e.reduced?'Enable full motion':'Use gentle motion'}</button><button className="view-toggle" onClick={e.toggleMode} aria-pressed={e.mode==='static'}>{e.mode==='three'?'Switch to 2D':e.sceneStatus==='error'?'Retry 3D':'Enable 3D'}<span className="view-dot"/></button></div>}</div>
+    {e.initialized && e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">{e.sceneStatus==='recovering'?'RESTORING THE FORGE':'ASSEMBLING THE FORGE'} {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.toggleMode}>Use 2D view <span aria-hidden="true">↗</span></button></div>}
+    {e.sceneStatus==='error' && <div className="scene-loader" role="status"><p>{e.reason}</p><button onClick={e.retry}>Retry 3D <span aria-hidden="true">↗</span></button></div>}
     <div ref={e.cursor} className="custom-cursor" aria-hidden="true"/>
   </div>;
 }

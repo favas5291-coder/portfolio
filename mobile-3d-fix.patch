@@ -1,0 +1,1199 @@
+diff --git a/docs/MOBILE-3D.md b/docs/MOBILE-3D.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..b3b8073364c3daeba16590531d3b92faadb1ae7d
+--- /dev/null
++++ b/docs/MOBILE-3D.md
+@@ -0,0 +1,79 @@
++# Automatic 3D startup and mobile verification
++
++## Root causes in the deployed source
++
++- `useExperience` skipped WebGL detection and selected static mode when Data Saver, device memory <= 4 GB, or hardware concurrency <= 4 was reported. These are quality hints, not WebGL capability tests.
++- The same hook disabled 3D entirely for `prefers-reduced-motion` and prevented the visitor from changing the motion setting.
++- A 12-second wall-clock timeout abandoned valid slow loads, including time spent in a background tab.
++- Context loss unmounted the canvas immediately, preventing normal WebGL restoration.
++- Touch scroll measurement and demand-render wakeups ran independently, so the last wake could read old progress. Viewport changes needed explicit invalidation as well.
++- The mobile camera used a fixed extra Z distance instead of fitting the exploded sculpture to its available space.
++- Environment and screen-texture loading suspended the entire scene.
++
++## Resulting behavior
++
++Fresh visits attempt WebGL 2 automatically on every device. Hardware hints only select a quality tier. Automatic renderer failure never writes a persistent 2D preference. This Three.js version requires WebGL 2; WebGL 1-only devices receive the accessible fallback with Retry 3D.
++
++The old `forge-view=static` entry was written only by the v1 visitor toggle, not automatic fallback. Preserve it as a deliberate choice. New preferences use `forge-experience-v2`, with `source: user`. Unmarked/automatic v2 entries are ignored. Choosing Enable/Retry 3D replaces an old 2D preference.
++
++Reduced-motion visitors receive a stable 3D sculpture without the introductory explosion, camera travel, pointer tilt or scroll fly-through. Selection highlights remain available. Enable full motion is an explicit persistent override. Gentle motion and 2D are independent user choices.
++
++Quality starts conservatively on compact/touch devices and low-resource or Data Saver hints. Consecutive rendered-frame samples adjust DPR (0.75 / 1 / 1.5), round-geometry segments (16 / 32 / 48), cable geometry, screen-texture resolution (512 / 1024 / 2048 maximum), studio reflections, shadow maps and bloom. The core model and scroll timeline remain active at every tier. The existing scene has no particles to reduce. Phone/touch quality is capped at medium. High-quality desktop HDR, bloom, geometry and authored camera positions are preserved.
++
++Rendering uses one Fiber demand loop, goes idle after motion settles, and pauses while hidden. Touch scroll remains native. Scroll refs are updated before invalidation. ResizeObserver, visual viewport, orientation, font layout and page restore changes refresh measurements. Context loss retains the canvas, pauses drawing and requests browser restoration; unrecovered loss after 20 visible seconds offers Retry 3D. Hidden time does not consume that recovery window. Retry remounts the scene and its error boundary without persisting an automatic fallback.
++
++Optional environment, screen texture and effects failures are isolated from the procedural sculpture. No 12-second load deadline remains. Event listeners, timers, generated textures, geometries and animation subscriptions have cleanup paths.
++
++## Verification actually performed
++
++- `npm test`: 27 Node tests passed for preferences, reduced-motion overrides, quality adaptation/cooldown, native scroll sampling, lifecycle cleanup/recovery, compact camera bounds and preservation of the desktop camera path.
++- `npm run verify`: production build, prerender, static asset/link/metadata checks and initial-JavaScript budget passed. Initial JavaScript: 77.2 KiB gzip (125 KiB budget). Validation ran on Node 24.19.0; Render is configured for Node 22.22.0.
++- Cloud Chromium: phone-sized 390x844 and 320x780 frames, tablet-sized 820x1180 and desktop-sized 1348x900 frames. Simulated coarse input, reduced motion, 2 GB memory and two cores. Checked automatic renderer attempts, no horizontal overflow, fitting navigation, programmatic native scrolling/progress, width/height swaps, full-motion override and refresh, deliberate legacy 2D preference and re-enabling 3D.
++- Cloud Chromium's renderer reports `GL_VENDOR = Disabled` and cannot create a WebGL context. Real WebGL failure/fallback and Retry 3D were exercised; successful 3D drawing, GPU performance, actual touch gestures and GPU context restoration could not be tested here. Viewport frames are layout checks, not Android/iOS browser emulation.
++- Android Chrome on hardware, iPhone Safari, iPad Safari, desktop GPU rendering and actual browser background/resume remain unverified. Recovery event behavior was tested with synthetic event targets, not a physical GPU. No FPS or Lighthouse score is claimed.
++
++Run the browser fixture only on a development/test origin: `npm run dev`, then open `/tests/browser.html` and click Run checks. It resets only this portfolio's preference keys on that test origin. It does not ship in `dist`.
++
++## Device checks before considering mobile GPU behavior verified
++
++On Android Chrome, iPhone Safari, a tablet and a desktop with working WebGL 2:
++
++1. Start in a private session. Check the real sculpture appears automatically without Enable 3D.
++2. Scroll from Home through Contact, then back. Check the sculpture transforms continuously and content/navigation remain usable.
++3. Reload at Home and at a middle chapter. Confirm correct timeline position, no replayed mid-page introduction, and no unexpected 2D preference.
++4. Rotate portrait/landscape; collapse/expand the browser address bar. Check framing and continued scrolling without resets.
++5. Background the tab for 30 seconds and return. Confirm current scroll position resumes without jumps/freezes. Repeat during initial loading.
++6. Test Data Saver, CPU slowdown and low-end hardware. Confirm quality decreases while the model and timeline remain active. Inspect `data-quality` on the stage if needed.
++7. Enable OS reduced motion. Confirm gentle 3D; opt into full motion and reload. Verify the explicit override persists.
++8. Choose 2D deliberately and reload; verify it persists. Enable 3D and reload; verify 3D persists.
++9. On a development GPU browser, use the `WEBGL_lose_context` extension to simulate loss/restoration. Check recovery retains the canvas and motion resumes. Test failed recovery followed by Retry 3D.
++10. Throttle or block optional HDR, screenshot and effects requests. The base sculpture should remain visible and animated. Test a slow initial scene chunk without the former 12-second abandonment.
++
++## Build and Render deployment
++
++After applying the included patch to your local checkout:
++
++```bash
++npm ci --include=dev
++npm test
++node scripts/set-site-url.mjs https://fazhere.com
++npm run build
++node scripts/verify-build.mjs
++```
++
++`npm run verify` runs tests, build, prerender and output checks. Running the domain helper first keeps the local output canonical URL correct.
++
++In the existing Render **portfolio-1 Static Site**, keep:
++
++| Setting | Value |
++| --- | --- |
++| Repository | favas5291-coder/portfolio |
++| Branch | main |
++| Root Directory | empty |
++| Build Command | `npm ci --include=dev && node scripts/set-site-url.mjs https://fazhere.com && npm run build && node scripts/verify-build.mjs` |
++| Publish Directory | `dist` |
++| NODE_VERSION | `22.22.0` |
++
++Save, then Manual Deploy > Deploy latest commit if auto-deploy has not already started. Wait for Deploy succeeded / Live. Test both the Static Site's onrender.com URL and https://fazhere.com in a private phone session. No DNS changes or new Render service are needed for this code change. Do not deploy the old Docker Web Service.
++
++GitHub allowed repository reads but rejected branch creation with HTTP 403, Resource not accessible by integration. No remote branch, commit, PR or deployment was created. Apply the patch locally, run the checks, commit the changes and push main before deploying. The bundle contains the complete contents of every changed file as well as a Git patch.
+diff --git a/package.json b/package.json
+index cd7633de3689a723de913ee0acd31be776b44a25..189afb9d2082eba0aa2b7ca526f19f3082f55c0c 100644
+--- a/package.json
++++ b/package.json
+@@ -6,7 +6,9 @@
+   "scripts": {
+     "dev": "vite --host 0.0.0.0 --port 4173",
+     "build": "vite build && node scripts/prerender.mjs",
+-    "preview": "vite preview --host 0.0.0.0 --port 4173"
++    "preview": "vite preview --host 0.0.0.0 --port 4173",
++    "test": "node --test tests/*.test.mjs",
++    "verify": "npm test && npm run build && node scripts/verify-build.mjs"
+   },
+   "dependencies": {
+     "react": "^19.1.1",
+diff --git a/scripts/verify-build.mjs b/scripts/verify-build.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..94068feb0458b92e088d9d1355e0a2a183b59c48
+--- /dev/null
++++ b/scripts/verify-build.mjs
+@@ -0,0 +1,23 @@
++import assert from 'node:assert/strict';
++import { readFile, stat } from 'node:fs/promises';
++import { gzipSync } from 'node:zlib';
++import { profile, chapters, project } from '../src/data/portfolio.js';
++
++const html = await readFile('dist/index.html', 'utf8');
++for (const chapter of chapters) assert.ok(html.includes(`id="${chapter.id}"`), `Missing prerendered ${chapter.id}`);
++for (const destination of [`mailto:${profile.email}`, profile.github, project.website, project.repository]) {
++  assert.ok(html.includes(destination), `Missing working contact/project destination: ${destination}`);
++}
++for (const asset of [project.screenshot, '/environment/forge-studio.hdr', '/social-card.png', '/favicon.svg']) {
++  assert.ok((await stat(`dist${asset}`)).size > 0, `Missing asset: ${asset}`);
++}
++assert.ok(html.includes('application/ld+json') && html.includes('og:image') && html.includes('rel="canonical"'), 'Missing search/sharing metadata');
++const entry = html.match(/<script\b[^>]*type="module"[^>]*src="([^\"]+)"/);
++assert.ok(entry, 'Missing Vite entry');
++const js = await readFile(`dist${entry[1]}`);
++const bytes = gzipSync(js).byteLength;
++assert.ok(bytes <= 125 * 1024, `Initial JavaScript exceeds the 125 KiB gzip budget: ${bytes}`);
++assert.ok(!js.toString().includes('WebGLRenderer'), 'The 3D renderer must remain outside the initial bundle');
++console.log(`Build verification passed: all chapters, contact/project links, assets and metadata present.`);
++console.log(`Initial JavaScript: ${(bytes / 1024).toFixed(1)} KiB gzip (budget: 125 KiB). 3D renderer remains lazy-loaded.`);
++console.log('This checks output and transfer budgets; it does not produce a Lighthouse score or GPU frame-rate result.');
+diff --git a/src/App.jsx b/src/App.jsx
+index b1b7f3867108259afe207e12446296357cc9d29a..0c3119839353582c4d4678a16653a068d9dea0c9 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,13 +1,12 @@
+-import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
++import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+ import { profile, chapters, skillGroups, skills, project } from './data/portfolio';
+ import { useExperience } from './hooks/useExperience';
+ import ForgeFallback from './components/ForgeFallback';
+-const ForgeScene = lazy(() => import('./scene/ForgeScene'));
+ 
+ class SceneBoundary extends Component {
+   state = { failed: false };
+   static getDerivedStateFromError() { return { failed: true }; }
+-  componentDidCatch() { this.props.onError(); }
++  componentDidCatch() { this.props.onError('The 3D renderer could not start. You can retry.'); }
+   render() { return this.state.failed ? null : this.props.children; }
+ }
+ function Arrow({ down = false }) { return <svg aria-hidden="true" viewBox="0 0 24 24" className={down ? 'arrow down' : 'arrow'}><path d="M5 19 19 5M5 5h14v14"/></svg>; }
+@@ -69,16 +68,18 @@ function Contact() {
+ }
+ export default function App() {
+   const e = useExperience();
++  const ForgeScene = useMemo(() => lazy(() => import('./scene/ForgeScene')), [e.attempt]);
+   const percent = e.loading.total ? Math.round(e.loading.loaded/e.loading.total*100) : null;
+-  return <div className={`portfolio ${e.mode === 'three' && e.sceneReady ? 'has-three' : 'has-poster'} ${e.mode === 'static' ? 'static-mode' : 'motion-mode'}`} data-chapter={e.active}>
++  return <div className={`portfolio ${e.mode === 'three' && e.sceneReady ? 'has-three' : 'has-poster'} ${e.mode === 'static' ? 'static-mode' : 'motion-mode'}`} data-chapter={e.active} data-scene-status={e.sceneStatus} data-motion={e.reduced?'gentle':'full'}>
+     <a href="#main" className="skip-link">Skip to content</a>
+-    <div className="world"><ForgeFallback/>{e.initialized && e.mode==='three' && <SceneBoundary key={e.mode} onError={e.fallback}><Suspense fallback={null}><ForgeScene motion={e.motion} onReady={e.ready} onError={e.fallback} onProgress={e.loadProgress} onSelect={e.setSelected}/></Suspense></SceneBoundary>}<div className="world-vignette"/></div>
++    <div className="world"><ForgeFallback/>{e.initialized && e.mode==='three' && <SceneBoundary key={e.attempt} onError={e.fallback}><Suspense fallback={null}><ForgeScene motion={e.motion} onReady={e.ready} onRecovering={e.recovering} onError={e.fallback} onProgress={e.loadProgress} onSelect={e.setSelected}/></Suspense></SceneBoundary>}<div className="world-vignette"/></div>
+     <div className="film-grain" aria-hidden="true"/>
+     <Header experience={e}/>
+     <main id="main" tabIndex="-1"><Hero experience={e}/><About/><Skills experience={e}/><Projects/><Contact/></main>
+     <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><span className="mono">BUILT WITH INTENTION.</span><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a></footer>
+-    <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <button className="view-toggle" onClick={e.toggleMode} disabled={e.reduced || e.webglUnavailable} aria-pressed={e.mode==='static'}>{e.reduced?'Reduced motion':e.webglUnavailable?'2D view':e.mode==='three'?'Switch to 2D':'Enable 3D'}<span className="view-dot"/></button>}</div>
+-    {e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">ASSEMBLING THE FORGE {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.fallback}>Skip 3D <span aria-hidden="true">↗</span></button></div>}
++    <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <div className="experience-options"><button className="view-toggle" onClick={e.toggleMotion} aria-pressed={!e.reduced}>{e.reduced?'Enable full motion':'Use gentle motion'}</button><button className="view-toggle" onClick={e.toggleMode} aria-pressed={e.mode==='static'}>{e.mode==='three'?'Switch to 2D':e.sceneStatus==='error'?'Retry 3D':'Enable 3D'}<span className="view-dot"/></button></div>}</div>
++    {e.initialized && e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">{e.sceneStatus==='recovering'?'RESTORING THE FORGE':'ASSEMBLING THE FORGE'} {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.toggleMode}>Use 2D view <span aria-hidden="true">↗</span></button></div>}
++    {e.sceneStatus==='error' && <div className="scene-loader" role="status"><p>{e.reason}</p><button onClick={e.retry}>Retry 3D <span aria-hidden="true">↗</span></button></div>}
+     <div ref={e.cursor} className="custom-cursor" aria-hidden="true"/>
+   </div>;
+ }
+diff --git a/src/experience/lifecycle.js b/src/experience/lifecycle.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..c7aac3bb04ad42f545ae48fc62c378c78ef0306c
+--- /dev/null
++++ b/src/experience/lifecycle.js
+@@ -0,0 +1,30 @@
++// Retain the canvas during context loss so the browser can restore resources.
++export function attachSceneLifecycle({ canvas, page, wakeTarget, pause, wake, recovering, restored, fail, recoveryMs = 20000, timers = globalThis }) {
++  let lost = false, timer, stopped = false;
++  const clear = () => { timers.clearTimeout(timer); timer = undefined; };
++  const arm = () => {
++    clear();
++    if (lost && !page.hidden) timer = timers.setTimeout(() => {
++      if (!stopped && lost) fail('The 3D renderer could not recover. You can retry.');
++    }, recoveryMs);
++  };
++  const visibility = () => {
++    pause(page.hidden || lost);
++    if (page.hidden) clear(); else if (lost) arm(); else wake();
++  };
++  const onLost = event => { event.preventDefault(); lost = true; pause(true); recovering(); arm(); };
++  const onRestored = () => { lost = false; clear(); restored(); pause(page.hidden); if (!page.hidden) wake(); };
++  const request = () => { if (!page.hidden && !lost) wake(); };
++  canvas.addEventListener('webglcontextlost', onLost);
++  canvas.addEventListener('webglcontextrestored', onRestored);
++  page.addEventListener('visibilitychange', visibility);
++  wakeTarget.addEventListener('forge-wake', request);
++  visibility();
++  return () => {
++    stopped = true; clear();
++    canvas.removeEventListener('webglcontextlost', onLost);
++    canvas.removeEventListener('webglcontextrestored', onRestored);
++    page.removeEventListener('visibilitychange', visibility);
++    wakeTarget.removeEventListener('forge-wake', request);
++  };
++}
+diff --git a/src/experience/preferences.js b/src/experience/preferences.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..d476e7ad3818002d5becf969201b65501ba6b29c
+--- /dev/null
++++ b/src/experience/preferences.js
+@@ -0,0 +1,21 @@
++export const PREFERENCE_KEY = 'forge-experience-v2';
++
++export function readPreferences(storage) {
++  try {
++    const saved = JSON.parse(storage.getItem(PREFERENCE_KEY));
++    if (saved?.version === 2 && saved.source === 'user') {
++      return { view: saved.view === 'static' ? 'static' : 'three', motion: ['full', 'gentle'].includes(saved.motion) ? saved.motion : 'system' };
++    }
++    // In v1 this key was written only by the visitor's toggle, never by an
++    // automatic hardware check or fallback. Preserve that explicit choice.
++    if (storage.getItem('forge-view') === 'static') return { view: 'static', motion: 'system' };
++  } catch { /* Storage may be blocked; 3D still starts automatically. */ }
++  return { view: 'three', motion: 'system' };
++}
++export function savePreferences(storage, preference) {
++  try { storage.setItem(PREFERENCE_KEY, JSON.stringify({ version: 2, source: 'user', ...preference })); }
++  catch { /* The current session's choice still works. */ }
++}
++export function gentleMotion(systemReduced, preference) {
++  return preference === 'gentle' || (systemReduced && preference !== 'full');
++}
+diff --git a/src/experience/quality.js b/src/experience/quality.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..eb0b45c80f7810979ad1bc5124483ac03cdcf227
+--- /dev/null
++++ b/src/experience/quality.js
+@@ -0,0 +1,32 @@
++export const QUALITY = [
++  { name: 'low', dpr: 0.75, segments: 16, cableSegments: 16, textureSize: 512, shadowSize: 0, effects: false },
++  { name: 'medium', dpr: 1, segments: 32, cableSegments: 28, textureSize: 1024, shadowSize: 512, effects: false },
++  { name: 'high', dpr: 1.5, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, effects: true },
++];
++export function initialQuality({ width, coarse = false, saveData = false, memory, cores }) {
++  return width < 900 || coarse || saveData || (memory && memory <= 4) || (cores && cores <= 4) ? 0 : 2;
++}
++// Only consecutive frames are sampled. Idle demand frames and suspended tabs
++// are not poor GPU performance. Hysteresis and a cooldown prevent churn.
++export function createQualityMonitor(initial, maximum = 2) {
++  let tier = initial, elapsed = 0, frames = 0, slow = 0, fast = 0, cooldown = 0, changes = 0;
++  return {
++    reset() { elapsed = 0; frames = 0; slow = 0; fast = 0; },
++    setTier(value) { tier = value; cooldown = 10; this.reset(); },
++    sample(delta) {
++      if (!(delta > 0) || delta > 0.25) { this.reset(); return null; }
++      cooldown = Math.max(0, cooldown - delta); elapsed += delta; frames++;
++      if (elapsed < 1.5 || frames < 20) return null;
++      const fps = frames / elapsed;
++      elapsed = 0; frames = 0;
++      slow = fps < 34 ? slow + 1 : 0; fast = fps > 55 ? fast + 1 : 0;
++      if (cooldown > 0) return null;
++      let next = tier;
++      if (slow >= 2) next = Math.max(0, tier - 1);
++      else if (fast >= 4 && changes < 4) next = Math.min(maximum, tier + 1);
++      if (next === tier) return null;
++      tier = next; changes++; cooldown = 10; slow = 0; fast = 0;
++      return tier;
++    },
++  };
++}
+diff --git a/src/experience/scroll.js b/src/experience/scroll.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..197951ffe5b3c6ce5b45d730203cec404d7ed71f
+--- /dev/null
++++ b/src/experience/scroll.js
+@@ -0,0 +1,7 @@
++export function sampleScroll(stops, y, fullHeight, viewportHeight) {
++  let index = 0;
++  while (index < stops.length - 1 && y >= stops[index + 1]) index++;
++  const next = stops[index + 1], span = next - stops[index];
++  const local = span > 0 ? Math.min(1, Math.max(0, (y - stops[index]) / span)) : 0;
++  return { index, position: index + local, progress: Math.round(Math.min(1, Math.max(0, y / Math.max(1, fullHeight - viewportHeight))) * 100) };
++}
+diff --git a/src/hooks/useExperience.js b/src/hooks/useExperience.js
+index 6aa42830c4b4a8eda42d6be4c001e2a6ea490f00..c29adf05a5c87f12f83d3b72188c5b7525cae667 100644
+--- a/src/hooks/useExperience.js
++++ b/src/hooks/useExperience.js
+@@ -1,116 +1,137 @@
+ import { useCallback, useEffect, useRef, useState } from 'react';
+ import { chapters } from '../data/portfolio';
++import { gentleMotion, readPreferences, savePreferences } from '../experience/preferences.js';
++import { sampleScroll } from '../experience/scroll.js';
+ 
+ export function useExperience() {
+   const [active, setActive] = useState('home');
+   const [progress, setProgress] = useState(0);
+-  const [mode, setMode] = useState('static');
++  const [mode, setMode] = useState('three');
+   const [initialized, setInitialized] = useState(false);
+-  const [reduced, setReduced] = useState(false);
++  const [systemReduced, setSystemReduced] = useState(false);
++  const [motionChoice, setMotionChoice] = useState('system');
+   const [reason, setReason] = useState('');
+-  const [webglUnavailable, setWebglUnavailable] = useState(false);
+   const [sceneReady, setSceneReady] = useState(false);
++  const [sceneStatus, setSceneStatus] = useState('loading');
++  const [attempt, setAttempt] = useState(0);
+   const [loading, setLoading] = useState({ loaded: 0, total: 0 });
+   const [selected, setSelected] = useState('React');
+-  const motion = useRef({ position: 0, pointer: [0, 0], selected: 'React', visible: true });
++  const reduced = gentleMotion(systemReduced, motionChoice);
++  const preferences = useRef({ view: 'three', motion: 'system' });
++  const motion = useRef({ position: 0, pointer: [0, 0], selected: 'React', visible: true, gentle: false });
+   const scrollEngine = useRef(null);
+   const progressElement = useRef(null);
+   const cursor = useRef(null);
+-  const initializedRef = useRef(false);
+   const revealDone = useRef(false);
++  const wake = () => window.dispatchEvent(new Event('forge-wake'));
+ 
+-  useEffect(() => { motion.current.selected = selected; window.dispatchEvent(new Event('forge-wake')); }, [selected]);
++  useEffect(() => { motion.current.selected = selected; wake(); }, [selected]);
++  useEffect(() => { motion.current.gentle = reduced; wake(); }, [reduced]);
+   useEffect(() => {
++    let storage;
++    try { storage = window.localStorage; } catch { /* unavailable */ }
++    const saved = readPreferences(storage);
++    preferences.current = saved;
++    setMode(saved.view); setMotionChoice(saved.motion);
++    if (saved.view === 'static') { setReason('2D view selected'); setSceneStatus('user-static'); }
+     const media = matchMedia('(prefers-reduced-motion: reduce)');
+-    const choose = () => {
+-      setReduced(media.matches);
+-      let saved = false;
+-      try { saved = localStorage.getItem('forge-view') === 'static'; } catch { /* private browsing */ }
+-      const lowPower = navigator.connection?.saveData || (navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+-      let supportsWebGL = false;
+-      if (!media.matches && !lowPower && !saved) {
+-        try { const c = document.createElement('canvas'); const gl = c.getContext('webgl2'); supportsWebGL = !!gl; gl?.getExtension('WEBGL_lose_context')?.loseContext(); } catch { /* fallback */ }
+-      }
+-      setWebglUnavailable(!media.matches && !lowPower && !saved && !supportsWebGL);
+-      setMode(supportsWebGL ? 'three' : 'static');
+-      setReason(media.matches ? 'Reduced motion' : lowPower ? 'Lightweight view' : saved ? '2D view' : supportsWebGL ? '' : '2D view');
+-      setInitialized(true); initializedRef.current = true;
+-    };
+-    choose(); media.addEventListener('change', choose);
+-    return () => media.removeEventListener('change', choose);
++    const change = () => setSystemReduced(media.matches);
++    change(); media.addEventListener('change', change); setInitialized(true);
++    return () => media.removeEventListener('change', change);
+   }, []);
+ 
+-  const fallback = useCallback(() => { setMode('static'); setSceneReady(false); setReason('2D view'); }, []);
+-  const ready = useCallback(() => setSceneReady(true), []);
++  const remember = useCallback(patch => {
++    preferences.current = { ...preferences.current, ...patch };
++    try { savePreferences(window.localStorage, preferences.current); } catch { /* session only */ }
++  }, []);
++  const fallback = useCallback((message) => {
++    setMode('static'); setSceneReady(false); setSceneStatus('error');
++    setReason(typeof message === 'string' ? message : '3D could not load. You can retry.');
++    // Automatic failure must never overwrite the visitor's view preference.
++  }, []);
++  const ready = useCallback(() => { setSceneReady(true); setSceneStatus('ready'); setReason(''); }, []);
++  const recovering = useCallback(() => { setSceneReady(false); setSceneStatus('recovering'); }, []);
+   const loadProgress = useCallback(value => setLoading(value), []);
++  const retry = useCallback(() => {
++    remember({ view: 'three' }); setAttempt(value => value + 1);
++    setSceneReady(false); setLoading({ loaded: 0, total: 0 });
++    setSceneStatus('loading'); setReason(''); setMode('three');
++  }, [remember]);
+   const toggleMode = useCallback(() => {
+-    if (reduced) return;
+-    if (mode === 'static') {
+-      try {
+-        const canvas = document.createElement('canvas');
+-        const gl = canvas.getContext('webgl2');
+-        if (!gl) { setWebglUnavailable(true); return; }
+-        gl.getExtension('WEBGL_lose_context')?.loseContext();
+-      } catch { setWebglUnavailable(true); return; }
+-    }
+-    setMode(value => { const next = value === 'three' ? 'static' : 'three'; try { localStorage.setItem('forge-view', next); } catch { /* temporary preference */ } setReason(next === 'static' ? '2D view' : ''); setSceneReady(false); return next; });
+-  }, [reduced, mode]);
++    if (mode === 'static') { retry(); return; }
++    remember({ view: 'static' }); setMode('static'); setSceneReady(false);
++    setSceneStatus('user-static'); setReason('2D view selected');
++  }, [mode, remember, retry]);
++  const toggleMotion = useCallback(() => {
++    const next = reduced ? 'full' : 'gentle';
++    remember({ motion: next }); setMotionChoice(next);
++  }, [reduced, remember]);
+ 
+   useEffect(() => {
+-    if (mode !== 'three' || sceneReady) return;
+-    const timer = setTimeout(fallback, 12000);
+-    return () => clearTimeout(timer);
+-  }, [mode, sceneReady, fallback]);
+-
+-  useEffect(() => {
+-    let raf = 0;
++    let raf = 0, measure = true, previousIndex = -1, previousProgress = -1;
++    let stops = [];
+     const update = () => {
+       raf = 0;
+-      const nodes = chapters.map(c => document.getElementById(c.id));
+-      const y = scrollY;
+-      const stops = nodes.map(node => Math.max(0, (node?.getBoundingClientRect().top || 0) + y - Math.max(140, innerHeight * 0.18)));
+-      let index = 0;
+-      while (index < stops.length - 1 && y >= stops[index + 1]) index++;
+-      const next = stops[index + 1];
+-      const local = next ? Math.min(1, Math.max(0, (y - stops[index]) / (next - stops[index]))) : 0;
+-      motion.current.position = index + local;
+-      const full = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+-      const p = Math.min(1, Math.max(0, y / full));
+-      setProgress(Math.round(p * 100));
+-      if (progressElement.current) progressElement.current.style.transform = `scaleX(${p})`;
+-      setActive(chapters[index].id);
++      if (document.hidden) return;
++      const y = window.scrollY;
++      const height = document.documentElement.clientHeight || innerHeight;
++      if (measure) {
++        stops = chapters.map(c => Math.max(0, (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y - Math.max(140, height * 0.18)));
++        measure = false;
++      }
++      const sample = sampleScroll(stops, y, document.documentElement.scrollHeight, height);
++      motion.current.position = sample.position;
++      if (sample.progress !== previousProgress) { previousProgress = sample.progress; setProgress(sample.progress); }
++      if (sample.index !== previousIndex) { previousIndex = sample.index; setActive(chapters[sample.index].id); }
++      if (progressElement.current) progressElement.current.style.transform = `scaleX(${sample.progress / 100})`;
++      // Wake after writing the timeline; the last touch-scroll event must not
++      // leave a demand frame reading stale progress and then going idle.
++      wake();
++    };
++    const request = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(update); };
++    const resize = () => { measure = true; request(); };
++    const visibility = () => {
++      motion.current.visible = !document.hidden;
++      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else resize();
+     };
+-    const request = () => { if (!raf) raf = requestAnimationFrame(update); };
+-    const visibility = () => { motion.current.visible = !document.hidden; if (!document.hidden) request(); };
+     window.addEventListener('scroll', request, { passive: true });
+-    window.addEventListener('resize', request);
++    window.addEventListener('resize', resize);
++    window.addEventListener('orientationchange', resize);
++    window.addEventListener('pageshow', resize);
++    window.visualViewport?.addEventListener('resize', resize);
+     document.addEventListener('visibilitychange', visibility);
+-    const resizeObserver = new ResizeObserver(request);
+-    resizeObserver.observe(document.querySelector('main'));
+-    request();
+-    return () => { resizeObserver.disconnect(); cancelAnimationFrame(raf); window.removeEventListener('scroll', request); window.removeEventListener('resize', request); document.removeEventListener('visibilitychange', visibility); };
++    const observer = new ResizeObserver(resize);
++    const main = document.querySelector('main'); if (main) observer.observe(main);
++    let disposed = false;
++    document.fonts?.ready.then(() => { if (!disposed) resize(); }); request();
++    return () => {
++      disposed = true; observer.disconnect(); cancelAnimationFrame(raf);
++      window.removeEventListener('scroll', request); window.removeEventListener('resize', resize);
++      window.removeEventListener('orientationchange', resize); window.removeEventListener('pageshow', resize);
++      window.visualViewport?.removeEventListener('resize', resize);
++      document.removeEventListener('visibilitychange', visibility);
++    };
+   }, []);
+ 
+   useEffect(() => {
+     if (!initialized || reduced || mode === 'static') return;
+-    let dispose; let stopped = false;
++    let dispose, stopped = false;
+     import('../motion/setupMotion').then(({ setupMotion }) => {
+       if (stopped) return;
+       dispose = setupMotion({ scrollEngine, cursor, motion, reveal: !revealDone.current });
+       revealDone.current = true;
+-    }).catch(() => { /* native scrolling and visible content remain available */ });
++    }).catch(() => { /* Native scrolling and visible content remain available. */ });
+     return () => { stopped = true; dispose?.(); };
+   }, [initialized, reduced, mode]);
+ 
+   const navigate = useCallback((event, id) => {
+     if (event && (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.button > 0)) return;
+     const node = document.getElementById(id); if (!node) return;
+-    event?.preventDefault();
+-    history.replaceState(null, '', `#${id}`);
+-    node.focus({ preventScroll: true });
+-    if (scrollEngine.current) scrollEngine.current.scrollTo(node, { offset: -80, duration: 1.35 });
+-    else window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY - (innerWidth < 768 ? 112 : 90), behavior: 'instant' });
++    event?.preventDefault(); history.replaceState(null, '', `#${id}`); node.focus({ preventScroll: true });
++    const offset = innerWidth < 768 ? 112 : 90;
++    if (scrollEngine.current) scrollEngine.current.scrollTo(node, { offset: -offset, duration: 1.35 });
++    else window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY - offset, behavior: 'instant' });
+   }, []);
+ 
+-  return { active, progress, mode, initialized, reduced, webglUnavailable, reason, sceneReady, loading, selected, setSelected, motion, progressElement, cursor, navigate, toggleMode, ready, fallback, loadProgress };
++  return { active, progress, mode, initialized, reduced, reason, sceneReady, sceneStatus, attempt, loading, selected, setSelected, motion, progressElement, cursor, navigate, toggleMode, toggleMotion, retry, ready, recovering, fallback, loadProgress };
+ }
+diff --git a/src/motion/setupMotion.js b/src/motion/setupMotion.js
+index 85d6ace6e95c1b148c47e93e460c7c082a0b604c..b82e28db63338b9115978b96848a503da0f2a02d 100644
+--- a/src/motion/setupMotion.js
++++ b/src/motion/setupMotion.js
+@@ -6,11 +6,13 @@ import 'lenis/dist/lenis.css';
+ gsap.registerPlugin(ScrollTrigger);
+ export function setupMotion({ scrollEngine, cursor, motion, reveal }) {
+   const fine = matchMedia('(pointer: fine)').matches;
+-  const lenis = new Lenis({ duration: 1.15, smoothWheel: true, syncTouch: false, anchors: false, prevent: node => node.closest?.('dialog') });
++  // Native touch scroll owns the timeline on phones; Lenis is desktop-only.
++  ScrollTrigger.config({ ignoreMobileResize: true });
++  const lenis = fine ? new Lenis({ duration: 1.15, smoothWheel: true, syncTouch: false, anchors: false, prevent: node => node.closest?.('dialog') }) : null;
+   scrollEngine.current = lenis;
+-  lenis.on('scroll', ScrollTrigger.update);
+-  const tick = time => { if (!document.hidden) lenis.raf(time * 1000); };
+-  gsap.ticker.add(tick);
++  lenis?.on('scroll', ScrollTrigger.update);
++  const tick = time => { if (!document.hidden) lenis?.raf(time * 1000); };
++  if (lenis) gsap.ticker.add(tick);
+   const context = gsap.context(() => {
+     if (reveal) {
+       gsap.fromTo('.hero-name .line-inner', { yPercent: 105 }, { yPercent: 0, duration: 1.45, stagger: 0.12, ease: 'expo.out', clearProps: 'transform' });
+@@ -27,7 +29,7 @@ export function setupMotion({ scrollEngine, cursor, motion, reveal }) {
+     const el = cursor.current;
+     const x = gsap.quickTo(el, 'x', { duration: 0.32, ease: 'power3.out' });
+     const y = gsap.quickTo(el, 'y', { duration: 0.32, ease: 'power3.out' });
+-    listen(window, 'pointermove', e => { x(e.clientX); y(e.clientY); el.classList.add('visible'); motion.current.pointer = [(e.clientX / innerWidth - 0.5) * 2, (e.clientY / innerHeight - 0.5) * 2]; });
++    listen(window, 'pointermove', e => { x(e.clientX); y(e.clientY); el.classList.add('visible'); motion.current.pointer = [(e.clientX / innerWidth - 0.5) * 2, (e.clientY / innerHeight - 0.5) * 2]; window.dispatchEvent(new Event('forge-wake')); });
+     listen(document, 'pointerover', e => {
+       const target = e.target.closest?.('[data-cursor],a,button,summary');
+       el.classList.toggle('is-link', !!target);
+@@ -41,12 +43,14 @@ export function setupMotion({ scrollEngine, cursor, motion, reveal }) {
+   }
+   const refresh = () => ScrollTrigger.refresh();
+   document.addEventListener('toggle', refresh, true);
+-  document.fonts?.ready.then(refresh);
++  let disposed = false;
++  document.fonts?.ready.then(() => { if (!disposed) refresh(); });
+   return () => {
++    disposed = true;
+     document.documentElement.classList.remove('custom-pointer');
+     document.removeEventListener('toggle', refresh, true);
+     listeners.forEach(remove => remove());
+-    context.revert(); gsap.ticker.remove(tick); lenis.destroy(); scrollEngine.current = null;
++    context.revert(); gsap.ticker.remove(tick); lenis?.destroy(); scrollEngine.current = null;
+     if (cursor.current) { cursor.current.classList.remove('visible'); gsap.killTweensOf(cursor.current); }
+     document.querySelectorAll('[data-magnetic]').forEach(el => { gsap.killTweensOf(el); gsap.set(el, { clearProps: 'transform' }); });
+   };
+diff --git a/src/scene/ForgeEffects.jsx b/src/scene/ForgeEffects.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..bd236f9661d070b87e7bd42018662725dc4020fd
+--- /dev/null
++++ b/src/scene/ForgeEffects.jsx
+@@ -0,0 +1,2 @@
++import { Bloom, EffectComposer } from '@react-three/postprocessing';
++export default function ForgeEffects() { return <EffectComposer multisampling={0}><Bloom luminanceThreshold={1.15} luminanceSmoothing={0.2} intensity={0.18} mipmapBlur/></EffectComposer>; }
+diff --git a/src/scene/ForgeScene.jsx b/src/scene/ForgeScene.jsx
+index 7fe1f7daccaa66ea268c451a075c216a7d53542c..4c09e3028cc643c794a50071e66beda33ce981b5 100644
+--- a/src/scene/ForgeScene.jsx
++++ b/src/scene/ForgeScene.jsx
+@@ -1,9 +1,55 @@
+-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
++import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+ import { Canvas, useFrame, useThree } from '@react-three/fiber';
+-import { Environment, Html, useProgress, useTexture } from '@react-three/drei';
+-import { Bloom, EffectComposer } from '@react-three/postprocessing';
++import { Environment, Html, Lightformer, useProgress, useTexture } from '@react-three/drei';
+ import * as THREE from 'three';
+-import { cameraTimeline, project } from '../data/portfolio';
++import { project } from '../data/portfolio';
++import { createCameraFraming, sampleCameraPose } from './framing.js';
++import { QUALITY, createQualityMonitor, initialQuality } from '../experience/quality.js';
++import { attachSceneLifecycle } from '../experience/lifecycle.js';
++const ForgeEffects = lazy(() => import('./ForgeEffects.jsx'));
++
++class AssetBoundary extends Component {
++  state = { failed: false };
++  static getDerivedStateFromError() { return { failed: true }; }
++  render() { return this.state.failed ? this.props.fallback || null : this.props.children; }
++}
++function StudioLights({ resolution = 64 }) {
++  return <Environment resolution={resolution}><Lightformer intensity={3} position={[0,4,2]} scale={[8,4,1]} rotation={[Math.PI/2,0,0]}/><Lightformer intensity={2} position={[-4,1,2]} scale={[3,6,1]} rotation={[0,Math.PI/2,0]}/><Lightformer intensity={1.5} position={[4,0,-2]} scale={[3,5,1]} rotation={[0,-Math.PI/2,0]}/></Environment>;
++}
++function QualityController({ initialTier, maxTier, onQuality, onReady, onRecovering, onError, onPause, wakeRef }) {
++  const { gl, invalidate, setDpr, setFrameloop } = useThree();
++  const monitor = useMemo(() => createQualityMonitor(initialTier, maxTier), [initialTier, maxTier]);
++  const wasPaused = useRef(false);
++  useEffect(() => attachSceneLifecycle({
++    canvas: gl.domElement, page: document, wakeTarget: window,
++    pause: value => { wasPaused.current = value; setFrameloop(value ? 'never' : 'demand'); onPause(value); monitor.reset(); },
++    wake: () => { wakeRef.current?.(); invalidate(); },
++    recovering: () => { monitor.setTier(0); onQuality(0); onRecovering(); },
++    restored: onReady, fail: onError,
++  }), [gl, invalidate, setFrameloop, monitor, onQuality, onReady, onRecovering, onError, onPause, wakeRef]);
++  useFrame((_, delta) => {
++    if (wasPaused.current) return;
++    const next = monitor.sample(delta);
++    if (next !== null) { setDpr(Math.min(window.devicePixelRatio || 1, QUALITY[next].dpr)); onQuality(next); }
++  });
++  return null;
++}
++function TextureScreen({ quality }) {
++  const source = useTexture(project.screenshot);
++  const texture = useMemo(() => {
++    const image = source.image;
++    const ratio = Math.min(1, quality.textureSize / Math.max(image.width, image.height));
++    const canvas = document.createElement('canvas');
++    canvas.width = Math.max(1, Math.round(image.width * ratio)); canvas.height = Math.max(1, Math.round(image.height * ratio));
++    const context = canvas.getContext('2d');
++    if (!context) return source;
++    context.drawImage(image, 0, 0, canvas.width, canvas.height);
++    const result = new THREE.CanvasTexture(canvas); result.colorSpace = THREE.SRGBColorSpace;
++    return result;
++  }, [source, quality.textureSize]);
++  useEffect(() => () => { if (texture !== source) texture.dispose(); }, [texture, source]);
++  return <meshBasicMaterial map={texture} toneMapped={false}/>;
++}
+ 
+ const ACCENT = '#ff5c26';
+ const smooth = (a,b,t) => THREE.MathUtils.smoothstep(t,a,b);
+@@ -25,9 +71,9 @@ function Progress({ onProgress }) {
+   return null;
+ }
+ function EnvironmentMap() { return <Environment files="/environment/forge-studio.hdr" environmentIntensity={0.65} environmentRotation={[0,1.5,0]}/>; }
+-function Cable({ points, radius = 0.035, color = '#22221f' }) {
++function Cable({ points, quality, radius = 0.035, color = '#22221f' }) {
+   const curve=useMemo(()=>new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),[points]);
+-  return <mesh castShadow><tubeGeometry args={[curve,40,radius,6,false]}/><meshStandardMaterial color={color} metalness={0.2} roughness={0.75}/></mesh>;
++  return <mesh castShadow><tubeGeometry args={[curve,quality.cableSegments,radius,quality.segments > 16 ? 6 : 4,false]}/><meshStandardMaterial color={color} metalness={0.2} roughness={0.75}/></mesh>;
+ }
+ function Bolts({ spread }) {
+   const ref=useRef();const dummy=useMemo(()=>new THREE.Object3D(),[]);
+@@ -42,10 +88,11 @@ function Bolts({ spread }) {
+   });
+   return <instancedMesh ref={ref} args={[null,null,32]} castShadow><cylinderGeometry args={[0.045,0.045,0.06,6]}/><meshStandardMaterial color="#9b9a8f" roughness={0.3} metalness={1}/></instancedMesh>;
+ }
+-function Part({ index, spread, device, selected, roughness, onSelect, stage }) {
++function Part({ index, spread, device, selected, roughness, onSelect, stage, quality }) {
+   const group=useRef();const ring=useRef();const [hover,setHover]=useState(false);
+   const name=partNames[index];
+-  const target=new THREE.Vector3();
++  const target=useMemo(()=>new THREE.Vector3(),[]);
++  const force=useMemo(()=>new THREE.Vector3(),[]);
+   const velocity=useRef(new THREE.Vector3());
+   const side=index%2===0?-1:1;
+   const base=side*(0.85+Math.floor(index/2)*0.34);
+@@ -57,7 +104,7 @@ function Part({ index, spread, device, selected, roughness, onSelect, stage }) {
+     const row=Math.floor(index/2);
+     target.set(base + side*s*(0.35+row*0.35), (row-1)*s*0.87 + (activated&&stage.current>1.5&&stage.current<2.8?0.12:0), (index%2?0.2:-0.2)*s);
+     // Damped response, with no physics engine or per-frame React state updates.
+-    const delta=Math.min(dt,0.04);const force=target.clone().sub(group.current.position).multiplyScalar(75);
++    const delta=Math.min(dt,0.04);force.copy(target).sub(group.current.position).multiplyScalar(75);
+     velocity.current.addScaledVector(force,delta).multiplyScalar(Math.exp(-13*delta));
+     group.current.position.addScaledVector(velocity.current,delta);
+     const scale=1-device.current*0.7;group.current.scale.setScalar(scale);
+@@ -66,10 +113,10 @@ function Part({ index, spread, device, selected, roughness, onSelect, stage }) {
+   });
+   return <group ref={group} position={[base,0,0]} onPointerOver={e=>{e.stopPropagation();setHover(true);}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();onSelect(name);}}>
+     <group rotation={[0,0,Math.PI/2]}>
+-      <mesh castShadow receiveShadow><cylinderGeometry args={[radius,radius,0.2,48]}/><meshPhysicalMaterial color={index<2?'#55554f':'#282a25'} roughness={0.34} metalness={0.9} roughnessMap={roughness} clearcoat={0.1}/></mesh>
+-      <mesh position={[0,0.11,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[radius*0.82,0.035,8,48]}/><meshStandardMaterial color="#1b1c19" roughness={0.9}/></mesh>
+-      <mesh ref={ring} position={[0,-0.11,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[radius*0.9,0.018,6,48]}/><meshStandardMaterial color={index<2?ACCENT:'#77786d'} emissive={index<2?ACCENT:'#000000'} emissiveIntensity={0.1} toneMapped={false}/></mesh>
+-      <mesh position={[0,0.12,0]}><cylinderGeometry args={[0.2,0.2,0.06,32]}/><meshStandardMaterial color="#a5a497" metalness={1} roughness={0.25}/></mesh>
++      <mesh castShadow receiveShadow><cylinderGeometry args={[radius,radius,0.2,quality.segments]}/><meshPhysicalMaterial color={index<2?'#55554f':'#282a25'} roughness={0.34} metalness={0.9} roughnessMap={roughness} clearcoat={0.1}/></mesh>
++      <mesh position={[0,0.11,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[radius*0.82,0.035,quality.segments > 16 ? 8 : 4,quality.segments]}/><meshStandardMaterial color="#1b1c19" roughness={0.9}/></mesh>
++      <mesh ref={ring} position={[0,-0.11,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[radius*0.9,0.018,6,quality.segments]}/><meshStandardMaterial color={index<2?ACCENT:'#77786d'} emissive={index<2?ACCENT:'#000000'} emissiveIntensity={0.1} toneMapped={false}/></mesh>
++      <mesh position={[0,0.12,0]}><cylinderGeometry args={[0.2,0.2,0.06,Math.min(32,quality.segments)]}/><meshStandardMaterial color="#a5a497" metalness={1} roughness={0.25}/></mesh>
+     </group>
+   </group>;
+ }
+@@ -84,83 +131,115 @@ function SkillLabels({ motion, onSelect }) {
+   if(!visible)return null;
+   return <group>{partNames.map((name,index)=><Html key={name} center position={[(index%2?1:-1)*(1.2+Math.floor(index/2)*0.45),(Math.floor(index/2)-1)*1.05,1.25]} zIndexRange={[8,1]}><button className="physical-label" onClick={()=>{onSelect(name);invalidate();}} data-cursor="Inspect" aria-label={`Inspect ${name}`}>{name}<span>↗</span></button></Html>)}</group>;
+ }
+-function Device({ device, motion, texture }) {
++function Device({ device, motion, quality }) {
+   const ref=useRef();
+   useFrame((_,dt)=>{
+     const v=device.current;ref.current.visible=v>0.01;
+     ref.current.scale.setScalar(Math.max(0.001,v));
+-    ref.current.rotation.y=mix(ref.current.rotation.y,motion.current.pointer[0]*0.12,1-Math.exp(-4*dt));
+-    ref.current.rotation.x=mix(ref.current.rotation.x,motion.current.pointer[1]*0.06,1-Math.exp(-4*dt));
++    ref.current.rotation.y=mix(ref.current.rotation.y,(motion.current.gentle ? 0 : motion.current.pointer[0]*0.12),1-Math.exp(-4*dt));
++    ref.current.rotation.x=mix(ref.current.rotation.x,(motion.current.gentle ? 0 : motion.current.pointer[1]*0.06),1-Math.exp(-4*dt));
+   });
+   return <group ref={ref} position={[0,0,0.4]}>
+     <mesh castShadow><boxGeometry args={[3.95,2.83,0.17]}/><meshStandardMaterial color="#262723" metalness={0.8} roughness={0.3}/></mesh>
+-    <mesh position={[0,0.06,0.091]}><planeGeometry args={[3.72,2.555]}/><meshBasicMaterial map={texture} toneMapped={false}/></mesh>
++    <mesh position={[0,0.06,0.091]}><planeGeometry args={[3.72,2.555]}/><AssetBoundary fallback={<meshBasicMaterial color="#292c26"/>}><Suspense fallback={<meshBasicMaterial color="#292c26"/>}><TextureScreen quality={quality}/></Suspense></AssetBoundary></mesh>
+     <mesh position={[0,-1.36,0.105]}><boxGeometry args={[0.22,0.025,0.02]}/><meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={1.3} toneMapped={false}/></mesh>
+     <mesh position={[0,-1.72,-0.12]} castShadow><boxGeometry args={[0.25,0.7,0.25]}/><meshStandardMaterial color="#68675e" metalness={1} roughness={0.3}/></mesh>
+     <mesh position={[0,-2.08,0]} castShadow><boxGeometry args={[1.75,0.09,0.85]}/><meshStandardMaterial color="#41433a" metalness={1} roughness={0.3}/></mesh>
+   </group>;
+ }
+-function Assembly({ motion,onSelect,onReady }) {
+-  const { camera, invalidate, size, gl }=useThree();
+-  const rig=useRef();const core=useRef();const shaft=useRef();const stage=useRef(0);const spread=useRef(0);const device=useRef(0);const selected=useRef('React');
+-  const elapsed=useRef(0);const lastPosition=useRef(-1);const settle=useRef(180);
++function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
++  const { camera, invalidate, size }=useThree();
++  const rig=useRef();const core=useRef();const shaft=useRef();const stage=useRef(motion.current.position);const spread=useRef(0);const device=useRef(0);const selected=useRef('React');
++  const elapsed=useRef(0), lastPosition=useRef(-1), settle=useRef(2.4), announced=useRef(false), cameraInitialized=useRef(false), lastViewport=useRef('');
+   const roughness=useMemo(brushedTexture,[]);
+-  const texture=useTexture(project.screenshot);
+-  texture.colorSpace=THREE.SRGBColorSpace;
+   const cameraTarget=useMemo(()=>new THREE.Vector3(),[]);
+-  const desiredPosition=useMemo(()=>new THREE.Vector3(),[]);
++  const frameCamera=useMemo(createCameraFraming,[]);
+   const cablePoints=useMemo(()=>[[-1.4,-0.4,0],[-1.6,-1.35,0.3],[0,-1.65,0.6],[1.8,-1.2,-0.2],[1.5,0.2,-0.3]],[]);
+-  useEffect(()=>{onReady();invalidate();return()=>roughness.dispose();},[onReady,invalidate,roughness]);
++  useEffect(()=>{roughness.needsUpdate=true;return()=>roughness.dispose();},[roughness]);
+   useEffect(()=>{
+-    const wake=()=>{settle.current=90;if(!document.hidden)invalidate();};
+-    const lost=event=>{event.preventDefault();gl.domElement.dispatchEvent(new CustomEvent('forge-context-lost',{bubbles:true}));};
+-    addEventListener('forge-wake',wake);addEventListener('scroll',wake,{passive:true});addEventListener('pointermove',wake,{passive:true});addEventListener('pointerdown',wake,{passive:true});addEventListener('visibilitychange',wake);gl.domElement.addEventListener('webglcontextlost',lost);
+-    return()=>{removeEventListener('forge-wake',wake);removeEventListener('scroll',wake);removeEventListener('pointermove',wake);removeEventListener('pointerdown',wake);removeEventListener('visibilitychange',wake);gl.domElement.removeEventListener('webglcontextlost',lost);};
+-  },[invalidate,gl]);
++    const wake=()=>{settle.current=motion.current.gentle?0.35:2.4;};
++    wakeRef.current=wake; wake(); invalidate();
++    const pointer=event=>{
++      if(event.pointerType==='touch'||motion.current.gentle)return;
++      motion.current.pointer=[(event.clientX/innerWidth-0.5)*2,(event.clientY/innerHeight-0.5)*2];
++      wake(); if(!document.hidden)invalidate();
++    };
++    window.addEventListener('pointermove',pointer,{passive:true});
++    return()=>{wakeRef.current=null;window.removeEventListener('pointermove',pointer);};
++  },[motion,invalidate,wakeRef]);
+   useFrame((_,dt)=>{
+     if(document.hidden)return;
++    const gentle=motion.current.gentle;
+     const delta=Math.min(dt,0.05);elapsed.current+=delta;
+-    const raw=motion.current.position;stage.current=mix(stage.current,raw,1-Math.exp(-5*delta));
+-    const p=Math.min(4,stage.current), i=Math.min(3,Math.floor(p)), t=smooth(0,1,p-i);
+-    const a=cameraTimeline[i],b=cameraTimeline[i+1];
++    const raw=gentle?0:motion.current.position;
++    stage.current=gentle?0:mix(stage.current,raw,1-Math.exp(-5*delta));
++    const p=THREE.MathUtils.clamp(stage.current,0,4);
++    const pose=sampleCameraPose(p);
+     const mobile=size.width<768;
+-    for(let axis=0;axis<3;axis++){desiredPosition.setComponent(axis,mix(a.camera[axis],b.camera[axis],t));cameraTarget.setComponent(axis,mix(a.target[axis],b.target[axis],t));}
+-    if(mobile){desiredPosition.x*=0.3;desiredPosition.z+=4;}
+-    camera.position.lerp(desiredPosition,1-Math.exp(-5*delta));camera.lookAt(cameraTarget);
+-    const intro=1-Math.pow(1-Math.min(1,elapsed.current/1.6),4);
+-    spread.current=mix(a.spread,b.spread,t)+(1-intro)*3.5;
+-    device.current=smooth(2.55,2.98,p)*(1-smooth(3.8,4,p));
++    const intro=gentle||motion.current.position>0.15?1:1-Math.pow(1-Math.min(1,elapsed.current/1.6),4);
++    spread.current=pose.spread+(1-intro)*3.5;
++    const frame=frameCamera({...pose,spread:spread.current},size.width,size.height);
++    const smoothing=!cameraInitialized.current||gentle?1:1-Math.exp(-5*delta);
++    camera.position.lerp(frame.position,smoothing);
++    if(size.width>=1100||size.width>=768&&size.width>=size.height)cameraTarget.copy(frame.target);
++    else cameraTarget.lerp(frame.target,smoothing);
++    camera.lookAt(cameraTarget);
++    const viewportKey=`${size.width}:${size.height}:${frame.offsetX}:${frame.offsetY}`;
++    if(viewportKey!==lastViewport.current){camera.setViewOffset(size.width,size.height,frame.offsetX,frame.offsetY,size.width,size.height);lastViewport.current=viewportKey;}
++    cameraInitialized.current=true;
++    device.current=gentle?0:smooth(2.55,2.98,p)*(1-smooth(3.8,4,p));
+     selected.current=motion.current.selected;
+-    rig.current.position.set(mobile?0:mix(a.object[0],b.object[0],t),mobile?-0.25:mix(a.object[1],b.object[1],t),0);
+-    rig.current.rotation.set(mix(a.rotation[0],b.rotation[0],t),mix(a.rotation[1],b.rotation[1],t),mix(a.rotation[2],b.rotation[2],t));
+-    rig.current.scale.setScalar(mobile?1.12:1.08);
+-    core.current.rotation.y=spread.current*0.42;
+-    core.current.scale.setScalar(Math.max(0.001,1-device.current));
+-    shaft.current.scale.y=1+spread.current*0.4;
+-    shaft.current.visible=device.current<0.9;
+-    if(Math.abs(raw-lastPosition.current)>0.0001){settle.current=90;lastPosition.current=raw;}
+-    if(elapsed.current<2.4||settle.current-->0)invalidate();
+-  });
++    rig.current.position.set(mobile?0:pose.object[0],mobile?-0.25:pose.object[1],0);
++    rig.current.rotation.set(...pose.rotation);rig.current.scale.setScalar(mobile?1.12:1.08);
++    core.current.rotation.y=spread.current*0.42;core.current.scale.setScalar(Math.max(0.001,1-device.current));
++    shaft.current.scale.y=1+spread.current*0.4;shaft.current.visible=device.current<0.9;
++    if(Math.abs(raw-lastPosition.current)>0.0001){settle.current=gentle?0.35:2.4;lastPosition.current=raw;}
++    settle.current-=delta;
++    if((!gentle&&elapsed.current<2.4)||settle.current>0)invalidate();
++    if(!announced.current){announced.current=true;onReady();}
++  },-1);
+   return <group ref={rig}>
+     <group ref={shaft} rotation={[0,0,Math.PI/2]}><mesh castShadow><cylinderGeometry args={[0.11,0.11,4.2,24]}/><meshStandardMaterial color="#aaa99d" metalness={1} roughness={0.24} roughnessMap={roughness}/></mesh><mesh><cylinderGeometry args={[0.135,0.135,1.3,24]}/><meshStandardMaterial color="#191b16" roughness={0.9}/></mesh></group>
+-    {partNames.map((_,index)=><Part key={index} index={index} spread={spread} device={device} selected={selected} roughness={roughness} onSelect={onSelect} stage={stage}/>)}
++    {partNames.map((_,index)=><Part key={index} index={index} spread={spread} device={device} selected={selected} roughness={roughness} onSelect={onSelect} stage={stage} quality={quality}/>)}
+     <Bolts spread={spread}/>
+     <group ref={core}>
+       <mesh castShadow><boxGeometry args={[1.05,1.05,1.05]}/><meshPhysicalMaterial color="#7d7c70" metalness={1} roughness={0.33} roughnessMap={roughness}/></mesh>
+       <mesh position={[0,0,0.54]}><boxGeometry args={[0.85,0.85,0.025]}/><meshStandardMaterial color="#1b1c18" metalness={0.6} roughness={0.7}/></mesh>
+       <group position={[0,0,0.58]}>{[-1,1].map(side=><group key={side} position={[side*0.25,0,0]}><mesh rotation={[0,0,side*0.65]} position={[0,0.09,0]}><boxGeometry args={[0.055,0.26,0.035]}/><meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={1.35} toneMapped={false}/></mesh><mesh rotation={[0,0,-side*0.65]} position={[0,-0.09,0]}><boxGeometry args={[0.055,0.26,0.035]}/><meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={1.35} toneMapped={false}/></mesh></group>)}</group>
+-      <Cable points={cablePoints}/>
++      <Cable points={cablePoints} quality={quality}/>
+     </group>
+-    <Device device={device} motion={motion} texture={texture}/>
++    <Device device={device} motion={motion} quality={quality}/>
+     {size.width>=900 && <SkillLabels motion={motion} onSelect={onSelect}/>}
+   </group>;
+ }
+-function SceneWorld(props) {
++function SceneWorld({ quality, ...props }) {
+   const {size}=useThree();
+-  return <><ambientLight intensity={0.25}/><directionalLight position={[3,6,4]} intensity={2.2} castShadow={size.width>=768} shadow-mapSize={[1024,1024]} shadow-bias={-0.001}/><directionalLight position={[-4,1,-2]} intensity={1.4} color="#e2d7be"/><EnvironmentMap/><Assembly {...props}/><mesh position={[0,-2.55,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[40,40]}/><meshStandardMaterial color="#0e0f0d" roughness={0.95} metalness={0.1}/></mesh><gridHelper args={[30,30,'#272822','#171914']} position={[0,-2.54,0]}/>{size.width>=900 && <EffectComposer multisampling={0}><Bloom luminanceThreshold={1.15} luminanceSmoothing={0.2} intensity={0.18} mipmapBlur/></EffectComposer>}</>;
++  const studio=<StudioLights resolution={quality.name==='low'?64:128}/>;
++  return <>
++    <ambientLight intensity={0.25}/>
++    <directionalLight key={quality.shadowSize} position={[3,6,4]} intensity={2.2} castShadow={quality.shadowSize>0} shadow-mapSize={[quality.shadowSize||256,quality.shadowSize||256]} shadow-bias={-0.001}/>
++    <directionalLight position={[-4,1,-2]} intensity={1.4} color="#e2d7be"/>
++    {quality.effects ? <AssetBoundary fallback={studio}><Suspense fallback={studio}><EnvironmentMap/></Suspense></AssetBoundary> : studio}
++    <Assembly {...props} quality={quality}/>
++    <mesh position={[0,-2.55,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[40,40]}/><meshStandardMaterial color="#0e0f0d" roughness={0.95} metalness={0.1}/></mesh>
++    <gridHelper args={[30,30,'#272822','#171914']} position={[0,-2.54,0]}/>
++    {quality.effects&&size.width>=900&&<AssetBoundary><Suspense fallback={null}><ForgeEffects/></Suspense></AssetBoundary>}
++  </>;
+ }
+-export default function ForgeScene({ motion,onReady,onError,onProgress,onSelect }) {
+-  const [visible,setVisible]=useState(!document.hidden);
+-  useEffect(()=>{const change=()=>setVisible(!document.hidden);const lost=()=>onError();document.addEventListener('visibilitychange',change);document.addEventListener('forge-context-lost',lost);return()=>{document.removeEventListener('visibilitychange',change);document.removeEventListener('forge-context-lost',lost);};},[onError]);
+-  return <div className="webgl-stage" role="region" aria-label="The Forge: an interactive mechanical sculpture that transforms as you scroll"><Canvas frameloop={visible?'demand':'never'} dpr={[1,1.5]} shadows camera={{position:[0,1,8],fov:42,near:0.1,far:60}} gl={{antialias:true,alpha:true,powerPreference:'high-performance'}} fallback={<span className="sr-only">3D unavailable. Portfolio content remains below.</span>} onCreated={({gl})=>{gl.setClearColor('#0b0b0c',0);}}><Progress onProgress={onProgress}/><Suspense fallback={null}><SceneWorld motion={motion} onReady={onReady} onSelect={onSelect}/></Suspense></Canvas></div>;
++export default function ForgeScene({ motion,onReady,onError,onProgress,onSelect,onRecovering }) {
++  const [initial] = useState(()=>initialQuality({width:innerWidth,coarse:matchMedia('(pointer: coarse)').matches,saveData:navigator.connection?.saveData,memory:navigator.deviceMemory,cores:navigator.hardwareConcurrency}));
++  const [tier,setTier]=useState(initial);
++  const [paused,setPaused]=useState(document.hidden);
++  const [maximum]=useState(()=>matchMedia('(pointer: coarse)').matches||innerWidth<900?1:2);
++  const quality=QUALITY[tier];
++  const wakeRef=useRef(null);
++  const [contextOptions]=useState(()=>({antialias:initial===2,alpha:true,powerPreference:'high-performance'}));
++  const dpr=Math.min(window.devicePixelRatio||1,quality.dpr);
++  return <div className="webgl-stage" data-quality={quality.name} role="region" aria-label="The Forge: an interactive mechanical sculpture that transforms as you scroll">
++    <Canvas frameloop={paused?'never':'demand'} dpr={dpr} shadows={quality.shadowSize>0} camera={{position:[0,1,8],fov:42,near:0.1,far:150}} gl={contextOptions} resize={{scroll:false,debounce:{scroll:0,resize:80}}} fallback={<span>3D requires a WebGL 2 browser. Portfolio content remains available.</span>} onCreated={({gl})=>gl.setClearColor('#0b0b0c',0)}>
++      <QualityController initialTier={initial} maxTier={maximum} onQuality={setTier} onReady={onReady} onRecovering={onRecovering} onError={onError} onPause={setPaused} wakeRef={wakeRef}/>
++      <Progress onProgress={onProgress}/>
++      <SceneWorld motion={motion} onReady={onReady} onSelect={onSelect} quality={quality} wakeRef={wakeRef}/>
++    </Canvas>
++  </div>;
+ }
+diff --git a/src/scene/framing.js b/src/scene/framing.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..7b6660eaf6aedcf36e407c4c80396e5301dfbb36
+--- /dev/null
++++ b/src/scene/framing.js
+@@ -0,0 +1,73 @@
++import * as THREE from 'three';
++import { cameraTimeline } from '../data/portfolio.js';
++
++// Preserve the authored camera directions, then fit the sculpture into the
++// empty part of the layout. A fixed z distance crops exploded parts on phones.
++export function sampleCameraPose(progress) {
++  const position = THREE.MathUtils.clamp(progress, 0, cameraTimeline.length - 1);
++  const index = Math.min(cameraTimeline.length - 2, Math.floor(position));
++  const t = THREE.MathUtils.smoothstep(position - index, 0, 1);
++  const a = cameraTimeline[index];
++  const b = cameraTimeline[index + 1];
++  const blend = key => a[key].map((value, axis) => THREE.MathUtils.lerp(value, b[key][axis], t));
++  return {
++    camera: blend('camera'), target: blend('target'), object: blend('object'),
++    rotation: blend('rotation'), spread: THREE.MathUtils.lerp(a.spread, b.spread, t),
++  };
++}
++
++export function createCameraFraming() {
++  const rotation = new THREE.Quaternion();
++  const matrix = new THREE.Matrix4();
++  const direction = new THREE.Vector3();
++  const right = new THREE.Vector3();
++  const up = new THREE.Vector3();
++  const delta = new THREE.Vector3();
++  const scale = new THREE.Vector3();
++  const object = new THREE.Vector3();
++  const euler = new THREE.Euler();
++  const corners = Array.from({ length: 8 }, () => new THREE.Vector3());
++  const frame = { position: new THREE.Vector3(), target: new THREE.Vector3(), offsetX: 0, offsetY: 0 };
++  const verticalTangent = Math.tan(THREE.MathUtils.degToRad(42 / 2));
++
++  return (pose, width, height) => {
++    width = Math.max(1, width); height = Math.max(1, height);
++    const mobile = width < 768;
++    if (!mobile && !(width < 1100 && height > width)) {
++      frame.position.fromArray(pose.camera); frame.target.fromArray(pose.target);
++      frame.offsetX = 0; frame.offsetY = 0; return frame;
++    }
++    object.set(mobile ? 0 : pose.object[0], mobile ? -0.25 : pose.object[1], 0);
++    rotation.setFromEuler(euler.set(...pose.rotation));
++    scale.setScalar(mobile ? 1.12 : 1.08);
++    matrix.compose(object, rotation, scale);
++    // Conservative bounds include the plates, cables, fasteners and device stand.
++    const halfWidth = 2.2 + pose.spread * 1.1;
++    const halfHeight = 2.2 + pose.spread * 0.87;
++    for (let index = 0; index < 8; index++) {
++      corners[index].set(index & 1 ? halfWidth : -halfWidth,
++        index & 2 ? halfHeight : -halfHeight, index & 4 ? 1.45 : -1.45).applyMatrix4(matrix);
++    }
++    frame.target.copy(object);
++    direction.fromArray(pose.camera).sub(delta.fromArray(pose.target)).normalize();
++    right.set(0, 1, 0).cross(direction).normalize();
++    up.copy(direction).cross(right).normalize();
++    const horizontalTangent = verticalTangent * width / height;
++    const paneWidth = mobile ? 0.88 : 0.44;
++    const paneHeight = Math.min(0.5, 320 / height);
++    let distance = 0;
++    for (const corner of corners) {
++      delta.copy(corner).sub(frame.target);
++      const depth = delta.dot(direction);
++      distance = Math.max(distance,
++        depth + Math.abs(delta.dot(right)) / (horizontalTangent * paneWidth),
++        depth + Math.abs(delta.dot(up)) / (verticalTangent * paneHeight));
++    }
++    frame.position.copy(frame.target).addScaledVector(direction, distance + 0.2);
++    const centerX = mobile ? 0.5 : 0.27;
++    const centerY = Math.min(0.48, 340 / height);
++    frame.offsetX = width * (0.5 - centerX);
++    frame.offsetY = height * (0.5 - centerY);
++    return frame;
++  };
++}
+diff --git a/src/styles.css b/src/styles.css
+index d3d801d340cff38fb0a2f866d42ab3b12632b375..b2078fc82c4166df5fdeb16bc8619e0e3672bb32 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -21,8 +21,8 @@ img { max-width:100%; display:block; }
+ .skip-link { position:fixed;left:20px;top:-90px;z-index:200;background:var(--accent);color:var(--ink);padding:14px 22px; }
+ .skip-link:focus { top:16px; }
+ .portfolio { position:relative; overflow:clip; }
+-.world { position:fixed;inset:0;z-index:0; background:var(--ink); }
+-.webgl-stage { position:absolute;inset:0; opacity:0; transition:opacity 1.1s ease; }
++.world { position:fixed;inset:0;height:100vh;height:100dvh;z-index:0; background:var(--ink); }
++.webgl-stage { position:absolute;inset:0;touch-action:pan-y pinch-zoom; opacity:0; transition:opacity 1.1s ease; }
+ .has-three .webgl-stage { opacity:1; }
+ .forge-poster { position:absolute; width:68vw; height:92vh; right:-5vw;top:8vh; opacity:.92;transition:opacity .7s ease; }
+ .forge-poster svg { width:100%;height:100%; }
+@@ -30,7 +30,7 @@ img { max-width:100%; display:block; }
+ [data-chapter='about'] .forge-poster,[data-chapter='skills'] .forge-poster { right:40vw; width:65vw; }
+ [data-chapter='projects'] .forge-poster { opacity:.16; }
+ .world-vignette { position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 160px 65px #0b0b0c88; }
+-.film-grain { position:fixed;inset:-50%;width:200%;height:200%;z-index:30;pointer-events:none;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.7' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
++.film-grain { position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.7' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
+ .site-header { height:88px;position:fixed;left:0;right:0;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 4.3vw;background:#0b0b0cf5;border-bottom:1px solid #ffffff14; }
+ .wordmark { display:flex;align-items:center;font-family:var(--display);font-size:23px;font-weight:800;letter-spacing:-.07em; min-height:44px; }
+ .wordmark-period { color:var(--accent); }
+@@ -195,3 +195,13 @@ main a,main button,main details,.text-panel,.project-visual {pointer-events:auto
+ }
+ .has-poster[data-chapter='contact'] .forge-poster{opacity:.2;}
+ @media(pointer:fine){.custom-pointer,.custom-pointer a,.custom-pointer button,.custom-pointer summary{cursor:none;}}
++
++
++/* Native touch scrolling must pass through the decorative sculpture. */
++.webgl-stage canvas { touch-action:pan-y pinch-zoom; }
++.experience-options {display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end;}
++.scene-loader p {font-size:12px;max-width:270px;line-height:1.6;}
++.portfolio[data-motion='gentle'] .custom-cursor {display:none;}
++.portfolio[data-motion='gentle'] .project-screenshot {transform:none;}
++@media(pointer:coarse){.webgl-stage{pointer-events:none;}}
++@media(max-width:767px){.view-controls{bottom:max(12px,env(safe-area-inset-bottom));}.scroll-counter{display:none;}.experience-options{margin-left:auto;}.view-toggle{font-size:8px;padding:0 9px;min-height:44px;gap:7px;}}
+diff --git a/tests/browser.html b/tests/browser.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f7a2cf4ec6228e14ccb26c66ca635ddafe325e1
+--- /dev/null
++++ b/tests/browser.html
+@@ -0,0 +1,44 @@
++<!doctype html><meta charset="utf-8"><title>Portfolio layout checks</title>
++<style>body{margin:18px;background:#151515;color:#eee;font:14px system-ui}button{padding:10px;margin:4px}iframe{border:1px solid #666;background:#0b0b0c;display:block;max-width:none}pre{white-space:pre-wrap}#stage{max-width:100%;overflow:auto}</style>
++<h1>Portfolio browser checks</h1><p>Chromium with simulated viewport and device hints. This does not emulate Safari or a real phone GPU.</p>
++<button id="run">Run checks</button><button id="phone">Show phone layout</button><button id="tablet">Show tablet layout</button><button id="desktop">Show desktop layout</button><pre id="results">Ready</pre><div id="stage"></div>
++<script type="module">
++const stage=document.querySelector('#stage'),results=document.querySelector('#results');let frame;
++const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
++async function load(width,height,{reduced=false,coarse=false,legacy=false,keep=false}={}) {
++ if(frame)frame.remove();frame=document.createElement('iframe');frame.title='Portfolio under test';frame.width=width;frame.height=height;stage.append(frame);
++ const html=await (await fetch('/')).text();
++ const bootstrap=`<script>if(!${keep}){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');}if(${legacy})localStorage.setItem('forge-view','static');const actual=window.matchMedia.bind(window);window.matchMedia=q=>{if(q==='(prefers-reduced-motion: reduce)'||q==='(pointer: coarse)'||q==='(pointer: fine)'){const result=actual(q);Object.defineProperty(result,'matches',{value:q==='(prefers-reduced-motion: reduce)'?${reduced}:q==='(pointer: coarse)'?${coarse}:!${coarse}});return result;}return actual(q)};Object.defineProperty(navigator,'deviceMemory',{value:2,configurable:true});Object.defineProperty(navigator,'hardwareConcurrency',{value:2,configurable:true});<\/script>`;
++ frame.srcdoc=html.replace('<head>','<head>'+bootstrap);
++ for(let i=0;i<100;i++){await sleep(150);const p=frame.contentDocument?.querySelector('.portfolio');if(p&&p.dataset.sceneStatus!=='loading')return frame.contentDocument;}
++ throw Error('Timed out waiting for initialization');
++}
++const assert=(ok,message)=>{results.textContent+='\n'+(ok?'PASS ':'FAIL ')+message;if(!ok)throw Error(message)};
++document.querySelector('#run').onclick=async()=>{results.textContent='Running';try{
++ for(const [name,w,h] of [['phone',390,844],['small phone',320,780],['tablet',820,1180],['desktop',1348,900]]){
++  const doc=await load(w,h,{coarse:w<1000});const p=doc.querySelector('.portfolio');
++  assert(['ready','error'].includes(p.dataset.sceneStatus),name+': 3D attempted automatically despite 2GB / 2-core hints');
++  assert(doc.documentElement.scrollWidth<=w,name+': no horizontal document overflow');
++  assert([...doc.querySelectorAll('nav a')].every(a=>{const r=a.getBoundingClientRect();return r.left>=0&&r.right<=w}),name+': navigation fits');
++  const sceneStatus=p.dataset.sceneStatus;results.textContent+='\nINFO '+name+': renderer '+sceneStatus+(sceneStatus==='error'?' (cloud WebGL unavailable)':'');
++  const yBefore=frame.contentWindow.scrollY;frame.contentWindow.scrollTo(0,1400);await sleep(300);
++  assert(frame.contentWindow.scrollY>yBefore,name+': scrolling remains available');
++  for(let tries=0;tries<50&&Number(doc.querySelector('[role=progressbar]').getAttribute('aria-valuenow'))===0;tries++)await sleep(100);
++  assert(Number(doc.querySelector('[role=progressbar]').getAttribute('aria-valuenow'))>0,name+': scroll progress updates');
++  frame.width=h;frame.height=w;await sleep(350);
++  assert(doc.documentElement.scrollWidth<=h,name+': rotation-sized viewport has no overflow');
++ }
++ let doc=await load(390,844,{reduced:true,coarse:true});
++ assert(doc.querySelector('.portfolio').dataset.motion==='gentle','reduced-motion system preference selects gentle 3D');
++ doc.querySelector('.experience-options button').click();await sleep(150);
++ assert(doc.querySelector('.portfolio').dataset.motion==='full','explicit full-motion override works');
++ doc=await load(390,844,{reduced:true,coarse:true,keep:true});
++ assert(doc.querySelector('.portfolio').dataset.motion==='full','full-motion choice survives refresh');
++ doc=await load(390,844,{legacy:true,coarse:true});
++ assert(doc.querySelector('.portfolio').dataset.sceneStatus==='user-static','deliberate legacy 2D preference is preserved');
++ [...doc.querySelectorAll('button')].find(b=>b.textContent.includes('Enable 3D')).click();await sleep(1200);
++ assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static','explicit 3D selection exits saved 2D');
++ results.textContent+='\nDONE. Actual rendered 3D, touch gestures, context restoration on a GPU, Android Chrome and iPhone Safari still require device testing.';
++}catch(error){results.textContent+='\nERROR '+error.message;}};
++for(const [id,w,h] of [['phone',390,844],['tablet',820,1180],['desktop',1348,900]])document.querySelector('#'+id).onclick=()=>load(w,h,{coarse:w<1000});
++</script>
+diff --git a/tests/experience.test.mjs b/tests/experience.test.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c5c5a783d60afe0c2f8f949526fb6ac7e8d8dcd4
+--- /dev/null
++++ b/tests/experience.test.mjs
+@@ -0,0 +1,110 @@
++import assert from 'node:assert/strict';
++import test from 'node:test';
++import { readPreferences, savePreferences, gentleMotion, PREFERENCE_KEY } from '../src/experience/preferences.js';
++import { initialQuality, createQualityMonitor, QUALITY } from '../src/experience/quality.js';
++import { sampleScroll } from '../src/experience/scroll.js';
++import { attachSceneLifecycle } from '../src/experience/lifecycle.js';
++
++function storage(initial = {}) {
++  const entries = new Map(Object.entries(initial));
++  return { getItem: key => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value) };
++}
++test('fresh, unavailable and corrupt storage all start in 3D', () => {
++  for (const source of [storage(), undefined, storage({[PREFERENCE_KEY]:'bad json'}), {getItem(){throw Error('blocked');}}]) {
++    assert.equal(readPreferences(source).view, 'three');
++  }
++});
++test('automatic/provenance-free v2 2D entries do not disable 3D', () => {
++  for (const source of ['automatic', undefined]) {
++    assert.equal(readPreferences(storage({[PREFERENCE_KEY]:JSON.stringify({version:2,source,view:'static'})})).view,'three');
++  }
++});
++test('deliberate legacy 2D selection is preserved; choosing 3D overrides it', () => {
++  const source=storage({'forge-view':'static'});
++  assert.equal(readPreferences(source).view,'static');
++  savePreferences(source,{view:'three',motion:'gentle'});
++  assert.deepEqual(readPreferences(source),{view:'three',motion:'gentle'});
++});
++test('deliberate v2 2D and full-motion preferences survive refresh', () => {
++  const source=storage(); savePreferences(source,{view:'static',motion:'full'});
++  assert.deepEqual(readPreferences(source),{view:'static',motion:'full'});
++});
++test('reduced motion chooses gentler animation, with an explicit full-motion override', () => {
++  assert.equal(gentleMotion(true,'system'),true);
++  assert.equal(gentleMotion(true,'full'),false);
++  assert.equal(gentleMotion(false,'gentle'),true);
++  assert.equal(gentleMotion(false,'system'),false);
++});
++test('mobile/hardware/data-saver hints choose conservative render quality', () => {
++  for(const hints of [{width:390},{width:1440,coarse:true},{width:1440,saveData:true},{width:1440,memory:2},{width:1440,cores:2}]) assert.equal(initialQuality(hints),0);
++  assert.equal(initialQuality({width:1440,memory:16,cores:12}),2);
++  assert.ok(QUALITY.every(q=>q.segments>=16&&q.textureSize>=512&&q.dpr>0));
++});
++function feed(monitor, fps, seconds) {
++  const changes=[];
++  for(let i=0;i<fps*seconds;i++){const tier=monitor.sample(1/fps);if(tier!==null)changes.push(tier);}
++  return changes;
++}
++test('sustained slow rendering lowers quality without disabling the scene', () => {
++  const monitor=createQualityMonitor(2);
++  assert.deepEqual(feed(monitor,24,20),[1,0]);
++});
++test('short frame spikes and idle/resume intervals do not lower quality', () => {
++  const monitor=createQualityMonitor(2);
++  assert.equal(monitor.sample(8),null); assert.equal(monitor.sample(0),null);
++  assert.deepEqual(feed(monitor,24,1),[]); monitor.reset();
++  assert.deepEqual(feed(monitor,60,10),[]);
++});
++test('fast sustained frames increase mobile quality only to its cap', () => {
++  const monitor=createQualityMonitor(0,1);
++  assert.deepEqual(feed(monitor,60,35),[1]);
++});
++test('quality cooldown prevents repeated reconfiguration after recovery', () => {
++  const monitor=createQualityMonitor(2); monitor.setTier(0);
++  assert.deepEqual(feed(monitor,60,8),[]);
++  assert.deepEqual(feed(monitor,60,12),[1]);
++});
++test('native scroll samples drive every chapter continuously, including rubber-banding', () => {
++  const stops=[0,900,1900,3300,5000];
++  assert.equal(sampleScroll(stops,-50,6000,800).position,0);
++  assert.equal(sampleScroll(stops,1400,6000,800).position,1.5);
++  assert.equal(sampleScroll(stops,3300,6000,800).index,3);
++  assert.equal(sampleScroll(stops,9000,6000,800).progress,100);
++  for(let y=0;y<=5200;y+=11){const p=sampleScroll(stops,y,6000,800);assert.ok(Number.isFinite(p.position));assert.ok(p.position>=0&&p.position<=4);}
++});
++test('recomputed viewport/section geometry retains the current chapter', () => {
++  const before=sampleScroll([0,900,1900,3300,5000],1400,6000,844);
++  const after=sampleScroll([0,950,2000,3400,5100],1400,6100,740);
++  assert.equal(after.index,before.index);assert.ok(after.position>1&&after.position<2);
++  assert.ok(Number.isFinite(sampleScroll([0,0,0,0,0],0,0,0).position));
++});
++
++function lifecycleFixture() {
++  const canvas=new EventTarget(), page=new EventTarget(), wakeTarget=new EventTarget();page.hidden=false;
++  const calls=[], pending=new Map();let id=0;
++  const timers={setTimeout(fn){pending.set(++id,fn);return id;},clearTimeout(key){pending.delete(key);}};
++  const dispose=attachSceneLifecycle({canvas,page,wakeTarget,timers,pause:value=>calls.push(['pause',value]),wake:()=>calls.push(['wake']),recovering:()=>calls.push(['recovering']),restored:()=>calls.push(['restored']),fail:()=>calls.push(['fail'])});
++  return {canvas,page,wakeTarget,calls,pending,dispose};
++}
++test('context loss is prevented, pauses rendering, restores the same scene and clears timeout', () => {
++  const f=lifecycleFixture(), event=new Event('webglcontextlost',{cancelable:true});
++  f.canvas.dispatchEvent(event);assert.ok(event.defaultPrevented);assert.equal(f.pending.size,1);
++  assert.deepEqual(f.calls.at(-2),['pause',true]);assert.deepEqual(f.calls.at(-1),['recovering']);
++  f.canvas.dispatchEvent(new Event('webglcontextrestored'));
++  assert.equal(f.pending.size,0);assert.ok(f.calls.some(c=>c[0]==='restored'));assert.deepEqual(f.calls.at(-1),['wake']);
++  f.dispose();
++});
++test('hidden pages pause rendering and recovery timers, then resume', () => {
++  const f=lifecycleFixture();f.canvas.dispatchEvent(new Event('webglcontextlost',{cancelable:true}));
++  f.page.hidden=true;f.page.dispatchEvent(new Event('visibilitychange'));assert.equal(f.pending.size,0);
++  const before=f.calls.length;f.wakeTarget.dispatchEvent(new Event('forge-wake'));assert.equal(f.calls.length,before);
++  f.page.hidden=false;f.page.dispatchEvent(new Event('visibilitychange'));assert.equal(f.pending.size,1);
++  f.canvas.dispatchEvent(new Event('webglcontextrestored'));assert.equal(f.pending.size,0);f.dispose();
++});
++test('failed context recovery enters fallback; unmount cancels timers and listeners', () => {
++  const f=lifecycleFixture();f.canvas.dispatchEvent(new Event('webglcontextlost',{cancelable:true}));
++  [...f.pending.values()][0]();assert.deepEqual(f.calls.at(-1),['fail']);
++  f.dispose();assert.equal(f.pending.size,0);const before=f.calls.length;
++  for(const [target,name] of [[f.canvas,'webglcontextrestored'],[f.page,'visibilitychange'],[f.wakeTarget,'forge-wake']]) target.dispatchEvent(new Event(name));
++  assert.equal(f.calls.length,before);
++});
+diff --git a/tests/framing.test.mjs b/tests/framing.test.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..07cebba73ceba2d7def48f4373861cf13a1c460f
+--- /dev/null
++++ b/tests/framing.test.mjs
+@@ -0,0 +1,81 @@
++import assert from 'node:assert/strict';
++import test from 'node:test';
++import * as THREE from 'three';
++import { cameraTimeline } from '../src/data/portfolio.js';
++import { createCameraFraming, sampleCameraPose } from '../src/scene/framing.js';
++
++function sculpturePoints(pose, mobile, stage) {
++  const points = [];
++  const transform = new THREE.Matrix4().compose(
++    new THREE.Vector3(mobile ? 0 : pose.object[0], mobile ? -0.25 : pose.object[1], 0),
++    new THREE.Quaternion().setFromEuler(new THREE.Euler(...pose.rotation)),
++    new THREE.Vector3().setScalar(mobile ? 1.12 : 1.08),
++  );
++  const addBox = (center, halfSize, rotation = new THREE.Euler()) => {
++    const local = new THREE.Matrix4().compose(center,
++      new THREE.Quaternion().setFromEuler(rotation), new THREE.Vector3(1, 1, 1));
++    for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) {
++      points.push(new THREE.Vector3(x * halfSize.x, y * halfSize.y, z * halfSize.z)
++        .applyMatrix4(local).applyMatrix4(transform));
++    }
++  };
++  for (let index = 0; index < 6; index++) {
++    const side = index % 2 ? 1 : -1;
++    const row = Math.floor(index / 2);
++    const radius = [1.04, 1.04, 0.9, 0.9, 0.73, 0.73][index];
++    addBox(new THREE.Vector3(side * (0.85 + row * 0.34 + pose.spread * (0.35 + row * 0.35)),
++      (row - 1) * pose.spread * 0.87, (index % 2 ? 0.2 : -0.2) * pose.spread),
++    new THREE.Vector3(0.2, radius, radius), new THREE.Euler(0, pose.spread * side * 0.18, 0));
++  }
++  addBox(new THREE.Vector3(), new THREE.Vector3(0.6, 0.6, 0.6));
++  addBox(new THREE.Vector3(0, -0.6, 0), new THREE.Vector3(1.85, 1.1, 0.7));
++  if (stage >= 2.55 && stage <= 4) {
++    addBox(new THREE.Vector3(0, 0, 0.4), new THREE.Vector3(2, 1.42, 0.1));
++    addBox(new THREE.Vector3(0, -2.08, 0.4), new THREE.Vector3(0.9, 0.05, 0.45));
++  }
++  return points;
++}
++
++for (const [width, height] of [[320, 780], [390, 844], [430, 932], [740, 390], [768, 1024], [820, 1180], [1024, 1366]]) {
++  test(`settled sculpture remains in view throughout the timeline at ${width} × ${height}`, () => {
++    const fit = createCameraFraming();
++    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 150);
++    for (let step = 0; step <= 80; step++) {
++      const stage = step / 20;
++      const pose = sampleCameraPose(stage);
++      const frame = fit(pose, width, height);
++      camera.position.copy(frame.position);
++      camera.lookAt(frame.target);
++      camera.setViewOffset(width, height, frame.offsetX, frame.offsetY, width, height);
++      camera.updateMatrixWorld();
++      for (const point of sculpturePoints(pose, width < 768, stage)) {
++        const projected = point.project(camera);
++        assert.ok(Math.abs(projected.x) < 0.96 && Math.abs(projected.y) < 0.96,
++          `cropped at stage ${stage}: ${projected.x}, ${projected.y}`);
++        assert.ok(projected.z > -1 && projected.z < 1, `outside clipping planes at stage ${stage}`);
++      }
++    }
++  });
++}
++
++test('camera direction and pose meet continuously at each authored chapter', () => {
++  const fit = createCameraFraming();
++  for (let chapter = 1; chapter < cameraTimeline.length - 1; chapter++) {
++    const before = fit(sampleCameraPose(chapter - 0.0001), 390, 844).position.clone();
++    const after = fit(sampleCameraPose(chapter + 0.0001), 390, 844).position.clone();
++    assert.ok(before.distanceTo(after) < 0.001, `camera jumps at chapter ${chapter}`);
++    assert.deepEqual(sampleCameraPose(chapter).rotation, cameraTimeline[chapter].rotation);
++  }
++});
++
++for (const [width,height] of [[844,390],[1024,768],[1348,900],[1920,1080]]) {
++  test(`desktop camera preserves the authored path at ${width} x ${height}`,()=>{
++    const frame=createCameraFraming();
++    for(let step=0;step<=80;step++) {
++      const pose=sampleCameraPose(step/20), result=frame(pose,width,height);
++      assert.deepEqual(result.position.toArray(),pose.camera);
++      assert.deepEqual(result.target.toArray(),pose.target);
++      assert.equal(result.offsetX,0);assert.equal(result.offsetY,0);
++    }
++  });
++}

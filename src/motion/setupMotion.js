@@ -6,11 +6,13 @@ import 'lenis/dist/lenis.css';
 gsap.registerPlugin(ScrollTrigger);
 export function setupMotion({ scrollEngine, cursor, motion, reveal }) {
   const fine = matchMedia('(pointer: fine)').matches;
-  const lenis = new Lenis({ duration: 1.15, smoothWheel: true, syncTouch: false, anchors: false, prevent: node => node.closest?.('dialog') });
+  // Native touch scroll owns the timeline on phones; Lenis is desktop-only.
+  ScrollTrigger.config({ ignoreMobileResize: true });
+  const lenis = fine ? new Lenis({ duration: 1.15, smoothWheel: true, syncTouch: false, anchors: false, prevent: node => node.closest?.('dialog') }) : null;
   scrollEngine.current = lenis;
-  lenis.on('scroll', ScrollTrigger.update);
-  const tick = time => { if (!document.hidden) lenis.raf(time * 1000); };
-  gsap.ticker.add(tick);
+  lenis?.on('scroll', ScrollTrigger.update);
+  const tick = time => { if (!document.hidden) lenis?.raf(time * 1000); };
+  if (lenis) gsap.ticker.add(tick);
   const context = gsap.context(() => {
     if (reveal) {
       gsap.fromTo('.hero-name .line-inner', { yPercent: 105 }, { yPercent: 0, duration: 1.45, stagger: 0.12, ease: 'expo.out', clearProps: 'transform' });
@@ -27,7 +29,7 @@ export function setupMotion({ scrollEngine, cursor, motion, reveal }) {
     const el = cursor.current;
     const x = gsap.quickTo(el, 'x', { duration: 0.32, ease: 'power3.out' });
     const y = gsap.quickTo(el, 'y', { duration: 0.32, ease: 'power3.out' });
-    listen(window, 'pointermove', e => { x(e.clientX); y(e.clientY); el.classList.add('visible'); motion.current.pointer = [(e.clientX / innerWidth - 0.5) * 2, (e.clientY / innerHeight - 0.5) * 2]; });
+    listen(window, 'pointermove', e => { x(e.clientX); y(e.clientY); el.classList.add('visible'); motion.current.pointer = [(e.clientX / innerWidth - 0.5) * 2, (e.clientY / innerHeight - 0.5) * 2]; window.dispatchEvent(new Event('forge-wake')); });
     listen(document, 'pointerover', e => {
       const target = e.target.closest?.('[data-cursor],a,button,summary');
       el.classList.toggle('is-link', !!target);
@@ -41,12 +43,14 @@ export function setupMotion({ scrollEngine, cursor, motion, reveal }) {
   }
   const refresh = () => ScrollTrigger.refresh();
   document.addEventListener('toggle', refresh, true);
-  document.fonts?.ready.then(refresh);
+  let disposed = false;
+  document.fonts?.ready.then(() => { if (!disposed) refresh(); });
   return () => {
+    disposed = true;
     document.documentElement.classList.remove('custom-pointer');
     document.removeEventListener('toggle', refresh, true);
     listeners.forEach(remove => remove());
-    context.revert(); gsap.ticker.remove(tick); lenis.destroy(); scrollEngine.current = null;
+    context.revert(); gsap.ticker.remove(tick); lenis?.destroy(); scrollEngine.current = null;
     if (cursor.current) { cursor.current.classList.remove('visible'); gsap.killTweensOf(cursor.current); }
     document.querySelectorAll('[data-magnetic]').forEach(el => { gsap.killTweensOf(el); gsap.set(el, { clearProps: 'transform' }); });
   };

@@ -1,116 +1,137 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { chapters } from '../data/portfolio';
+import { gentleMotion, readPreferences, savePreferences } from '../experience/preferences.js';
+import { sampleScroll } from '../experience/scroll.js';
 
 export function useExperience() {
   const [active, setActive] = useState('home');
   const [progress, setProgress] = useState(0);
-  const [mode, setMode] = useState('static');
+  const [mode, setMode] = useState('three');
   const [initialized, setInitialized] = useState(false);
-  const [reduced, setReduced] = useState(false);
+  const [systemReduced, setSystemReduced] = useState(false);
+  const [motionChoice, setMotionChoice] = useState('system');
   const [reason, setReason] = useState('');
-  const [webglUnavailable, setWebglUnavailable] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
+  const [sceneStatus, setSceneStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState({ loaded: 0, total: 0 });
   const [selected, setSelected] = useState('React');
-  const motion = useRef({ position: 0, pointer: [0, 0], selected: 'React', visible: true });
+  const reduced = gentleMotion(systemReduced, motionChoice);
+  const preferences = useRef({ view: 'three', motion: 'system' });
+  const motion = useRef({ position: 0, pointer: [0, 0], selected: 'React', visible: true, gentle: false });
   const scrollEngine = useRef(null);
   const progressElement = useRef(null);
   const cursor = useRef(null);
-  const initializedRef = useRef(false);
   const revealDone = useRef(false);
+  const wake = () => window.dispatchEvent(new Event('forge-wake'));
 
-  useEffect(() => { motion.current.selected = selected; window.dispatchEvent(new Event('forge-wake')); }, [selected]);
+  useEffect(() => { motion.current.selected = selected; wake(); }, [selected]);
+  useEffect(() => { motion.current.gentle = reduced; wake(); }, [reduced]);
   useEffect(() => {
+    let storage;
+    try { storage = window.localStorage; } catch { /* unavailable */ }
+    const saved = readPreferences(storage);
+    preferences.current = saved;
+    setMode(saved.view); setMotionChoice(saved.motion);
+    if (saved.view === 'static') { setReason('2D view selected'); setSceneStatus('user-static'); }
     const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const choose = () => {
-      setReduced(media.matches);
-      let saved = false;
-      try { saved = localStorage.getItem('forge-view') === 'static'; } catch { /* private browsing */ }
-      const lowPower = navigator.connection?.saveData || (navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
-      let supportsWebGL = false;
-      if (!media.matches && !lowPower && !saved) {
-        try { const c = document.createElement('canvas'); const gl = c.getContext('webgl2'); supportsWebGL = !!gl; gl?.getExtension('WEBGL_lose_context')?.loseContext(); } catch { /* fallback */ }
-      }
-      setWebglUnavailable(!media.matches && !lowPower && !saved && !supportsWebGL);
-      setMode(supportsWebGL ? 'three' : 'static');
-      setReason(media.matches ? 'Reduced motion' : lowPower ? 'Lightweight view' : saved ? '2D view' : supportsWebGL ? '' : '2D view');
-      setInitialized(true); initializedRef.current = true;
-    };
-    choose(); media.addEventListener('change', choose);
-    return () => media.removeEventListener('change', choose);
+    const change = () => setSystemReduced(media.matches);
+    change(); media.addEventListener('change', change); setInitialized(true);
+    return () => media.removeEventListener('change', change);
   }, []);
 
-  const fallback = useCallback(() => { setMode('static'); setSceneReady(false); setReason('2D view'); }, []);
-  const ready = useCallback(() => setSceneReady(true), []);
+  const remember = useCallback(patch => {
+    preferences.current = { ...preferences.current, ...patch };
+    try { savePreferences(window.localStorage, preferences.current); } catch { /* session only */ }
+  }, []);
+  const fallback = useCallback((message) => {
+    setMode('static'); setSceneReady(false); setSceneStatus('error');
+    setReason(typeof message === 'string' ? message : '3D could not load. You can retry.');
+    // Automatic failure must never overwrite the visitor's view preference.
+  }, []);
+  const ready = useCallback(() => { setSceneReady(true); setSceneStatus('ready'); setReason(''); }, []);
+  const recovering = useCallback(() => { setSceneReady(false); setSceneStatus('recovering'); }, []);
   const loadProgress = useCallback(value => setLoading(value), []);
+  const retry = useCallback(() => {
+    remember({ view: 'three' }); setAttempt(value => value + 1);
+    setSceneReady(false); setLoading({ loaded: 0, total: 0 });
+    setSceneStatus('loading'); setReason(''); setMode('three');
+  }, [remember]);
   const toggleMode = useCallback(() => {
-    if (reduced) return;
-    if (mode === 'static') {
-      try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl2');
-        if (!gl) { setWebglUnavailable(true); return; }
-        gl.getExtension('WEBGL_lose_context')?.loseContext();
-      } catch { setWebglUnavailable(true); return; }
-    }
-    setMode(value => { const next = value === 'three' ? 'static' : 'three'; try { localStorage.setItem('forge-view', next); } catch { /* temporary preference */ } setReason(next === 'static' ? '2D view' : ''); setSceneReady(false); return next; });
-  }, [reduced, mode]);
+    if (mode === 'static') { retry(); return; }
+    remember({ view: 'static' }); setMode('static'); setSceneReady(false);
+    setSceneStatus('user-static'); setReason('2D view selected');
+  }, [mode, remember, retry]);
+  const toggleMotion = useCallback(() => {
+    const next = reduced ? 'full' : 'gentle';
+    remember({ motion: next }); setMotionChoice(next);
+  }, [reduced, remember]);
 
   useEffect(() => {
-    if (mode !== 'three' || sceneReady) return;
-    const timer = setTimeout(fallback, 12000);
-    return () => clearTimeout(timer);
-  }, [mode, sceneReady, fallback]);
-
-  useEffect(() => {
-    let raf = 0;
+    let raf = 0, measure = true, previousIndex = -1, previousProgress = -1;
+    let stops = [];
     const update = () => {
       raf = 0;
-      const nodes = chapters.map(c => document.getElementById(c.id));
-      const y = scrollY;
-      const stops = nodes.map(node => Math.max(0, (node?.getBoundingClientRect().top || 0) + y - Math.max(140, innerHeight * 0.18)));
-      let index = 0;
-      while (index < stops.length - 1 && y >= stops[index + 1]) index++;
-      const next = stops[index + 1];
-      const local = next ? Math.min(1, Math.max(0, (y - stops[index]) / (next - stops[index]))) : 0;
-      motion.current.position = index + local;
-      const full = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-      const p = Math.min(1, Math.max(0, y / full));
-      setProgress(Math.round(p * 100));
-      if (progressElement.current) progressElement.current.style.transform = `scaleX(${p})`;
-      setActive(chapters[index].id);
+      if (document.hidden) return;
+      const y = window.scrollY;
+      const height = document.documentElement.clientHeight || innerHeight;
+      if (measure) {
+        stops = chapters.map(c => Math.max(0, (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y - Math.max(140, height * 0.18)));
+        measure = false;
+      }
+      const sample = sampleScroll(stops, y, document.documentElement.scrollHeight, height);
+      motion.current.position = sample.position;
+      if (sample.progress !== previousProgress) { previousProgress = sample.progress; setProgress(sample.progress); }
+      if (sample.index !== previousIndex) { previousIndex = sample.index; setActive(chapters[sample.index].id); }
+      if (progressElement.current) progressElement.current.style.transform = `scaleX(${sample.progress / 100})`;
+      // Wake after writing the timeline; the last touch-scroll event must not
+      // leave a demand frame reading stale progress and then going idle.
+      wake();
     };
-    const request = () => { if (!raf) raf = requestAnimationFrame(update); };
-    const visibility = () => { motion.current.visible = !document.hidden; if (!document.hidden) request(); };
+    const request = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(update); };
+    const resize = () => { measure = true; request(); };
+    const visibility = () => {
+      motion.current.visible = !document.hidden;
+      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else resize();
+    };
     window.addEventListener('scroll', request, { passive: true });
-    window.addEventListener('resize', request);
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+    window.addEventListener('pageshow', resize);
+    window.visualViewport?.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', visibility);
-    const resizeObserver = new ResizeObserver(request);
-    resizeObserver.observe(document.querySelector('main'));
-    request();
-    return () => { resizeObserver.disconnect(); cancelAnimationFrame(raf); window.removeEventListener('scroll', request); window.removeEventListener('resize', request); document.removeEventListener('visibilitychange', visibility); };
+    const observer = new ResizeObserver(resize);
+    const main = document.querySelector('main'); if (main) observer.observe(main);
+    let disposed = false;
+    document.fonts?.ready.then(() => { if (!disposed) resize(); }); request();
+    return () => {
+      disposed = true; observer.disconnect(); cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', request); window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize); window.removeEventListener('pageshow', resize);
+      window.visualViewport?.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', visibility);
+    };
   }, []);
 
   useEffect(() => {
     if (!initialized || reduced || mode === 'static') return;
-    let dispose; let stopped = false;
+    let dispose, stopped = false;
     import('../motion/setupMotion').then(({ setupMotion }) => {
       if (stopped) return;
       dispose = setupMotion({ scrollEngine, cursor, motion, reveal: !revealDone.current });
       revealDone.current = true;
-    }).catch(() => { /* native scrolling and visible content remain available */ });
+    }).catch(() => { /* Native scrolling and visible content remain available. */ });
     return () => { stopped = true; dispose?.(); };
   }, [initialized, reduced, mode]);
 
   const navigate = useCallback((event, id) => {
     if (event && (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.button > 0)) return;
     const node = document.getElementById(id); if (!node) return;
-    event?.preventDefault();
-    history.replaceState(null, '', `#${id}`);
-    node.focus({ preventScroll: true });
-    if (scrollEngine.current) scrollEngine.current.scrollTo(node, { offset: -80, duration: 1.35 });
-    else window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY - (innerWidth < 768 ? 112 : 90), behavior: 'instant' });
+    event?.preventDefault(); history.replaceState(null, '', `#${id}`); node.focus({ preventScroll: true });
+    const offset = innerWidth < 768 ? 112 : 90;
+    if (scrollEngine.current) scrollEngine.current.scrollTo(node, { offset: -offset, duration: 1.35 });
+    else window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY - offset, behavior: 'instant' });
   }, []);
 
-  return { active, progress, mode, initialized, reduced, webglUnavailable, reason, sceneReady, loading, selected, setSelected, motion, progressElement, cursor, navigate, toggleMode, ready, fallback, loadProgress };
+  return { active, progress, mode, initialized, reduced, reason, sceneReady, sceneStatus, attempt, loading, selected, setSelected, motion, progressElement, cursor, navigate, toggleMode, toggleMotion, retry, ready, recovering, fallback, loadProgress };
 }

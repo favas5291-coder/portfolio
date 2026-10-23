@@ -21,8 +21,8 @@ img { max-width:100%; display:block; }
 .skip-link { position:fixed;left:20px;top:-90px;z-index:200;background:var(--accent);color:var(--ink);padding:14px 22px; }
 .skip-link:focus { top:16px; }
 .portfolio { position:relative; overflow:clip; }
-.world { position:fixed;inset:0;z-index:0; background:var(--ink); }
-.webgl-stage { position:absolute;inset:0; opacity:0; transition:opacity 1.1s ease; }
+.world { position:fixed;inset:0;height:100vh;height:100dvh;z-index:0; background:var(--ink); }
+.webgl-stage { position:absolute;inset:0;touch-action:pan-y pinch-zoom; opacity:0; transition:opacity 1.1s ease; }
 .has-three .webgl-stage { opacity:1; }
 .forge-poster { position:absolute; width:68vw; height:92vh; right:-5vw;top:8vh; opacity:.92;transition:opacity .7s ease; }
 .forge-poster svg { width:100%;height:100%; }
@@ -30,7 +30,7 @@ img { max-width:100%; display:block; }
 [data-chapter='about'] .forge-poster,[data-chapter='skills'] .forge-poster { right:40vw; width:65vw; }
 [data-chapter='projects'] .forge-poster { opacity:.16; }
 .world-vignette { position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 160px 65px #0b0b0c88; }
-.film-grain { position:fixed;inset:-50%;width:200%;height:200%;z-index:30;pointer-events:none;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.7' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
+.film-grain { position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.7' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
 .site-header { height:88px;position:fixed;left:0;right:0;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 4.3vw;background:#0b0b0cf5;border-bottom:1px solid #ffffff14; }
 .wordmark { display:flex;align-items:center;font-family:var(--display);font-size:23px;font-weight:800;letter-spacing:-.07em; min-height:44px; }
 .wordmark-period { color:var(--accent); }
@@ -195,3 +195,13 @@ main a,main button,main details,.text-panel,.project-visual {pointer-events:auto
 }
 .has-poster[data-chapter='contact'] .forge-poster{opacity:.2;}
 @media(pointer:fine){.custom-pointer,.custom-pointer a,.custom-pointer button,.custom-pointer summary{cursor:none;}}
+
+
+/* Native touch scrolling must pass through the decorative sculpture. */
+.webgl-stage canvas { touch-action:pan-y pinch-zoom; }
+.experience-options {display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end;}
+.scene-loader p {font-size:12px;max-width:270px;line-height:1.6;}
+.portfolio[data-motion='gentle'] .custom-cursor {display:none;}
+.portfolio[data-motion='gentle'] .project-screenshot {transform:none;}
+@media(pointer:coarse){.webgl-stage{pointer-events:none;}}
+@media(max-width:767px){.view-controls{bottom:max(12px,env(safe-area-inset-bottom));}.scroll-counter{display:none;}.experience-options{margin-left:auto;}.view-toggle{font-size:8px;padding:0 9px;min-height:44px;gap:7px;}}

@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><title>Portfolio layout checks</title>
+<style>body{margin:18px;background:#151515;color:#eee;font:14px system-ui}button{padding:10px;margin:4px}iframe{border:1px solid #666;background:#0b0b0c;display:block;max-width:none}pre{white-space:pre-wrap}#stage{max-width:100%;overflow:auto}</style>
+<h1>Portfolio browser checks</h1><p>Chromium with simulated viewport and device hints. This does not emulate Safari or a real phone GPU.</p>
+<button id="run">Run checks</button><button id="phone">Show phone layout</button><button id="tablet">Show tablet layout</button><button id="desktop">Show desktop layout</button><pre id="results">Ready</pre><div id="stage"></div>
+<script type="module">
+const stage=document.querySelector('#stage'),results=document.querySelector('#results');let frame;
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function load(width,height,{reduced=false,coarse=false,legacy=false,keep=false}={}) {
+ if(frame)frame.remove();frame=document.createElement('iframe');frame.title='Portfolio under test';frame.width=width;frame.height=height;stage.append(frame);
+ const html=await (await fetch('/')).text();
+ const bootstrap=`<script>if(!${keep}){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');}if(${legacy})localStorage.setItem('forge-view','static');const actual=window.matchMedia.bind(window);window.matchMedia=q=>{if(q==='(prefers-reduced-motion: reduce)'||q==='(pointer: coarse)'||q==='(pointer: fine)'){const result=actual(q);Object.defineProperty(result,'matches',{value:q==='(prefers-reduced-motion: reduce)'?${reduced}:q==='(pointer: coarse)'?${coarse}:!${coarse}});return result;}return actual(q)};Object.defineProperty(navigator,'deviceMemory',{value:2,configurable:true});Object.defineProperty(navigator,'hardwareConcurrency',{value:2,configurable:true});<\/script>`;
+ frame.srcdoc=html.replace('<head>','<head>'+bootstrap);
+ for(let i=0;i<100;i++){await sleep(150);const p=frame.contentDocument?.querySelector('.portfolio');if(p&&p.dataset.sceneStatus!=='loading')return frame.contentDocument;}
+ throw Error('Timed out waiting for initialization');
+}
+const assert=(ok,message)=>{results.textContent+='\n'+(ok?'PASS ':'FAIL ')+message;if(!ok)throw Error(message)};
+document.querySelector('#run').onclick=async()=>{results.textContent='Running';try{
+ for(const [name,w,h] of [['phone',390,844],['small phone',320,780],['tablet',820,1180],['desktop',1348,900]]){
+  const doc=await load(w,h,{coarse:w<1000});const p=doc.querySelector('.portfolio');
+  assert(['ready','error'].includes(p.dataset.sceneStatus),name+': 3D attempted automatically despite 2GB / 2-core hints');
+  assert(doc.documentElement.scrollWidth<=w,name+': no horizontal document overflow');
+  assert([...doc.querySelectorAll('nav a')].every(a=>{const r=a.getBoundingClientRect();return r.left>=0&&r.right<=w}),name+': navigation fits');
+  const sceneStatus=p.dataset.sceneStatus;results.textContent+='\nINFO '+name+': renderer '+sceneStatus+(sceneStatus==='error'?' (cloud WebGL unavailable)':'');
+  const yBefore=frame.contentWindow.scrollY;frame.contentWindow.scrollTo(0,1400);await sleep(300);
+  assert(frame.contentWindow.scrollY>yBefore,name+': scrolling remains available');
+  for(let tries=0;tries<50&&Number(doc.querySelector('[role=progressbar]').getAttribute('aria-valuenow'))===0;tries++)await sleep(100);
+  assert(Number(doc.querySelector('[role=progressbar]').getAttribute('aria-valuenow'))>0,name+': scroll progress updates');
+  frame.width=h;frame.height=w;await sleep(350);
+  assert(doc.documentElement.scrollWidth<=h,name+': rotation-sized viewport has no overflow');
+ }
+ let doc=await load(390,844,{reduced:true,coarse:true});
+ assert(doc.querySelector('.portfolio').dataset.motion==='gentle','reduced-motion system preference selects gentle 3D');
+ doc.querySelector('.experience-options button').click();await sleep(150);
+ assert(doc.querySelector('.portfolio').dataset.motion==='full','explicit full-motion override works');
+ doc=await load(390,844,{reduced:true,coarse:true,keep:true});
+ assert(doc.querySelector('.portfolio').dataset.motion==='full','full-motion choice survives refresh');
+ doc=await load(390,844,{legacy:true,coarse:true});
+ assert(doc.querySelector('.portfolio').dataset.sceneStatus==='user-static','deliberate legacy 2D preference is preserved');
+ [...doc.querySelectorAll('button')].find(b=>b.textContent.includes('Enable 3D')).click();await sleep(1200);
+ assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static','explicit 3D selection exits saved 2D');
+ results.textContent+='\nDONE. Actual rendered 3D, touch gestures, context restoration on a GPU, Android Chrome and iPhone Safari still require device testing.';
+}catch(error){results.textContent+='\nERROR '+error.message;}};
+for(const [id,w,h] of [['phone',390,844],['tablet',820,1180],['desktop',1348,900]])document.querySelector('#'+id).onclick=()=>load(w,h,{coarse:w<1000});
+</script>
