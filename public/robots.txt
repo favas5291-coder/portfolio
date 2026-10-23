@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://favas-developer-quest.cocoabadge12.chatgpt.site/sitemap.xml

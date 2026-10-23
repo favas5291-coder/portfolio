@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.sites-runtime/
+.env
+.env.local
+*.log
+*.tar.gz
+*.zip
+.DS_Store
+__qa.html
