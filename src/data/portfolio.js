@@ -1,6 +1,6 @@
 // All personal and project copy lives here. Empty optional destinations stay hidden.
 export const profile = {
-  name: 'Muhammed Favas k ',
+  name: 'Muhammed Favas K',
   displayName: ['Muhammed', 'Favas '],
   shortName: 'Favas',
   signature: 'Favas .',
@@ -8,10 +8,10 @@ export const profile = {
   location: 'Kozhikode, Kerala, India',
   email: 'favas5291@gmail.com',
   github: 'https://github.com/favas5291-coder',
-  linkedin: '',
+  linkedin: 'https://www.linkedin.com/in/muhammed-favas-2aa4b03aa',
   cv: '',
-  headline: 'I build web experiences that turn ideas into reality.',
-  intro: 'From the interface to the database. I build useful, responsive applications with the MERN stack.',
+  headline: 'Freelance Web Developer in Kozhikode — Websites Built for Your Business.',
+  intro: 'I’m Favas. I build business websites, online stores and landing pages that make your offer clear and help customers contact you. Based in Calicut, Kerala; available for remote projects across India.',
   aboutTitle: ['Good ideas.', 'Built to work.'],
   about: 'I’m Favas, a full stack developer based in Kozhikode, Kerala. I work with JavaScript, React, Node.js, Express and MongoDB.',
   approach: 'My work connects what people see with what happens behind it. GymDrobe puts that into practice: products, accounts, shopping and checkout in one connected experience.',

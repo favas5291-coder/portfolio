@@ -1,17 +1,20 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
-const input = process.argv[2];
-if (!input) throw new Error('Usage: node scripts/set-site-url.mjs https://your-domain.com');
-const url = new URL(input);
-if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
-  throw new Error('Supply an HTTPS origin without a path, credentials, query or hash.');
+export async function setSiteURL(input) {
+  if (!input) throw new Error('Usage: node scripts/set-site-url.mjs https://your-domain.com');
+  const url = new URL(input);
+  if (url.protocol !== 'https:' || !/^[a-z0-9.-]+$/i.test(url.hostname) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('Supply an HTTPS origin without a path, credentials, query or hash.');
+  const path = 'src/data/site.js';
+  const source = await readFile(path, 'utf8');
+  const match = source.match(/export const SITE_ORIGIN = '([^']+)';/);
+  if (!match) throw new Error('SITE_ORIGIN is missing from src/data/site.js');
+  await writeFile(path, source.replace(match[0], `export const SITE_ORIGIN = '${url.origin}';`));
+  for (const publicPath of ['public/robots.txt', 'public/sitemap.xml']) {
+    const content = await readFile(publicPath, 'utf8');
+    await writeFile(publicPath, content.replaceAll(match[1], url.origin));
+  }
+  console.log(`Site origin set to ${url.origin}. Rebuild to regenerate every page, canonical, graph and sitemap.`);
 }
-const html = await readFile('index.html', 'utf8');
-const oldUrl = html.match(/<link rel="canonical" href="(https:\/\/[^\"]+)"/);
-if (!oldUrl) throw new Error('Canonical URL is missing from index.html.');
-const oldOrigin = new URL(oldUrl[1]).origin;
-for (const path of ['index.html', 'public/robots.txt', 'public/sitemap.xml']) {
-  const content = await readFile(path, 'utf8');
-  await writeFile(path, content.replaceAll(oldOrigin, url.origin));
-}
-console.log(`Updated canonical metadata and sitemap to ${url.origin}. Rebuild before deploying.`);
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await setSiteURL(process.argv[2]);

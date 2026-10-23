@@ -1,3 +1,5 @@
+> Freelance service pages and enquiry update: see [deployment steps](docs/SEO-DEPLOY.md) and [SEO report, page metadata and 30-day plan](docs/SEO-REPORT.md). The Render site uses real static pages; remove an old SPA catch-all rewrite before verifying missing-page status codes.
+
 # Favas — The Forge
 
 A scroll-driven portfolio for **Muhammed Favas K**, built with React, Vite, Tailwind CSS, Three.js, React Three Fiber, drei, React Three Postprocessing, GSAP/ScrollTrigger and Lenis.

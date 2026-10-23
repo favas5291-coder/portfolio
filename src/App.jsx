@@ -2,6 +2,9 @@ import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { profile, chapters, skillGroups, skills, project } from './data/portfolio';
 import { useExperience } from './hooks/useExperience';
 import ForgeFallback from './components/ForgeFallback';
+import { ContactActions, ContactDetails, MobileContact } from './components/ContactActions.jsx';
+import { services, whatsappHref } from './data/site.js';
+import AnalyticsPreference from './components/AnalyticsPreference.jsx';
 
 class SceneBoundary extends Component {
   state = { failed: false };
@@ -17,24 +20,24 @@ function Mask({ children, className = '' }) { return <span className={`line-mask
 function Header({ experience: e }) {
   return <header className="site-header">
     <a href="#home" className="wordmark" onClick={event => e.navigate(event, 'home')} aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>{profile.shortName.toUpperCase()}<span className="wordmark-period">.</span></a>
-    <nav aria-label="Main navigation">{chapters.map(c => <a href={`#${c.id}`} key={c.id} aria-current={e.active === c.id ? 'location' : undefined} onClick={event => e.navigate(event, c.id)}>{c.label}</a>)}</nav>
-    <a href={`mailto:${profile.email}`} className="header-contact" data-cursor="Hello">LET’S TALK <Arrow/></a>
+    <nav aria-label="Main navigation">{chapters.map(c => <a href={`/#${c.id}`} key={c.id} aria-current={e.active === c.id ? 'location' : undefined} onClick={event => e.navigate(event, c.id)}>{c.label}</a>)}<a href="/services/">Services</a></nav>
+    <a href="/contact/" className="header-contact" data-cursor="Hello">LET’S TALK <Arrow/></a>
     <div ref={e.progressElement} className="scroll-line" aria-hidden="true"/>
     <span className="sr-only" role="progressbar" aria-label="Page scroll progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={e.progress}/>
   </header>;
 }
 function Hero({ experience: e }) {
-  return <section id="home" tabIndex="-1" aria-labelledby="hero-name" className="chapter hero">
+  return <section id="home" tabIndex="-1" aria-labelledby="hero-services" className="chapter hero">
     <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
-    <h1 id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</h1>
-    <div className="hero-bottom"><div className="hero-copy text-panel"><p className="role mono"><span/> {profile.role}</p><h2>{profile.headline}</h2><p className="intro">{profile.intro}</p><div className="hero-actions"><a href="#projects" onClick={event => e.navigate(event,'projects')} className="button-solid" data-magnetic data-cursor="View">Explore My Work <Arrow/></a><a href="#contact" onClick={event => e.navigate(event,'contact')} className="text-link">Contact Me <Arrow/></a></div></div><div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div></div>
+    <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
+    <div className="hero-bottom"><div className="hero-copy text-panel"><p className="role mono"><span/> {profile.role}</p><h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div><div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div></div>
     <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
   </section>;
 }
 function About() {
   return <section id="about" tabIndex="-1" aria-labelledby="about-title" className="chapter about">
     <ChapterLabel id="about"/><span className="chapter-numeral" aria-hidden="true">01</span>
-    <div className="about-copy text-panel" data-reveal><p className="mono overline">THE PERSON BEHIND THE PARTS</p><h2 id="about-title" className="display-heading">{profile.aboutTitle.map((line,i)=><span key={line} className={i === 1 ? 'muted' : ''}>{line}</span>)}</h2><p>{profile.about}</p><p>{profile.approach}</p><div className="about-signoff"><span className="signature">{profile.signature}</span><span className="mono">DEVELOPER<br/>{profile.location}</span></div></div>
+    <div className="about-copy text-panel" data-reveal><p className="mono overline">THE PERSON BEHIND THE PARTS</p><h2 id="about-title" className="display-heading">{profile.aboutTitle.map((line,i)=><span key={line} className={i === 1 ? 'muted' : ''}>{line}</span>)}</h2><p>{profile.about}</p><p>{profile.approach}</p><div className="home-services"><h3>Websites for your next step.</h3><ul>{services.map(service => <li key={service.slug}><a href={`/services/${service.slug}/`}>{service.name} <span aria-hidden="true">↗</span></a></li>)}</ul><a className="text-link" href="/services/">Explore website development services <Arrow/></a></div><div className="about-signoff"><span className="signature">{profile.signature}</span><span className="mono">DEVELOPER<br/>{profile.location}</span></div></div>
   </section>;
 }
 function Skills({ experience: e }) {
@@ -50,7 +53,7 @@ function Projects() {
   const [imageFailed,setImageFailed] = useState(false);
   return <section id="projects" tabIndex="-1" aria-labelledby="project-title" className="chapter projects">
     <ChapterLabel id="projects"/>
-    <div className="project-intro text-panel" data-reveal><p className="mono overline">SELECTED WORK / 01</p><h2 id="project-title" className="project-title">{project.name}<span aria-hidden="true">↗</span></h2><p className="project-tagline">{project.tagline}</p><p>{project.description}</p><div className="project-links"><External href={project.website} className="button-solid" data-magnetic data-cursor="Visit">Visit Website <Arrow/></External><External href={project.repository} className="text-link" data-cursor="Code">View Code <Arrow/></External></div><p className="mono project-role">{project.role}<br/>{project.stack.join(' / ')}</p></div>
+    <div className="project-intro text-panel" data-reveal><p className="mono overline">SELECTED WORK / 01</p><h2 id="project-title" className="project-title">{project.name}<span aria-hidden="true">↗</span></h2><p className="project-tagline">{project.tagline}</p><p>{project.description}</p><div className="project-links"><External href={project.website} className="button-solid" data-magnetic data-cursor="Visit">Visit Website <Arrow/></External><External href={project.repository} className="text-link" data-cursor="Code">View Code <Arrow/></External></div><a href="/projects/gymdrobe/" className="text-link case-link">Read the GymDrobe case study <Arrow/></a><p className="mono project-role">{project.role}<br/>{project.stack.join(' / ')}</p></div>
     <div className="project-visual"><button className="project-screenshot" onClick={()=>dialog.current?.showModal()} data-cursor="View" aria-label="Enlarge real GymDrobe screenshot">{!imageFailed ? <img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async" onError={()=>setImageFailed(true)}/> : <span>GYMDROBE<br/>Storefront screenshot unavailable</span>}<span className="screenshot-action mono">ACTUAL STOREFRONT <Arrow/></span></button><span className="mono image-caption">GYMDROBE.COM — CAPTURED {project.reviewed}</span></div>
     <div className="case-study text-panel">
       <div className="case-meta"><span className="mono">A CLOSER LOOK</span><p>A shopping flow.<br/>A connected system.</p></div>
@@ -64,7 +67,7 @@ function Contact() {
   const timer = useRef(null);
   useEffect(()=>()=>clearTimeout(timer.current),[]);
   const copy = async()=>{try { await navigator.clipboard.writeText(profile.email);setCopyState('Email copied.');}catch{setCopyState('Select the email address to copy it, or use the email link.');}clearTimeout(timer.current);timer.current=setTimeout(()=>setCopyState(''),6000);};
-  return <section id="contact" tabIndex="-1" aria-labelledby="contact-title" className="chapter contact"><ChapterLabel id="contact"/><div className="contact-copy text-panel"><p className="mono overline" data-reveal>THE NEXT BUILD STARTS HERE</p><h2 id="contact-title" className="contact-title" data-reveal>{profile.contactTitle.map((line,i)=><span key={line} className={i===1?'accent':''}>{line}</span>)}</h2><p className="contact-intro">{profile.contactIntro}</p><a href={`mailto:${profile.email}`} className="email-link" data-magnetic data-cursor="Hello">{profile.email} <Arrow/></a><div className="contact-links"><External href="https://wa.me/918156805806" className="text-link">WhatsApp · +91 8156805806 <Arrow/></External><External href={profile.github} className="text-link">GitHub <Arrow/></External>{profile.linkedin && <External href={profile.linkedin} className="text-link">LinkedIn <Arrow/></External>}{profile.cv && <a href={profile.cv} className="text-link" download>Download CV <Arrow/></a>}<button className="copy-email" onClick={copy}>Copy email address</button></div><p className="copy-status" role="status">{copyState}</p></div><div className="contact-location mono">{profile.location}</div></section>;
+  return <section id="contact" tabIndex="-1" aria-labelledby="contact-title" className="chapter contact"><ChapterLabel id="contact"/><div className="contact-copy text-panel"><p className="mono overline" data-reveal>THE NEXT BUILD STARTS HERE</p><h2 id="contact-title" className="contact-title" data-reveal>{profile.contactTitle.map((line,i)=><span key={line} className={i===1?'accent':''}>{line}</span>)}</h2><p className="contact-intro">{profile.contactIntro}</p><ContactActions compact/><ContactDetails showEmail={false}/><a href={`mailto:${profile.email}`} className="email-link" data-contact="email" data-magnetic data-cursor="Hello">{profile.email} <Arrow/></a><div className="contact-links"><External href={whatsappHref()} data-contact="whatsapp" className="text-link">WhatsApp · +91 8156805806 <Arrow/></External><External href={profile.github} className="text-link">GitHub <Arrow/></External>{profile.linkedin && <External href={profile.linkedin} className="text-link">LinkedIn <Arrow/></External>}{profile.cv && <a href={profile.cv} className="text-link" download>Download CV <Arrow/></a>}<button className="copy-email" onClick={copy}>Copy email address</button></div><p className="copy-status" role="status">{copyState}</p></div><div className="contact-location mono">{profile.location}</div></section>;
 }
 export default function App() {
   const e = useExperience();
@@ -76,7 +79,8 @@ export default function App() {
     <div className="film-grain" aria-hidden="true"/>
     <Header experience={e}/>
     <main id="main" tabIndex="-1"><Hero experience={e}/><About/><Skills experience={e}/><Projects/><Contact/></main>
-    <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><span className="mono">BUILT WITH INTENTION.</span><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a></footer>
+    <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><nav className="home-footer-links" aria-label="Footer navigation"><a href="/services/">Services</a><a href="/projects/gymdrobe/">GymDrobe case study</a><a href="/contact/">Request a Quote</a><a href="/privacy/">Privacy</a></nav><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a><AnalyticsPreference/></footer>
+    <MobileContact/>
     <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <div className="experience-options"><button className="view-toggle" onClick={e.toggleMotion} aria-pressed={!e.reduced}>{e.reduced?'Enable full motion':'Use gentle motion'}</button><button className="view-toggle" onClick={e.toggleMode} aria-pressed={e.mode==='static'}>{e.mode==='three'?'Switch to 2D':e.sceneStatus==='error'?'Retry 3D':'Enable 3D'}<span className="view-dot"/></button></div>}</div>
     {e.initialized && e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">{e.sceneStatus==='recovering'?'RESTORING THE FORGE':'ASSEMBLING THE FORGE'} {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.toggleMode}>Use 2D view <span aria-hidden="true">↗</span></button></div>}
     {e.sceneStatus==='error' && <div className="scene-loader" role="status"><p>{e.reason}</p><button onClick={e.retry}>Retry 3D <span aria-hidden="true">↗</span></button></div>}
