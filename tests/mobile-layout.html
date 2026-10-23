@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Mobile hero layout verification</title>
+<style>body{margin:16px;background:#151515;color:#eee;font:14px system-ui}button{padding:10px;margin:4px}iframe{display:block;border:1px solid #666;max-width:none}#stage{overflow:auto;max-width:100%}pre{white-space:pre-wrap;max-height:140px;overflow:auto}</style>
+<h1>Mobile hero checks</h1><p>Chromium viewport checks; physical phones and successful GPU drawing need device verification.</p>
+<button id="run">Run layout checks</button><button id="phone">Show 390px hero</button><button id="intro">Show introduction</button><button id="desktop">Show desktop</button>
+<pre id="results">Ready</pre><div id="stage"></div><script type="module">
+const baseline={"1024":{"#home":[44.03125,0,920.9375,900],".hero-kicker":[44.03125,128,920.9375,17],".hero-name":[44.03125,166,877.84375,169.234375],".role":[44.03125,510.703125,478.875,15.296875],"#hero-services":[44.03125,542,478.875,63.71875],".intro":[44.03125,619.71875,478.875,66.28125],".enquiry-actions":[44.03125,710,478.875,49],".hero-work a":[44.03125,767,108.25,44],".hero-footer":[44.03125,836,920.9375,64],".object-caption":[784.578125,779.8125,149.671875,31.1875]},"1348":{"#home":[57.953125,0,1217.09375,900],".hero-kicker":[57.953125,128,1217.09375,17],".hero-name":[57.953125,166,1159.078125,222.8125],".role":[57.953125,497.609375,565,15.296875],"#hero-services":[57.953125,528.90625,565,66.8125],".intro":[57.953125,609.71875,490,66.28125],".enquiry-actions":[57.953125,700,565,49],".hero-work a":[57.953125,757,108.25,44],".hero-footer":[57.953125,836,1217.09375,64],".object-caption":[1084.9375,769.8125,149.671875,31.1875]},"1920":{"#home":[152.5,0,1600,929.859375],".hero-kicker":[152.5,145,1600,17],".hero-name":[152.5,183,1373.359375,264.46875],".role":[152.5,477.46875,565,15.296875],"#hero-services":[152.5,508.765625,565,116.8125],".intro":[152.5,639.578125,490,66.28125],".enquiry-actions":[152.5,729.859375,565,49],".hero-work a":[152.5,786.859375,108.25,44],".hero-footer":[152.5,865.859375,1600,64],".object-caption":[1545.234375,799.671875,149.671875,31.1875]}};
+const stage=document.querySelector('#stage'),out=document.querySelector('#results');let frame;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function load(w,h){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');if(frame)frame.remove();frame=document.createElement('iframe');frame.width=w;frame.height=h;frame.title='Portfolio layout';stage.append(frame);await new Promise(r=>{frame.onload=r;frame.src='/'});await frame.contentDocument.fonts.ready;for(let i=0;i<100;i++){if(frame.contentDocument.querySelector('.portfolio')?.dataset.sceneStatus!=='loading')break;await sleep(50);}await sleep(100);return frame.contentDocument;}
+const assert=(v,m)=>{out.textContent+='\n'+(v?'PASS ':'FAIL ')+m;if(!v)throw Error(m)};
+const waitFor=async test=>{for(let i=0;i<40;i++){if(test())return true;await sleep(50);}return false;};
+const shown=doc=>{const css=doc.defaultView.getComputedStyle(doc.querySelector('.mobile-contact'));return css.display!=='none'&&css.visibility==='visible';};
+document.querySelector('#run').onclick=async()=>{out.textContent='Running';try{
+for(const width of [1024,1348,1920]){
+const doc=await load(width,900),diffs=[];
+for(const [selector,expected] of Object.entries(baseline[width])){
+const r=doc.querySelector(selector).getBoundingClientRect(),actual=[r.x,r.y,r.width,r.height];
+if(actual.some((v,i)=>Math.abs(v-expected[i])>1))diffs.push({selector,expected,actual});
+}
+out.textContent+='\nMETRICS '+width+' '+JSON.stringify(diffs);
+assert(!diffs.length,width+': desktop positions and sizes match baseline within 1px');
+assert(!shown(doc),width+': floating mobile icon absent on desktop');
+}
+for(const w of [320,375,390,430]){
+const h=w===320?780:844,doc=await load(w,h),win=frame.contentWindow,hero=doc.querySelector('#hero-visual'),intro=doc.querySelector('#business-introduction'),fab=doc.querySelector('.mobile-contact');
+const visual=hero.getBoundingClientRect(),business=intro.getBoundingClientRect(),about=doc.querySelector('#about').getBoundingClientRect();
+assert(doc.documentElement.scrollWidth<=w,w+': no horizontal overflow');
+assert(business.top>=visual.bottom-1&&business.bottom<=about.top+1,w+': business section follows full hero and precedes About');
+assert(hero.nextElementSibling===intro,w+': separate sibling sections in the DOM');
+assert(!hero.querySelector('h1')&&doc.querySelectorAll('#hero-services').length===1,w+': one copy of the marketing heading');
+assert(doc.querySelector('.hero-scene-space').getBoundingClientRect().height>=300,w+': clear scene space');
+assert(hero.querySelector('.hero-name')&&hero.querySelector('.role'),w+': name and developer role stay with the scene');
+assert(hero.querySelector('.hero-work a').getAttribute('href')==='/#projects',w+': compact work link stays near hero');
+assert(win.getComputedStyle(doc.querySelector('.hero-opening'),'::before').display==='none',w+': mobile overlay removed');
+assert(!shown(doc),w+': floating WhatsApp hidden in hero');
+assert(fab.getBoundingClientRect().width===50&&fab.getBoundingClientRect().height===50,w+': compact 50px icon replaces strip');
+const beforeHeight=doc.documentElement.scrollHeight;
+for(let step=0;step<16;step++){win.scrollTo(0,visual.bottom+1+step*60);await sleep(120);if(shown(doc))break;}
+assert(shown(doc),w+': WhatsApp appears past hero where clear');
+assert(fab.tabIndex===0&&fab.getAttribute('aria-hidden')==='false',w+': visible icon is keyboard accessible');
+const block=doc.createElement('button');block.textContent='QA collision';block.style.cssText='position:fixed;right:16px;bottom:16px;width:50px;height:50px';doc.querySelector('main').append(block);await waitFor(()=>!shown(doc));
+assert(!shown(doc),w+': icon hides rather than cover a control');
+block.remove();await waitFor(()=>shown(doc));if(!shown(doc)){for(let step=1;step<16;step++){win.scrollTo(0,visual.bottom+1+step*60);await sleep(120);if(shown(doc))break;}}assert(shown(doc),w+': icon resumes when space is clear');
+assert(doc.documentElement.scrollHeight===beforeHeight,w+': visibility causes no layout jump');
+win.scrollTo(0,0);await waitFor(()=>!shown(doc));assert(!shown(doc),w+': returning to hero hides icon');
+frame.width=844;frame.height=w;await sleep(250);
+assert(doc.documentElement.scrollWidth<=844,w+': landscape-sized resize stays scrollable without overflow');
+frame.width=w;frame.height=h;await sleep(250);
+assert(intro.getBoundingClientRect().top>=hero.getBoundingClientRect().bottom-1,w+': portrait layout restores without duplicated content');
+hero.querySelector('.hero-work a').click();await sleep(100);assert(win.location.hash==='#projects'&&doc.activeElement?.id==='projects',w+': View My Work preserves project navigation and focus');
+}
+out.textContent+='\nDONE. No external contact links were opened.';
+}catch(e){out.textContent+='\nERROR '+e.message;}};
+document.querySelector('#phone').onclick=()=>load(390,844);
+document.querySelector('#intro').onclick=async()=>{const d=await load(390,844);frame.contentWindow.scrollTo(0,d.querySelector('#business-introduction').offsetTop-115);};
+document.querySelector('#desktop').onclick=()=>load(1348,900);
+</script></html>

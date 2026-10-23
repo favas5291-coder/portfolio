@@ -369,3 +369,41 @@ main input,main select,main textarea,main form,main label {pointer-events:auto;}
   .marketing-footer nav{gap:0 20px;}
 }
 @media(max-width:359px){.hero-copy h1{font-size:22px;}.hero-kicker{margin-bottom:17px;}.hero-copy .enquiry-actions{gap:8px;}.hero-copy .enquiry-actions .button-solid,.hero-copy .enquiry-actions .button-outline{font-size:10px;padding:12px 9px;gap:6px;}.marketing-hero h1{font-size:36px;}}
+
+/* One introduction in the HTML: shared desktop composition, separate mobile section. */
+.hero-opening {display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(30px,1fr) auto auto auto 35px auto;min-height:100svh;padding-top:128px;isolation:isolate;}
+.hero-opening > .hero {display:contents;}
+.hero-opening::before {content:'';grid-column:1;grid-row:4/7;width:565px;max-width:50%;background:linear-gradient(90deg,#0b0b0cf2 70%,#0b0b0c55);z-index:-1;}
+.hero-opening .hero-kicker {grid-column:1;grid-row:1;}
+.hero-opening .hero-name {grid-column:1;grid-row:2;}
+.hero-role {grid-column:1;grid-row:4;width:565px;max-width:50%;}
+.business-intro {grid-column:1;grid-row:5;width:565px;max-width:50%;min-width:0;}
+.business-intro h1 {font-family:var(--display);font-size:clamp(22px,2.1vw,33px);line-height:1.18;font-weight:500;letter-spacing:-.035em;margin-top:16px;max-width:565px;}
+.business-intro .intro {font-size:13px;line-height:1.7;color:#aaa99f;max-width:490px;margin-top:14px;}
+.hero-work {grid-column:1;grid-row:6;width:565px;max-width:50%;}
+.hero-opening .object-caption {grid-column:1;grid-row:4/7;align-self:end;justify-self:end;}
+.hero-opening .hero-footer {grid-column:1;grid-row:8;}
+.hero-scene-space {display:none;}
+@media(min-width:1600px){.hero-opening{padding-top:145px;}}
+@media(min-width:768px) and (max-width:1100px){.hero-opening{grid-template-rows:auto auto minmax(30px,1fr) auto auto auto 25px auto;}.hero-opening::before,.hero-role,.business-intro,.hero-work{max-width:52%;}.business-intro h1{font-size:27px;}}
+@media(max-width:767px){
+  body{padding-bottom:0;}
+  .hero-opening{display:block;min-height:0;padding:0;margin:0;isolation:auto;}
+  .hero-opening::before{display:none;}
+  .hero-opening > .hero{display:flex;flex-direction:column;min-height:max(720px,100svh);padding:130px 0 0;margin:0 6vw;}
+  .hero-opening .hero-kicker{margin-bottom:24px;}
+  .hero-opening .hero-name{flex-shrink:0;}
+  .hero-role{width:100%;max-width:none;margin-top:20px;flex-shrink:0;}
+  .hero-scene-space{display:block;flex:1;min-height:340px;pointer-events:none;}
+  .hero-work{width:auto;max-width:none;margin-bottom:12px;}
+  .hero-opening .hero-footer{min-height:70px;margin-top:0;flex-shrink:0;}
+  .business-intro{width:auto;max-width:none;position:relative;margin:0 6vw;padding:38px 0 46px;border-top:1px solid var(--rule);background:var(--ink);box-shadow:0 0 0 6vw var(--ink);}
+  .business-intro h1{font-size:clamp(23px,6.2vw,28px);line-height:1.25;letter-spacing:-.04em;margin:0;max-width:600px;text-wrap:balance;}
+  .business-intro .intro{font-size:14px;line-height:1.8;max-width:600px;margin-top:18px;}
+  .business-intro .enquiry-actions{gap:10px;margin:22px 0 0;}
+  .business-intro .enquiry-actions a{min-height:46px;max-width:100%;font-size:11px;padding:13px 12px;gap:10px;}
+  .view-controls{margin-bottom:20px;}
+  .mobile-contact{position:fixed;inset:auto;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:50px;height:50px;min-height:50px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #ff855b;border-radius:50%;background:var(--accent);color:var(--ink);box-shadow:0 5px 18px #0008;z-index:55;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;}
+  .mobile-contact[data-visible='true']{opacity:1;visibility:visible;pointer-events:auto;}
+  .mobile-contact svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+}

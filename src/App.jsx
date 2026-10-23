@@ -27,13 +27,22 @@ function Header({ experience: e }) {
   </header>;
 }
 function Hero({ experience: e }) {
-  return <section id="home" tabIndex="-1" aria-labelledby="hero-services" className="chapter hero">
-    <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
-    <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
-    <div className="hero-bottom"><div className="hero-copy text-panel"><p className="role mono"><span/> {profile.role}</p><h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div><div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div></div>
-    <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
-  </section>;
+  return <div id="home" tabIndex="-1" className="chapter hero-opening">
+    <section id="hero-visual" aria-labelledby="hero-name" className="hero">
+      <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
+      <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
+      <p className="role mono hero-role"><span/> {profile.role}</p>
+      <div className="hero-scene-space" aria-hidden="true"/>
+      <div className="hero-work"><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div>
+      <div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div>
+      <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
+    </section>
+    <section id="business-introduction" aria-labelledby="hero-services" className="business-intro text-panel">
+      <h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/>
+    </section>
+  </div>;
 }
+
 function About() {
   return <section id="about" tabIndex="-1" aria-labelledby="about-title" className="chapter about">
     <ChapterLabel id="about"/><span className="chapter-numeral" aria-hidden="true">01</span>

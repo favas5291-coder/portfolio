@@ -14,7 +14,7 @@ assert(doc.querySelectorAll('h1').length===1,name+' '+path+': one clear H1');
 assert(doc.documentElement.scrollWidth<=w,name+' '+path+': no horizontal overflow');
 assert([...doc.querySelectorAll('header a')].every(a=>{const r=a.getBoundingClientRect();return r.left>=0&&r.right<=w}),name+' '+path+': header navigation fits');
 assert(!!doc.querySelector('a[href^="https://wa.me/918156805806"]'),name+' '+path+': WhatsApp action available');
-if(path==='/'){const c=doc.querySelector('.hero-copy .button-solid').getBoundingClientRect();assert(c.bottom<h-60,name+': discuss website visible in first screen');assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static',name+': automatic 3D not disabled by marketing changes');}
+if(path==='/'){const c=doc.querySelector('.business-intro').getBoundingClientRect();assert(w<768?c.top>=doc.querySelector('#hero-visual').getBoundingClientRect().bottom:c.bottom<h,name+': business introduction uses the intended mobile/desktop position');assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static',name+': automatic 3D not disabled by marketing changes');}
 else assert(!doc.querySelector('canvas'),name+' '+path+': service content independent of 3D');
 }
 }
