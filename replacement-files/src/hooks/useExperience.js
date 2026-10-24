@@ -18,7 +18,7 @@ export function useExperience() {
   const [selected, setSelected] = useState('React');
   const reduced = gentleMotion(systemReduced, motionChoice);
   const preferences = useRef({ view: 'three', motion: 'system' });
-  const motion = useRef({ position: 0, pointer: [0, 0], selected: 'React', visible: true, gentle: false });
+  const motion = useRef({ position: 0, pointer: [0, 0], selected: 'React', visible: true, gentle: false, smoothedScroll: false });
   const scrollEngine = useRef(null);
   const progressElement = useRef(null);
   const cursor = useRef(null);
@@ -69,24 +69,15 @@ export function useExperience() {
 
   useEffect(() => {
     let raf = 0, measure = true, previousIndex = -1, previousProgress = -1;
-    let stops = [];
+    let stops = [], viewportHeight = 0, fullHeight = 0;
     // svh does not change when the browser address bar retracts. Use it for
     // chapter anchors, while the canvas still follows the visible viewport.
     const viewportProbe = document.createElement('div');
     viewportProbe.setAttribute('aria-hidden', 'true');
     viewportProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none;contain:strict';
     document.body.append(viewportProbe);
-    const update = () => {
-      raf = 0;
-      if (document.hidden) return;
-      const y = window.scrollY;
-      const height = document.documentElement.clientHeight || innerHeight;
-      if (measure) {
-        const stableHeight = viewportProbe.clientHeight || height;
-        stops = chapterStops(chapters.map(c => (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y), stableHeight);
-        measure = false;
-      }
-      const sample = sampleScroll(stops, y, document.documentElement.scrollHeight, height);
+    const publish = () => {
+      const sample = sampleScroll(stops, window.scrollY, fullHeight, viewportHeight);
       motion.current.position = sample.position;
       if (sample.progress !== previousProgress) { previousProgress = sample.progress; setProgress(sample.progress); }
       if (sample.index !== previousIndex) { previousIndex = sample.index; setActive(chapters[sample.index].id); }
@@ -95,13 +86,37 @@ export function useExperience() {
       // leave a demand frame reading stale progress and then going idle.
       wake();
     };
+    const update = () => {
+      raf = 0;
+      if (document.hidden) return;
+      if (measure) {
+        viewportHeight = document.documentElement.clientHeight || innerHeight;
+        fullHeight = document.documentElement.scrollHeight;
+        const stableHeight = viewportProbe.clientHeight || viewportHeight;
+        const y = window.scrollY;
+        stops = chapterStops(chapters.map(c => (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y), stableHeight);
+        measure = false;
+      }
+      publish();
+    };
     const request = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(update); };
+    const scroll = () => {
+      if (document.hidden) return;
+      // Touch scroll already arrives at the browser's scroll cadence. Publish
+      // the cached geometry now so the next WebGL frame sees the latest input;
+      // scheduling a second RAF here leaves the scene one extra frame behind.
+      if (scrollEngine.current) { request(); return; }
+      // Browser-toolbar resizing can dirty the geometry during the same swipe.
+      // Refresh it once here, and replace its queued measurement frame.
+      if (raf) cancelAnimationFrame(raf);
+      update();
+    };
     const resize = () => { measure = true; request(); };
     const visibility = () => {
       motion.current.visible = !document.hidden;
       if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else resize();
     };
-    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('scroll', scroll, { passive: true });
     window.addEventListener('resize', resize);
     window.addEventListener('orientationchange', resize);
     window.addEventListener('pageshow', resize);
@@ -113,7 +128,7 @@ export function useExperience() {
     document.fonts?.ready.then(() => { if (!disposed) resize(); }); request();
     return () => {
       disposed = true; observer.disconnect(); cancelAnimationFrame(raf); viewportProbe.remove();
-      window.removeEventListener('scroll', request); window.removeEventListener('resize', resize);
+      window.removeEventListener('scroll', scroll); window.removeEventListener('resize', resize);
       window.removeEventListener('orientationchange', resize); window.removeEventListener('pageshow', resize);
       window.visualViewport?.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', visibility);

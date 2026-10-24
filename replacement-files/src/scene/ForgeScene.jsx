@@ -6,7 +6,7 @@ import { project } from '../data/portfolio';
 import { createCameraFraming, sampleCameraPose } from './framing.js';
 import { QUALITY, createQualityMonitor, initialQuality, renderDpr } from '../experience/quality.js';
 import { attachSceneLifecycle } from '../experience/lifecycle.js';
-import { advanceSpring, animationDelta } from './dynamics.js';
+import { advanceSpring, animationDelta, motionResponse } from './dynamics.js';
 const ForgeEffects = lazy(() => import('./ForgeEffects.jsx'));
 
 class AssetBoundary extends Component {
@@ -130,7 +130,7 @@ function Part({ index, spread, device, selected, roughness, onSelect, stage, qua
     target.set(base + side*s*(0.35+row*0.35), (row-1)*s*0.87 + (activated&&stage.current>1.5&&stage.current<2.8?0.12:0), (index%2?0.2:-0.2)*s);
     const delta=animationDelta(dt);
     if (motion.current.gentle) { group.current.position.copy(target); velocity.current.set(0,0,0); }
-    else advanceSpring(group.current.position,velocity.current,target,delta);
+    else advanceSpring(group.current.position,velocity.current,target,delta,motionResponse(motion.current.smoothedScroll).spring);
     const scale=1-device.current*0.7;group.current.scale.setScalar(scale);
     group.current.rotation.y=mix(group.current.rotation.y, s*side*0.18 + (hover?0.13:0),1-Math.exp(-6*delta));
     if(ring.current)ring.current.material.emissiveIntensity=activated ? 0.5 : 0.05;
@@ -198,13 +198,14 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
     if(document.hidden)return;
     const gentle=motion.current.gentle;
     const delta=animationDelta(dt);elapsed.current+=delta;
+    const follow=1-Math.exp(-motionResponse(motion.current.smoothedScroll).follow*delta);
     const raw=gentle?0:motion.current.position;
-    stage.current=gentle?0:mix(stage.current,raw,1-Math.exp(-5*delta));
+    stage.current=gentle?0:mix(stage.current,raw,follow);
     const p=THREE.MathUtils.clamp(stage.current,0,4);
     const pose=sampleCameraPose(p);
     const intro=gentle||motion.current.position>0.15?1:1-Math.pow(1-Math.min(1,elapsed.current/1.6),4);
     spread.current=pose.spread+(1-intro)*3.5;
-    const smoothing=!cameraInitialized.current||gentle?1:1-Math.exp(-5*delta);
+    const smoothing=!cameraInitialized.current||gentle?1:follow;
     // Smooth the authored path once on every screen, then fit the actual view.
     // Smoothing the fitted distance afterwards can crop expanding parts.
     authoredCamera.lerp(cameraTarget.fromArray(pose.camera),smoothing);

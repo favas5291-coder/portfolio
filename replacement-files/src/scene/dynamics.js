@@ -11,13 +11,22 @@ const cosine = (a + damping) / (2 * radius);
 const angle = Math.acos(cosine);
 const sine = Math.sin(angle);
 
+const wheelResponse = Object.freeze({ follow: 5, spring: 1 });
+const nativeResponse = Object.freeze({ follow: 8, spring: 1.15 });
+
+// Lenis already eases wheel input. Native touch input needs a quicker catch-up
+// so a short swipe does not trail through two slow follow filters.
+export function motionResponse(smoothedScroll = false) {
+  return smoothedScroll ? wheelResponse : nativeResponse;
+}
+
 export function animationDelta(delta) {
   // Idle demand frames and tab suspension must not advance the opening reveal.
   return delta > 0 && delta <= 0.25 ? delta : step;
 }
 
-export function advanceSpring(position, velocity, target, delta) {
-  const count = animationDelta(delta) / step;
+export function advanceSpring(position, velocity, target, delta, speed = 1) {
+  const count = animationDelta(delta) * speed / step;
   const decay = Math.pow(radius, count);
   const blend = Math.sin(angle * count) / sine;
   const phase = Math.cos(angle * count);

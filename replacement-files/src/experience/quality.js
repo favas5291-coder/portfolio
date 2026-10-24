@@ -1,6 +1,6 @@
 export const QUALITY = [
   { name: 'balanced', dpr: 1, segments: 32, cableSegments: 28, textureSize: 2048, shadowSize: 512, bloomScale: 0.25 },
-  { name: 'detailed', dpr: 1.25, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, bloomScale: 0.35 },
+  { name: 'detailed', dpr: 1.5, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, bloomScale: 0.35 },
   { name: 'high', dpr: 1.5, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, bloomScale: 0.5 },
 ];
 // Appearance is never inferred from touch input, viewport width or hardware hints.
@@ -27,7 +27,7 @@ export function createQualityMonitor(initial, maximum = 2) {
       if (elapsed < 1.5 || frames < 20) return null;
       const fps = frames / elapsed;
       elapsed = 0; frames = 0;
-      slow = fps < 34 ? slow + 1 : 0; fast = fps > 55 ? fast + 1 : 0;
+      slow = fps < 50 ? slow + 1 : 0; fast = fps > 55 ? fast + 1 : 0;
       if (cooldown > 0) return null;
       let next = tier;
       if (slow >= 2) next = Math.max(0, tier - 1);

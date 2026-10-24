@@ -1,20 +1,23 @@
-# Favas responsive 3D quality fix
+# Small mobile motion update
 
-This update is prepared for your portfolio after commit c2488a0. It is not deployed yet.
+This follows the rendering-quality fix you deployed in commit d5b3c7e. It is not live yet.
 
-1. Copy only `responsive-3d-quality.patch` beside `package.json` in `C:\portfolio 3d\portfolio`.
-2. Open Git Bash in that project and run these commands one at a time:
+Copy only `mobile-motion-polish.patch` beside `package.json` in your real project: `C:\portfolio 3d\portfolio`.
+
+Run these in Git Bash, one at a time:
 
 ```bash
-git apply --check responsive-3d-quality.patch
-git apply responsive-3d-quality.patch
+git apply --check mobile-motion-polish.patch
+git apply mobile-motion-polish.patch
 npm run verify
 ```
 
-The patch commands normally produce no output when they succeed. Stop if the first command reports an error and share it before continuing.
+No output from the patch commands means success. Stop and share any error before continuing.
 
-`APPLY-AND-VERIFY.md` contains the root causes, all 13 changed paths, test results, exact Git/Render deployment steps and the remaining real-device checks.
+Apply the patch to the actual project before committing. Uploading the ZIP or replacement folder alone does not apply the changes.
 
-`replacement-files/` contains complete replacement code for every changed file, preserving its project path. It is an alternative to the patch, not a second application step. Do not replace the entire src folder, build inside replacement-files, or commit the ZIP/patch/replacement folder. Stage only the 13 paths listed in the guide.
+Complete replacement code for all nine changed files is in `replacement-files/`, with the exact project paths. It is an alternative to the patch, not a complete application. Do not replace the whole src folder or build in replacement-files.
 
-Verification: 43 Node tests, production build and output checks passed. Chromium layout/scroll assertions passed. The available browser has WebGL disabled, so rendered 3D screenshots, phone GPU performance, real Android Chrome and iPhone Safari still require verification. The archive includes a development-only stage comparison fixture for those checks.
+`APPLY-AND-VERIFY.md` lists the findings, changes, tests and exact Git/Render deployment steps. Stage only its nine listed paths, rather than using git add .
+
+All 46 Node tests, the production build, 31 browser scroll/preference checks and 82 layout checks passed. The cloud browser has WebGL disabled: actual phone GPU smoothness and rendering still need your verification after deploying this update.

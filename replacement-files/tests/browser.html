@@ -10,7 +10,7 @@ async function load(width,height,{legacy=false,keep=false}={}) {
  if(legacy)localStorage.setItem('forge-view','static');
  if(frame)frame.remove();frame=document.createElement('iframe');frame.title='Portfolio under test';frame.width=width;frame.height=height;stage.append(frame);
  await new Promise((resolve,reject)=>{frame.onload=resolve;frame.onerror=reject;frame.src='/';});
- for(let i=0;i<100;i++){await sleep(150);const p=frame.contentDocument?.querySelector('.portfolio');if(p&&p.dataset.sceneStatus!=='loading')return frame.contentDocument;}
+ for(let i=0;i<100;i++){await sleep(150);const p=frame.contentDocument?.querySelector('.portfolio');if(p&&p.dataset.sceneStatus!=='loading'){await frame.contentDocument.fonts.ready;await sleep(100);return frame.contentDocument;}}
  throw Error('Timed out waiting for initialization');
 }
 const assert=(ok,message)=>{results.textContent+='\n'+(ok?'PASS ':'FAIL ')+message;if(!ok)throw Error(message)};
@@ -33,6 +33,12 @@ document.querySelector('#run').onclick=async()=>{results.textContent='Running';t
  assert(doc.querySelector('.portfolio').dataset.motion===(frame.contentWindow.matchMedia('(prefers-reduced-motion: reduce)').matches?'gentle':'full'),'system motion preference is respected');
  await clickMotion(doc,'Use gentle motion');
  assert(doc.querySelector('.portfolio').dataset.motion==='gentle','intentional gentle motion works');
+ const win=frame.contentWindow;
+ win.scrollTo({top:0,behavior:'instant'});await sleep(150);
+ const line=doc.querySelector('.scroll-line'),before=line.style.transform;
+ win.dispatchEvent(new win.Event('resize'));
+ win.scrollTo({top:1400,behavior:'instant'});win.dispatchEvent(new win.Event('scroll'));
+ assert(line.style.transform!==before,'native scroll publishes progress before another animation frame, including a pending resize '+JSON.stringify({y:win.scrollY,before,after:line.style.transform}));
  await clickMotion(doc,'Enable full motion');
  assert(doc.querySelector('.portfolio').dataset.motion==='full','explicit full-motion override works');
  doc=await load(390,844,{keep:true});

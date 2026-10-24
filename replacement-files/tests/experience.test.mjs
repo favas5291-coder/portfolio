@@ -44,6 +44,7 @@ test('drawing resolution uses screen density and a bounded pixel budget', () => 
   assert.equal(renderDpr(2,390,844,3),2);
   assert.equal(renderDpr(2,1348,900,2),1.5);
   assert.equal(renderDpr(2,1920,1080,2),1.5);
+  assert.equal(renderDpr(1,390,844,3),1.5);
   for(const tier of [0,1,2])for(const [w,h,dpr] of [[320,780,3],[390,844,3],[820,1180,2],[1920,1080,2],[3840,2160,3]]) {
     const ratio=renderDpr(tier,w,h,dpr,4096);
     assert.ok(ratio<=dpr&&ratio>0);
@@ -59,6 +60,10 @@ function feed(monitor, fps, seconds) {
 test('sustained slow rendering lowers quality without disabling the scene', () => {
   const monitor=createQualityMonitor(2);
   assert.deepEqual(feed(monitor,24,20),[1,0]);
+});
+test('sustained 45fps rendering gets help before it falls to 30fps', () => {
+  assert.deepEqual(feed(createQualityMonitor(2),45,5),[1]);
+  assert.deepEqual(feed(createQualityMonitor(2),54,15),[]);
 });
 test('short frame spikes and idle/resume intervals do not lower quality', () => {
   const monitor=createQualityMonitor(2);
