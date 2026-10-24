@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { chapters } from '../data/portfolio';
 import { gentleMotion, readPreferences, savePreferences } from '../experience/preferences.js';
-import { sampleScroll } from '../experience/scroll.js';
+import { chapterStops, sampleScroll } from '../experience/scroll.js';
 
 export function useExperience() {
   const [active, setActive] = useState('home');
@@ -70,13 +70,20 @@ export function useExperience() {
   useEffect(() => {
     let raf = 0, measure = true, previousIndex = -1, previousProgress = -1;
     let stops = [];
+    // svh does not change when the browser address bar retracts. Use it for
+    // chapter anchors, while the canvas still follows the visible viewport.
+    const viewportProbe = document.createElement('div');
+    viewportProbe.setAttribute('aria-hidden', 'true');
+    viewportProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none;contain:strict';
+    document.body.append(viewportProbe);
     const update = () => {
       raf = 0;
       if (document.hidden) return;
       const y = window.scrollY;
       const height = document.documentElement.clientHeight || innerHeight;
       if (measure) {
-        stops = chapters.map(c => Math.max(0, (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y - Math.max(140, height * 0.18)));
+        const stableHeight = viewportProbe.clientHeight || height;
+        stops = chapterStops(chapters.map(c => (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y), stableHeight);
         measure = false;
       }
       const sample = sampleScroll(stops, y, document.documentElement.scrollHeight, height);
@@ -105,7 +112,7 @@ export function useExperience() {
     let disposed = false;
     document.fonts?.ready.then(() => { if (!disposed) resize(); }); request();
     return () => {
-      disposed = true; observer.disconnect(); cancelAnimationFrame(raf);
+      disposed = true; observer.disconnect(); cancelAnimationFrame(raf); viewportProbe.remove();
       window.removeEventListener('scroll', request); window.removeEventListener('resize', resize);
       window.removeEventListener('orientationchange', resize); window.removeEventListener('pageshow', resize);
       window.visualViewport?.removeEventListener('resize', resize);

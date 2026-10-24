@@ -1,3 +1,8 @@
+export function chapterStops(tops, stableViewportHeight) {
+  const offset = Math.max(140, stableViewportHeight * 0.18);
+  return tops.map(top => Math.max(0, top - offset));
+}
+
 export function sampleScroll(stops, y, fullHeight, viewportHeight) {
   let index = 0;
   while (index < stops.length - 1 && y >= stops[index + 1]) index++;

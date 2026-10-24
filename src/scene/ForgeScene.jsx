@@ -1,11 +1,12 @@
-import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Html, Lightformer, useProgress, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { project } from '../data/portfolio';
 import { createCameraFraming, sampleCameraPose } from './framing.js';
-import { QUALITY, createQualityMonitor, initialQuality } from '../experience/quality.js';
+import { QUALITY, createQualityMonitor, initialQuality, renderDpr } from '../experience/quality.js';
 import { attachSceneLifecycle } from '../experience/lifecycle.js';
+import { advanceSpring, animationDelta } from './dynamics.js';
 const ForgeEffects = lazy(() => import('./ForgeEffects.jsx'));
 
 class AssetBoundary extends Component {
@@ -16,10 +17,32 @@ class AssetBoundary extends Component {
 function StudioLights({ resolution = 64 }) {
   return <Environment resolution={resolution}><Lightformer intensity={3} position={[0,4,2]} scale={[8,4,1]} rotation={[Math.PI/2,0,0]}/><Lightformer intensity={2} position={[-4,1,2]} scale={[3,6,1]} rotation={[0,Math.PI/2,0]}/><Lightformer intensity={1.5} position={[4,0,-2]} scale={[3,5,1]} rotation={[0,-Math.PI/2,0]}/></Environment>;
 }
-function QualityController({ initialTier, maxTier, onQuality, onReady, onRecovering, onError, onPause, wakeRef }) {
-  const { gl, invalidate, setDpr, setFrameloop } = useThree();
-  const monitor = useMemo(() => createQualityMonitor(initialTier, maxTier), [initialTier, maxTier]);
+function QualityController({ initialTier, tier, onResolution, onQuality, onReady, onRecovering, onError, onPause, wakeRef }) {
+  const { gl, size, invalidate, setDpr, setFrameloop } = useThree();
+  const monitor = useMemo(() => createQualityMonitor(initialTier), [initialTier]);
   const wasPaused = useRef(false);
+  const warmup = useRef(1.5);
+  useLayoutEffect(() => {
+    let media;
+    const update = () => {
+      media?.removeEventListener('change', update);
+      const context = gl.getContext();
+      // getParameter returns null during context loss; do not publish DPR 0
+      // while recovery lowers the quality tier.
+      const maxDimension = Math.min(gl.capabilities.maxTextureSize || 8192,
+        context.getParameter(context.MAX_RENDERBUFFER_SIZE) || gl.capabilities.maxTextureSize || 8192);
+      const dpr = renderDpr(tier, size.width, size.height, window.devicePixelRatio, maxDimension);
+      setDpr(dpr);
+      onResolution(dpr);
+      gl.domElement.dataset.renderDpr = String(dpr);
+      media = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+      media.addEventListener('change', update);
+      wakeRef.current?.(); invalidate();
+    };
+    update();
+    return () => media?.removeEventListener('change', update);
+  }, [gl, size.width, size.height, tier, setDpr, onResolution, invalidate, wakeRef]);
+  useEffect(() => { warmup.current = 1.5; monitor.reset(); }, [tier, monitor]);
   useEffect(() => attachSceneLifecycle({
     canvas: gl.domElement, page: document, wakeTarget: window,
     pause: value => { wasPaused.current = value; setFrameloop(value ? 'never' : 'demand'); onPause(value); monitor.reset(); },
@@ -29,30 +52,33 @@ function QualityController({ initialTier, maxTier, onQuality, onReady, onRecover
   }), [gl, invalidate, setFrameloop, monitor, onQuality, onReady, onRecovering, onError, onPause, wakeRef]);
   useFrame((_, delta) => {
     if (wasPaused.current) return;
+    if (warmup.current > 0) { warmup.current -= Math.min(delta, 0.05); return; }
     const next = monitor.sample(delta);
-    if (next !== null) { setDpr(Math.min(window.devicePixelRatio || 1, QUALITY[next].dpr)); onQuality(next); }
+    if (next !== null) onQuality(next);
   });
   return null;
 }
 function TextureScreen({ quality }) {
   const source = useTexture(project.screenshot);
+  const gl = useThree(state => state.gl);
   const texture = useMemo(() => {
     const image = source.image;
-    const ratio = Math.min(1, quality.textureSize / Math.max(image.width, image.height));
+    const ratio = Math.min(1, Math.min(quality.textureSize, gl.capabilities.maxTextureSize) / Math.max(image.width, image.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(image.width * ratio)); canvas.height = Math.max(1, Math.round(image.height * ratio));
     const context = canvas.getContext('2d');
-    if (!context) return source;
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const result = new THREE.CanvasTexture(canvas); result.colorSpace = THREE.SRGBColorSpace;
+    if (context) context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const result = context ? new THREE.CanvasTexture(canvas) : source.clone();
+    result.colorSpace = THREE.SRGBColorSpace;
+    result.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    result.needsUpdate = true;
     return result;
-  }, [source, quality.textureSize]);
+  }, [source, quality.textureSize, gl]);
   useEffect(() => () => { if (texture !== source) texture.dispose(); }, [texture, source]);
   return <meshBasicMaterial map={texture} toneMapped={false}/>;
 }
 
 const ACCENT = '#ff5c26';
-const smooth = (a,b,t) => THREE.MathUtils.smoothstep(t,a,b);
 const mix = THREE.MathUtils.lerp;
 const partNames = ['React','Node.js','Express','MongoDB','Tailwind CSS','Git'];
 function brushedTexture() {
@@ -88,11 +114,10 @@ function Bolts({ spread }) {
   });
   return <instancedMesh ref={ref} args={[null,null,32]} castShadow><cylinderGeometry args={[0.045,0.045,0.06,6]}/><meshStandardMaterial color="#9b9a8f" roughness={0.3} metalness={1}/></instancedMesh>;
 }
-function Part({ index, spread, device, selected, roughness, onSelect, stage, quality }) {
+function Part({ index, spread, device, selected, roughness, onSelect, stage, quality, parts, motion }) {
   const group=useRef();const ring=useRef();const [hover,setHover]=useState(false);
   const name=partNames[index];
   const target=useMemo(()=>new THREE.Vector3(),[]);
-  const force=useMemo(()=>new THREE.Vector3(),[]);
   const velocity=useRef(new THREE.Vector3());
   const side=index%2===0?-1:1;
   const base=side*(0.85+Math.floor(index/2)*0.34);
@@ -103,15 +128,14 @@ function Part({ index, spread, device, selected, roughness, onSelect, stage, qua
     const activated=selected.current===name||hover;
     const row=Math.floor(index/2);
     target.set(base + side*s*(0.35+row*0.35), (row-1)*s*0.87 + (activated&&stage.current>1.5&&stage.current<2.8?0.12:0), (index%2?0.2:-0.2)*s);
-    // Damped response, with no physics engine or per-frame React state updates.
-    const delta=Math.min(dt,0.04);force.copy(target).sub(group.current.position).multiplyScalar(75);
-    velocity.current.addScaledVector(force,delta).multiplyScalar(Math.exp(-13*delta));
-    group.current.position.addScaledVector(velocity.current,delta);
+    const delta=animationDelta(dt);
+    if (motion.current.gentle) { group.current.position.copy(target); velocity.current.set(0,0,0); }
+    else advanceSpring(group.current.position,velocity.current,target,delta);
     const scale=1-device.current*0.7;group.current.scale.setScalar(scale);
     group.current.rotation.y=mix(group.current.rotation.y, s*side*0.18 + (hover?0.13:0),1-Math.exp(-6*delta));
     if(ring.current)ring.current.material.emissiveIntensity=activated ? 0.5 : 0.05;
   });
-  return <group ref={group} position={[base,0,0]} onPointerOver={e=>{e.stopPropagation();setHover(true);}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();onSelect(name);}}>
+  return <group ref={node=>{group.current=node;parts.current[index]=node;}} position={[base,0,0]} onPointerOver={e=>{e.stopPropagation();setHover(true);}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();onSelect(name);}}>
     <group rotation={[0,0,Math.PI/2]}>
       <mesh castShadow receiveShadow><cylinderGeometry args={[radius,radius,0.2,quality.segments]}/><meshPhysicalMaterial color={index<2?'#55554f':'#282a25'} roughness={0.34} metalness={0.9} roughnessMap={roughness} clearcoat={0.1}/></mesh>
       <mesh position={[0,0.11,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[radius*0.82,0.035,quality.segments > 16 ? 8 : 4,quality.segments]}/><meshStandardMaterial color="#1b1c19" roughness={0.9}/></mesh>
@@ -134,6 +158,7 @@ function SkillLabels({ motion, onSelect }) {
 function Device({ device, motion, quality }) {
   const ref=useRef();
   useFrame((_,dt)=>{
+    dt=animationDelta(dt);
     const v=device.current;ref.current.visible=v>0.01;
     ref.current.scale.setScalar(Math.max(0.001,v));
     ref.current.rotation.y=mix(ref.current.rotation.y,(motion.current.gentle ? 0 : motion.current.pointer[0]*0.12),1-Math.exp(-4*dt));
@@ -153,6 +178,8 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
   const elapsed=useRef(0), lastPosition=useRef(-1), settle=useRef(2.4), announced=useRef(false), cameraInitialized=useRef(false), lastViewport=useRef('');
   const roughness=useMemo(brushedTexture,[]);
   const cameraTarget=useMemo(()=>new THREE.Vector3(),[]);
+  const authoredCamera=useMemo(()=>new THREE.Vector3(),[]);
+  const parts=useRef([]);
   const frameCamera=useMemo(createCameraFraming,[]);
   const cablePoints=useMemo(()=>[[-1.4,-0.4,0],[-1.6,-1.35,0.3],[0,-1.65,0.6],[1.8,-1.2,-0.2],[1.5,0.2,-0.3]],[]);
   useEffect(()=>{roughness.needsUpdate=true;return()=>roughness.dispose();},[roughness]);
@@ -170,27 +197,27 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
   useFrame((_,dt)=>{
     if(document.hidden)return;
     const gentle=motion.current.gentle;
-    const delta=Math.min(dt,0.05);elapsed.current+=delta;
+    const delta=animationDelta(dt);elapsed.current+=delta;
     const raw=gentle?0:motion.current.position;
     stage.current=gentle?0:mix(stage.current,raw,1-Math.exp(-5*delta));
     const p=THREE.MathUtils.clamp(stage.current,0,4);
     const pose=sampleCameraPose(p);
-    const mobile=size.width<768;
     const intro=gentle||motion.current.position>0.15?1:1-Math.pow(1-Math.min(1,elapsed.current/1.6),4);
     spread.current=pose.spread+(1-intro)*3.5;
-    const frame=frameCamera({...pose,spread:spread.current},size.width,size.height);
     const smoothing=!cameraInitialized.current||gentle?1:1-Math.exp(-5*delta);
-    camera.position.lerp(frame.position,smoothing);
-    if(size.width>=1100||size.width>=768&&size.width>=size.height)cameraTarget.copy(frame.target);
-    else cameraTarget.lerp(frame.target,smoothing);
-    camera.lookAt(cameraTarget);
+    // Smooth the authored path once on every screen, then fit the actual view.
+    // Smoothing the fitted distance afterwards can crop expanding parts.
+    authoredCamera.lerp(cameraTarget.fromArray(pose.camera),smoothing);
+    const frame=frameCamera({...pose,camera:authoredCamera.toArray(),spread:spread.current,parts:gentle?null:parts.current},size.width,size.height);
+    camera.position.copy(frame.position);
+    camera.lookAt(frame.target);
     const viewportKey=`${size.width}:${size.height}:${frame.offsetX}:${frame.offsetY}`;
     if(viewportKey!==lastViewport.current){camera.setViewOffset(size.width,size.height,frame.offsetX,frame.offsetY,size.width,size.height);lastViewport.current=viewportKey;}
     cameraInitialized.current=true;
-    device.current=gentle?0:smooth(2.55,2.98,p)*(1-smooth(3.8,4,p));
+    device.current=gentle?0:pose.device;
     selected.current=motion.current.selected;
-    rig.current.position.set(mobile?0:pose.object[0],mobile?-0.25:pose.object[1],0);
-    rig.current.rotation.set(...pose.rotation);rig.current.scale.setScalar(mobile?1.12:1.08);
+    rig.current.position.set(...pose.object);
+    rig.current.rotation.set(...pose.rotation);rig.current.scale.setScalar(1.08);
     core.current.rotation.y=spread.current*0.42;core.current.scale.setScalar(Math.max(0.001,1-device.current));
     shaft.current.scale.y=1+spread.current*0.4;shaft.current.visible=device.current<0.9;
     if(Math.abs(raw-lastPosition.current)>0.0001){settle.current=gentle?0.35:2.4;lastPosition.current=raw;}
@@ -200,7 +227,7 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
   },-1);
   return <group ref={rig}>
     <group ref={shaft} rotation={[0,0,Math.PI/2]}><mesh castShadow><cylinderGeometry args={[0.11,0.11,4.2,24]}/><meshStandardMaterial color="#aaa99d" metalness={1} roughness={0.24} roughnessMap={roughness}/></mesh><mesh><cylinderGeometry args={[0.135,0.135,1.3,24]}/><meshStandardMaterial color="#191b16" roughness={0.9}/></mesh></group>
-    {partNames.map((_,index)=><Part key={index} index={index} spread={spread} device={device} selected={selected} roughness={roughness} onSelect={onSelect} stage={stage} quality={quality}/>)}
+    {partNames.map((_,index)=><Part key={index} index={index} spread={spread} device={device} selected={selected} roughness={roughness} onSelect={onSelect} stage={stage} quality={quality} parts={parts} motion={motion}/>)}
     <Bolts spread={spread}/>
     <group ref={core}>
       <mesh castShadow><boxGeometry args={[1.05,1.05,1.05]}/><meshPhysicalMaterial color="#7d7c70" metalness={1} roughness={0.33} roughnessMap={roughness}/></mesh>
@@ -213,33 +240,33 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
   </group>;
 }
 function SceneWorld({ quality, ...props }) {
-  const {size}=useThree();
-  const studio=<StudioLights resolution={quality.name==='low'?64:128}/>;
+  const gl=useThree(state=>state.gl);
+  const hdrEffects=gl.extensions.has('EXT_color_buffer_float');
+  const studio=<StudioLights resolution={128}/>;
   return <>
     <ambientLight intensity={0.25}/>
     <directionalLight key={quality.shadowSize} position={[3,6,4]} intensity={2.2} castShadow={quality.shadowSize>0} shadow-mapSize={[quality.shadowSize||256,quality.shadowSize||256]} shadow-bias={-0.001}/>
     <directionalLight position={[-4,1,-2]} intensity={1.4} color="#e2d7be"/>
-    {quality.effects ? <AssetBoundary fallback={studio}><Suspense fallback={studio}><EnvironmentMap/></Suspense></AssetBoundary> : studio}
+    <AssetBoundary fallback={studio}><EnvironmentMap/></AssetBoundary>
     <Assembly {...props} quality={quality}/>
     <mesh position={[0,-2.55,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[40,40]}/><meshStandardMaterial color="#0e0f0d" roughness={0.95} metalness={0.1}/></mesh>
     <gridHelper args={[30,30,'#272822','#171914']} position={[0,-2.54,0]}/>
-    {quality.effects&&size.width>=900&&<AssetBoundary><Suspense fallback={null}><ForgeEffects/></Suspense></AssetBoundary>}
+    {hdrEffects&&<AssetBoundary><ForgeEffects quality={quality}/></AssetBoundary>}
   </>;
 }
 export default function ForgeScene({ motion,onReady,onError,onProgress,onSelect,onRecovering }) {
-  const [initial] = useState(()=>initialQuality({width:innerWidth,coarse:matchMedia('(pointer: coarse)').matches,saveData:navigator.connection?.saveData,memory:navigator.deviceMemory,cores:navigator.hardwareConcurrency}));
+  const [initial] = useState(initialQuality);
   const [tier,setTier]=useState(initial);
   const [paused,setPaused]=useState(document.hidden);
-  const [maximum]=useState(()=>matchMedia('(pointer: coarse)').matches||innerWidth<900?1:2);
   const quality=QUALITY[tier];
   const wakeRef=useRef(null);
-  const [contextOptions]=useState(()=>({antialias:initial===2,alpha:true,powerPreference:'high-performance'}));
-  const dpr=Math.min(window.devicePixelRatio||1,quality.dpr);
+  const [contextOptions]=useState(()=>({antialias:true,alpha:true,powerPreference:'high-performance'}));
+  const [dpr,setResolution]=useState(()=>renderDpr(initial,innerWidth,innerHeight,window.devicePixelRatio));
   return <div className="webgl-stage" data-quality={quality.name} role="region" aria-label="The Forge: an interactive mechanical sculpture that transforms as you scroll">
-    <Canvas frameloop={paused?'never':'demand'} dpr={dpr} shadows={quality.shadowSize>0} camera={{position:[0,1,8],fov:42,near:0.1,far:150}} gl={contextOptions} resize={{scroll:false,debounce:{scroll:0,resize:80}}} fallback={<span>3D requires a WebGL 2 browser. Portfolio content remains available.</span>} onCreated={({gl})=>gl.setClearColor('#0b0b0c',0)}>
-      <QualityController initialTier={initial} maxTier={maximum} onQuality={setTier} onReady={onReady} onRecovering={onRecovering} onError={onError} onPause={setPaused} wakeRef={wakeRef}/>
+    <Canvas frameloop={paused?'never':'demand'} dpr={dpr} shadows camera={{position:[0,1,8],fov:42,near:0.1,far:150}} gl={contextOptions} resize={{scroll:false,debounce:{scroll:0,resize:0}}} fallback={<span>3D requires a WebGL 2 browser. Portfolio content remains available.</span>} onCreated={({gl})=>{gl.setClearColor('#0b0b0c',0);gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.NoToneMapping;}}>
+      <QualityController initialTier={initial} tier={tier} onResolution={setResolution} onQuality={setTier} onReady={onReady} onRecovering={onRecovering} onError={onError} onPause={setPaused} wakeRef={wakeRef}/>
       <Progress onProgress={onProgress}/>
-      <SceneWorld motion={motion} onReady={onReady} onSelect={onSelect} quality={quality} wakeRef={wakeRef}/>
+      <Suspense fallback={null}><SceneWorld motion={motion} onReady={onReady} onSelect={onSelect} quality={quality} wakeRef={wakeRef}/></Suspense>
     </Canvas>
   </div>;
 }
