@@ -1,0 +1,1696 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000000000000000000000000000000000000..fae3048e044301a88907630e29df0c94d86f91ff
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,10 @@
++# Public build-time identifiers only. Never put private keys in VITE_* variables.
++SITE_ENV=production
++# Use SITE_ENV=preview for staging; pull-request builds also get noindex.
++# Optional: public Formspree form ID, after activating the recipient email.
++VITE_FORMSPREE_FORM_ID=
++# Optional analytics. Disable Enhanced Measurement and user-provided data first.
++# Visitors must opt in before the script is loaded.
++VITE_GA_MEASUREMENT_ID=
++GOOGLE_SITE_VERIFICATION=
++BING_SITE_VERIFICATION=
+diff --git a/README.md b/README.md
+index c4ae7f37cc3ab98ccfa2d0e983faaf2b432ebbe3..715d04275c065920c7001e9c4d25fa514c37c5e3 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,5 @@
++> Freelance service pages and enquiry update: see [deployment steps](docs/SEO-DEPLOY.md) and [SEO report, page metadata and 30-day plan](docs/SEO-REPORT.md). The Render site uses real static pages; remove an old SPA catch-all rewrite before verifying missing-page status codes.
++
+ # Favas — The Forge
+ 
+ A scroll-driven portfolio for **Muhammed Favas K**, built with React, Vite, Tailwind CSS, Three.js, React Three Fiber, drei, React Three Postprocessing, GSAP/ScrollTrigger and Lenis.
+diff --git a/docs/SEO-DEPLOY.md b/docs/SEO-DEPLOY.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f3329048e4b0ad3b94a3163e5f8a7c655f2cad85
+--- /dev/null
++++ b/docs/SEO-DEPLOY.md
+@@ -0,0 +1,114 @@
++# Deploy the freelance services update
++
++This is an update to the existing React/Vite portfolio and the existing Render **portfolio-1 Static Site**. Keep your current domain and DNS. The GitHub connection available to this assistant cannot push, so the prepared changes are not live until you apply and push them.
++
++## 1. Apply the update locally
++
++Extract `Favas-Freelance-SEO-Update.zip`. Copy `freelance-seo.patch` beside your project's `package.json`. The patch is based on the current GitHub files, including the automatic mobile 3D fix and WhatsApp contact link. It does not need those previous patches to be applied again.
++
++Open Git Bash and run one command at a time:
++
++```bash
++cd "/c/portfolio 3d/portfolio"
++git status --short
++git apply --check freelance-seo.patch
++git apply freelance-seo.patch
++npm ci --include=dev
++node scripts/set-site-url.mjs https://fazhere.com
++npm run verify
++```
++
++If the patch check fails, stop and share the output. Do not force-apply or overwrite newer edits. `replacement-files/` contains the complete final version of each changed file for review or manual application; it is not a complete project or a new `src` directory to replace wholesale.
++
++Use `git diff` to review the changes. The patch preserves your existing sculpture, scene code, camera timeline, adaptive rendering, reduced-motion controls and chapter URLs.
++
++## 2. Commit and push
++
++After verification passes:
++
++```bash
++git add .env.example index.html render.yaml netlify.toml vercel.json vite.config.js src scripts tests docs README.md public/sitemap.xml
++git diff --cached --stat
++git commit -m "Add freelance service pages and enquiry SEO"
++git push origin main
++```
++
++Do not add your `.env`, `dist`, `node_modules` or downloaded patch/ZIP files. Check the staged list before committing. If your local branch is not `main`, resolve the branch selection before pushing.
++
++## 3. Update the existing Render service
++
++1. Open Render and select **portfolio-1**, the **Static Site** connected to this portfolio repository.
++2. Branch: `main`. Root Directory: leave blank. Publish Directory: `dist`.
++3. Set the Build Command to:
++
++```bash
++npm ci --include=dev && node scripts/set-site-url.mjs https://fazhere.com && npm run verify
++```
++
++4. Environment: `NODE_VERSION=22.22.0`, `SITE_ENV=production`.
++5. In **Redirects/Rewrites**, remove an existing **Rewrite** from `/*` to `/index.html` if present. Every page now has its own HTML file. Keep unrelated intentional redirects. Never add a blanket redirect of missing pages to Home.
++6. In **Headers**, add `/assets/*` → `Cache-Control: public, max-age=31536000, immutable`; add `/*` → `Referrer-Policy: strict-origin-when-cross-origin` and `/*` → `X-Content-Type-Options: nosniff`.
++7. Keep `fazhere.com` as the primary custom domain and its `www` redirect. Render handles HTTP-to-HTTPS. Verify these after deployment; no DNS reset is needed.
++8. If auto-deploy has not started, choose **Manual Deploy → Deploy latest commit**. Wait for **Live**.
++
++`render.yaml` records these settings, but merely committing it does not update an existing Dashboard-managed service. Do not create a second service or change the domain to use the file.
++
++Canonical service URLs use trailing slashes, such as `/services/business-websites/`, matching their generated `index.html` directories. Both slashless and slashed variants must be reachable; canonical tags always use the slash version. Render may serve a resource directly rather than apply a redirect rule, so post-deploy tests accept a correct 200+canonical or a redirect. Query parameters do not change the canonical URL. Do not add a global slash rewrite that creates loops.
++
++Old `/#home`, `/#about`, `/#skills`, `/#projects` and `/#contact` URLs still work. No old content has been moved away from those anchors. Do not invent WordPress redirect destinations: export real old URLs from Search Console or your old sitemap before mapping useful replacements.
++
++## 4. Check the live deployment
++
++Run this read-only check after the new build is Live:
++
++```bash
++node scripts/check-deployment.mjs https://fazhere.com
++```
++
++It checks all nine pages, initial HTML titles/canonicals, sitemap, robots, tracking-parameter canonicalization, missing-page HTTP 404, slashless page access, HTTP→HTTPS and www→apex. It does not send messages or prove inbox delivery.
++
++Open Home, Services, a service page, GymDrobe and Contact yourself. Check a fresh phone visit, refresh, native scrolling, rotation and background/resume. Test the WhatsApp link by reviewing the prepared message in your own WhatsApp; opening a link is not a sent enquiry. Call/email links need a compatible device or application.
++
++Render must return an actual 404 for a random missing path. A branded `404.html` is included for hosts that use it; Render may display its own 404 body. Do not rewrite unknown paths to that document with status 200. The preview's custom 404 body is not proof that Render will use the same body.
++
++If the `onrender.com` hostname remains public, it serves the same build with production canonicals. You may disable that subdomain in Render **after** the custom domain works. Host-specific noindex cannot be enforced by this static build alone.
++
++## 5. Optional direct form delivery
++
++No email server or private form credentials exist in this Static Site. Without configuration, the form validates the brief and offers a WhatsApp review-and-send link; it never reports that the message was sent.
++
++To enable direct form submissions:
++
++1. In your own Formspree account, create a form with `favas5291@gmail.com` as recipient and complete their recipient verification.
++2. Copy the public form ID from `https://formspree.io/f/YOUR_ID`.
++3. In Render Environment add `VITE_FORMSPREE_FORM_ID=YOUR_ID` (ID only), then redeploy. A public form ID is not an API secret. Never put a Formspree API key, email password or other secret in `VITE_*`.
++4. Configure allowed-domain restrictions for `fazhere.com` in the provider, and enable its available spam protections. The code includes a honeypot; the provider also applies rate limits and filtering. These are not a promise that all spam will be blocked.
++5. Submit one consented test enquiry yourself. Confirm both the provider record and recipient inbox. Check invalid input, provider errors and rate-limit handling. No live submission was made by the assistant.
++6. If your provider settings require an interactive CAPTCHA, do not advertise direct delivery until the matching widget flow is integrated and tested. This implementation does not solve CAPTCHA challenges.
++
++The form requires name, service, description and at least email or phone. It guards duplicate clicks, aborts on unmount, times out unconfirmed requests, retains details on failure and only confirms a successful provider response. A provider acceptance is not proof of inbox delivery or a paying client.
++
++## 6. Preview builds and measurement
++
++For a separate preview or staging build, set `SITE_ENV=preview`. Render pull-request builds with `IS_PULL_REQUEST=true` also get `noindex`. Keep crawling allowed so the noindex directive can be seen. Preview sitemaps contain no indexable URLs. Do not set preview mode on the production service.
++
++To use optional Google Analytics:
++
++1. Create/select your own GA4 web stream.
++2. **Disable Enhanced Measurement and user-provided data collection**, especially automatic outbound-link, form and site-search collection. Otherwise provider-side settings may capture URLs/fields outside this integration's allowlist.
++3. Set `VITE_GA_MEASUREMENT_ID=G-YOURID` in Render and rebuild.
++4. Check the Privacy copy against your actual business/provider settings before enabling.
++5. Analytics remain off until the visitor chooses **Allow optional analytics** in the footer or Privacy page. Test opt-in, opt-out and refresh. Do not add another automatic analytics or tag-manager snippet.
++6. In GA4 DebugView/Realtime, verify `whatsapp_click`, `call_click`, `email_click`, `enquiry_submitted` and page views. The code does not pass form contents, query strings, phone/email values or WhatsApp message text as event parameters. Form success is emitted only after provider confirmation; a WhatsApp handoff emits only a click.
++
++No Search Console, Bing, analytics, Formspree or Google Business Profile account was created or verified by this update. See `SEO-REPORT.md` for setup, remaining decisions and the 30-day plan.
++
++## Sources checked on 23 October 2026
++
++- [Render Static Sites](https://render.com/docs/static-sites)
++- [Render redirects and rewrites](https://render.com/docs/redirects-rewrites)
++- [Render custom domains](https://render.com/docs/custom-domains)
++- [Formspree JavaScript submissions](https://help.formspree.io/articles/building-your-form/submit-forms-with-javascript-ajax/)
++- [Formspree honeypot](https://help.formspree.io/articles/building-your-form/honeypot-spam-filtering)
++- [Formspree limits](https://help.formspree.io/articles/form-and-project-settings/system-limits)
++- [Google Analytics configuration](https://developers.google.com/analytics/devguides/collection/ga4/reference/config)
+diff --git a/docs/SEO-REPORT.md b/docs/SEO-REPORT.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..7af34f48b12cbc305700237a564d502d3adcfb46
+--- /dev/null
++++ b/docs/SEO-REPORT.md
+@@ -0,0 +1,215 @@
++# Freelance website SEO & enquiry implementation
++Date: 23 October 2026. Owner: Muhammed Favas K. Production target: https://fazhere.com.
++
++## Result and deployment status
++
++Implemented in the existing React/Vite project, with nine prerendered pages, a clearer freelance message, direct contact actions, a validated enquiry flow, structured data and optional measurement. The 3D portfolio stays on Home; service and contact pages do not initialize a renderer. The existing automatic 3D, adaptive quality and reduced-motion implementation is retained.
++
++This is a prepared code update, not a confirmed production deployment. GitHub files were read through the connected integration and compared by Git blob hashes with the local checkout. Every existing project file matched the current remote snapshot, including the already-added WhatsApp link; the downloaded old patch file in the remote tree is unrelated. Remote tree at inspection: `9c62853d65106455f39a6b6ca98e1c2ecb8a7c83`. The available GitHub integration cannot push. Apply the patch and follow **SEO-DEPLOY.md**.
++
++## What the inspection found
++
++- React 19 + Vite 6, Three.js / React Three Fiber, GSAP and Lenis; no routing library or enquiry backend.
++- Render Static Site is the deployment target. Netlify and Vercel files were also present; they remain usable as static-host configurations.
++- The original build already prerendered Home, so the original portfolio was not an empty client-only shell.
++- Only Home appeared in the sitemap. Titles and descriptions targeted a developer portfolio, rather than distinct client services.
++- The mobile hero reserved a large area before its main copy and actions. That made it harder to understand the service and contact the developer in the first screen.
++- Contact had email/GitHub/WhatsApp, but no project brief form, click-to-call flow, dedicated services or project page URLs.
++- Existing code contained real project copy, an actual GymDrobe screenshot and references to inspected source. Those were reused with their original review-date limits.
++- Public web retrieval could not fetch fazhere.com, robots.txt or sitemap.xml in this session. This is a retrieval limitation, not evidence of a production outage or a Google indexing block. No live crawl, Search Console account or WordPress historical-URL export was available.
++
++## Implemented changes
++
++- Kept the charcoal, orange, Syne and monospace identity, name treatment and main animated sculpture.
++- Added a clear business-focused Home H1 and immediately usable Discuss Your Website, WhatsApp Me and View My Work actions. Mobile contact actions precede the old animation gap.
++- Added a Services overview and four substantial service pages with audience, problem, deliverables, evidence, process, FAQs and quote actions.
++- Added the GymDrobe case study as an **own project**, not a paid client engagement. No revenue, client logos, ratings or performance outcomes were invented.
++- Added Contact and Privacy pages, click-to-call/email, prefilled WhatsApp links, mobile contact dock and labels/error focus for the form.
++- Form defaults to a truthful WhatsApp review-and-send handoff. Optional Formspree delivery uses a public form ID, provider confirmation, duplicate-click guard, timeout, cleanup, honeypot and error states. No live message was sent during QA.
++- Added Person, WebSite, WebPage/ContactPage/CollectionPage, Service and BreadcrumbList JSON-LD with connected identifiers. No unverified address, hours, price or review schema.
++- Prerendered all nine pages with unique metadata, HTTPS apex canonicals, social metadata and the existing share image/favicon. Kept local fonts and responsive screenshot dimensions.
++- Split Home and marketing-page modules. 3D, optional effects and GSAP remain separate downloads; the service page content and form do not depend on them.
++- Generated sitemap/robots for the selected build environment, production/preview index directives and a 404 document. Added a static-host reference configuration and read-only post-deploy HTTP checker.
++- Prepared optional GA4 with visitor opt-in, named contact-click and confirmed-submission events. Queries, fragments, form values and WhatsApp URLs are not supplied as event parameters. Provider-side Enhanced Measurement must also be disabled.
++- Preserved existing chapter fragments. No invented WordPress redirects or duplicate Calicut location pages.
++
++## Keyword-to-page map
++
++This is a qualitative intent map, not a paid keyword-tool report. A public search snapshot for freelance web development in Kozhikode/Calicut surfaced local developer/service pages, quote/contact paths and business/e-commerce intent. These observations inform the grouping below. No search volumes, keyword difficulty, rankings or traffic estimates were obtained or invented. The exact phrases remain hypotheses to refine with actual Search Console queries.
++
++| Canonical path | Primary intent | Supporting phrases used naturally |
++| --- | --- | --- |
++| / | Find a local freelance developer | freelance web developer in Kozhikode; freelance web developer in Calicut; MERN stack freelance developer; React website developer |
++| /services/ | Compare what Favas can build | website developer in Kerala; freelance website development services; hire a freelance web developer |
++| /services/business-websites/ | Commission a business information website | business website development; small business website designer; business website developer in Kozhikode |
++| /services/ecommerce-development/ | Commission a custom store | e-commerce website developer; e-commerce development in Kerala; custom React store |
++| /services/landing-pages/ | Build one focused offer/campaign page | landing page developer; landing page for business enquiries |
++| /services/website-redesign/ | Improve an existing website | website redesign services; React website improvements; website redesign in Kozhikode |
++| /projects/gymdrobe/ | Assess real development evidence | GymDrobe case study; MERN e-commerce project; React checkout project |
++| /contact/ | Make a project enquiry | contact Favas; request a website quote; hire Favas |
++| /privacy/ | Understand data use | navigational/supporting page, not a separate commercial keyword target |
++
++Kozhikode and Calicut name the same place. Kerala and remote India are service-availability descriptions, not claims of additional offices. Home owns broad local-developer intent; service pages own distinct tasks. Do not add thin city clones.
++
++## Final page titles and descriptions
++
++The following table is generated from the same data used by the build.
++
++| Path | Title | Description |
++| --- | --- | --- |
++| / | Freelance Web Developer in Kozhikode \| Muhammed Favas K | I’m Favas, a freelance web developer in Kozhikode (Calicut), Kerala. Business websites, online stores and landing pages. Available for remote projects across India. |
++| /services/ | Freelance Website Development Services \| Favas, Kerala | Explore business websites, custom e-commerce development, landing pages and website redesign with Favas in Kozhikode, Kerala. Find the right scope and request a quote. |
++| /services/business-websites/ | Business Website Development in Kozhikode \| Favas | Business website development for small businesses in Kozhikode and Kerala. Clear service pages, mobile layouts and easy customer contact. Request a quote. |
++| /services/ecommerce-development/ | E-commerce Website Developer in Kerala \| Favas | Custom e-commerce website development with React and the MERN stack. Product variants, cart, checkout and order flows. Explore GymDrobe and request a quote. |
++| /services/landing-pages/ | Landing Page Developer for Business Enquiries \| Favas | Focused, responsive landing pages for a business, service or campaign. Clear copy, useful proof and WhatsApp or enquiry actions. Request a project quote. |
++| /services/website-redesign/ | Website Redesign Services in Kozhikode \| Favas | Website redesign and React website improvements for businesses in Kozhikode and Kerala. Review mobile layouts, service clarity, speed and contact journeys. |
++| /projects/gymdrobe/ | GymDrobe Case Study — MERN E-commerce Project \| Favas | Explore GymDrobe, Muhammed Favas K’s own fitness e-commerce project: the business problem, React storefront, purchase flow and full stack development contribution. |
++| /contact/ | Discuss Your Website — Contact Favas in Kozhikode | Need a business website, online store or landing page? Contact freelance web developer Muhammed Favas K in Kozhikode by WhatsApp, phone, email or project enquiry. |
++| /privacy/ | Privacy & Enquiry Information \| Favas | How project enquiries and optional analytics are handled on fazhere.com. Contact Favas about your information or update your analytics preference. |
++
++The 404 page is noindex and absent from the sitemap. Preview pages are also noindex, with no indexable sitemap entries; crawling stays allowed so crawlers can read that directive. Production canonicals are stable across tracking queries and trailing-slash duplicates.
++
++## Verification and measured limits
++
++| Check | Result |
++| --- | --- |
++| Existing + new Node tests | 35 passed, 0 failed |
++| Production build and prerender | Passed: 9 public HTML pages + 404 document |
++| Preview build | Passed with noindex on all pages and zero indexable sitemap URLs; production build restored afterward |
++| Static build verifier | Passed: one H1, distinct titles/descriptions, canonical URL, structured data JSON and references, every internal link/fragment, static assets, contact destinations, sitemap and robots |
++| Production browser fixture | 202 passed assertions across 320×780, 390×844, 820×1180 and 1348×900 Chromium iframe viewports |
++| Existing 3D browser fixture | 30 passed assertions for automatic attempts, scroll, viewport swaps, system/user motion choices and saved 2D behavior; successful GPU rendering unverified |
++| Core text/button contrast | Calculated solid-color ratios: body 15.50:1, muted text 8.07:1, accent 6.38:1, button text 6.09:1. This is not a complete visual contrast audit of the animated scene |
++| Form browser behavior | Empty-field errors, first-error focus, phone-only validation and WhatsApp brief handoff passed; no message sent |
++| Preview HTTP | 200 marketing pages, returned HTML canonicals, genuine 404 for unknown route and missing asset, clean route access, tracking canonical, sitemap and robots passed |
++| Initial JavaScript including selected page/shared imports | Home **83.5 KiB gzip**; marketing pages **82.9 KiB gzip**; both below the existing 125 KiB budget |
++| CSS output | Approximately 43.4 kB uncompressed / 10.3 kB gzip |
++| Heavy scene | About 278.9 kB gzip, deferred from initial interaction code; not loaded on service pages |
++| Lighthouse | Not run; no Lighthouse automation was available through the supported browser interface |
++| Field Core Web Vitals | No real-user dataset or verified account access available; no LCP/INP/CLS field result claimed |
++| External schema validator | Not run; JSON syntax/entity consistency checked locally, not a guarantee of search rich results |
++| Android Chrome, iPhone/iPad Safari, real desktop GPU | Not physically tested |
++| Successful 3D rendering | Not verified: cloud Chromium reports GL_VENDOR/GL_RENDERER Disabled and cannot create a WebGL context |
++| Live fazhere.com HTTP/redirects after this change | Pending deployment; the supplied checker verifies these on the real host |
++| External contact apps / provider inbox | WhatsApp URL generation and form logic checked; app handoff, live provider acceptance and inbox delivery need owner tests |
++
++Browser viewports are layout simulations, not Android/iOS emulators. Renderer failure is handled without hiding the service copy; real-device rotation, address-bar behavior, touch gestures, background/resume and successful GPU recovery remain part of owner acceptance testing. The previous 3D behavior tests still check defaults, saved preferences, adaptive quality, scroll sampling, framing and lifecycle behavior.
++
++A build warning remains for the large deferred 3D chunk. The app is not downloading that scene for a service/contact visit. Do not turn 3D off based on phone hardware to hide the warning. These transfer sizes are not a Lighthouse score, an FPS measurement or proof of passing Core Web Vitals.
++
++## Correct status codes and redirect boundaries
++
++The preview is configured as a static host, not an SPA that returns Home with status 200 for every URL. Actual Render behavior depends on removing any old catch-all rewrite. `render.yaml` is a reference; an existing Dashboard-managed service does not automatically adopt it.
++
++Canonical routes use directory-style trailing slashes and real HTML output. Slashless variants can return the same page with the correct canonical, or redirect to it. Query variants share the same canonical. HTTP→HTTPS and www→apex need live checks; no production redirect was changed or confirmed through an authenticated Render account here.
++
++The provided 404 document is available for hosts that honor it; Render can use its own 404 body. A genuine missing-page status matters more than showing the custom design with a misleading 200 status. Existing WordPress URLs should be mapped only after obtaining the real old sitemap/Search Console URLs.
++
++## Search Console and Bing owner setup
++
++1. After deployment, run the live checker and inspect the homepage/services HTML with View Source.
++2. In Google Search Console, add the **fazhere.com Domain property** and follow the DNS TXT instructions at your current DNS provider. Keep existing A/CNAME/email records intact. This verifies the domain; it is not a ranking submission.
++3. Alternatively use an HTTPS URL-prefix property and its HTML-tag verification token. Set only the token value as `GOOGLE_SITE_VERIFICATION` in Render, rebuild, then verify in your own account. The code emits the tag; it does not complete ownership verification.
++4. Submit `https://fazhere.com/sitemap.xml` in Sitemaps. Inspect Home and the service URLs with URL Inspection; request indexing for important pages after the live test succeeds. Monitor indexing reports for exclusions and wrong canonicals.
++5. In Bing Webmaster Tools, import the verified Search Console property where available, or add the site and use its verification instructions. An HTML-tag token can be supplied as `BING_SITE_VERIFICATION`; rebuild before verification.
++6. Submit the same canonical sitemap in Bing and check its indexing/crawl reports.
++
++Nothing was verified or submitted on your behalf. Discovery and indexing can take time and are not guaranteed by a sitemap or a request.
++
++## Local discovery eligibility
++
++**Do not create a Google Business Profile until the business's real operating model is confirmed.** Google excludes online-only businesses from Business Profile eligibility. Remote web-development availability alone does not establish eligibility.
++
++If you genuinely meet clients in person at an eligible business location or visit customers in person, first confirm the applicable Google rules. Then the conditional checklist is:
++
++- Use the real public-facing business name, without keywords added to the name.
++- Choose the accurate service category and a truthful service area.
++- Provide the verified phone and website.
++- Use a real eligible address only where required; hide a home address for a legitimate service-area business where Google's rules permit it.
++- Enter only real hours and authentic business photos, then complete the verification method Google provides.
++- Request reviews only from genuine eligible customers; never buy or fabricate them.
++
++No LocalBusiness markup, street address, business hours or review claims were added. If the business is online-only, focus on the website, Search Console, existing professional profiles and legitimate online discovery instead.
++
++## Measurement and owner decisions
++
++The optional analytics integration needs your GA4 ID, provider settings and review of the Privacy copy. Enhanced Measurement/user-provided data must be disabled before enabling this integration. Analytics are opt-in, and may undercount visitors who decline.
++
++Track these as separate stages:
++
++| Stage | What it proves |
++| --- | --- |
++| Page view | A measured visit, subject to consent and blockers |
++| WhatsApp/call/email click | Intent to open a contact channel; not a message or conversation |
++| enquiry_submitted | A positive form-provider acknowledgement; not inbox delivery, qualification or a sale |
++| Qualified enquiry | You confirm a relevant need, plausible scope and contact with the prospect |
++| Client/project agreed | A real agreement recorded in your own business process |
++
++Keep enquiry content and personal details out of analytics. If you keep a business log, record only the information you actually need, protect access and agree a retention practice.
++
++Still requiring owner input: Formspree recipient/form ID for direct submission; GA4 and webmaster account identifiers/verification; actual Google Business Profile eligibility; quote/support/maintenance terms; WordPress/Shopify capabilities before advertising them; any paid-search budget; any historical URLs that need redirects. Prices, free-consultation offers, turnaround promises and guaranteed response times were not invented.
++
++## Prioritized 30-day client acquisition plan
++
++| Days | Priority and action | Useful outcome / check |
++| --- | --- | --- |
++| 1–3 | Apply, verify and deploy. Remove the SPA catch-all. Check every contact channel on your own phone. Confirm preview noindex is not used in production. | Working service URLs and a truthful enquiry path |
++| 3–5 | Verify Search Console/Bing and submit the sitemap. Review indexing, detected canonical and crawl errors; fix technical failures first. | Baseline impressions/clicks when data becomes available; no ranking promise |
++| 5–7 | Review your real scope, quote process and availability. Update existing LinkedIn/GitHub profile links to the relevant service/case-study pages yourself. | Consistent identity and clearer relevance |
++| 8–10 | Prepare one useful article: “What to prepare before asking for a business website quote.” Use actual questions, a practical content checklist and a service link. Review before publishing. | A useful resource that supports business-website intent |
++| 11–14 | Prepare a second article: “Business website or online store: what does your customer need to do?” Explain tradeoffs and show relevant real project screens. | Better-qualified enquiries; no mass-produced city articles |
++| 15–18 | Improve the GymDrobe case study with updated real screenshots and specific build decisions. Keep its own-project label and distinguish implemented features from end-to-end verified behavior. | Stronger evidence without invented success metrics |
++| 19–21 | Prepare two LinkedIn posts: one real build decision and one practical website checklist, each linking to a relevant page. Obtain permission before using client material or testimonials. | Useful professional proof; publishing remains your decision |
++| 22–24 | Identify relevant local designers, photographers and business-support professionals for possible referral partnerships. Prepare a collaboration offer; use opt-in or existing relationships and approve each outreach separately. | Legitimate referral opportunities; no unsolicited message campaign |
++| 25–27 | Review actual Search Console queries and enquiries. Clarify pages where visitors misunderstand the service; add useful answers based on real questions. Check form-provider failures/spam and contact handoffs. | Evidence-led improvements instead of keyword repetition |
++| 28–30 | Review qualified enquiries and agreed projects separately from clicks. Optionally define a small paid-search experiment only after you choose a separate budget and approve spending; use a focused service page and real enquiry follow-up. | A measured next-month decision, with a stop/continue rule based on qualified enquiries |
++
++Do not buy backlinks or reviews, publish fabricated testimonials, mass-generate thin articles or send unsolicited outreach. No posts, accounts, listings, messages or advertising spend were created by this work. Rankings, AI recommendations, traffic and client counts are not guaranteed.
++
++## Sources consulted
++
++- [Google: JavaScript SEO basics](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics)
++- [Google: canonical URLs](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)
++- [Google: build and submit a sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)
++- [Google: verify site ownership](https://support.google.com/webmasters/answer/9008080)
++- [Google: Business Profile eligibility](https://support.google.com/business/answer/7039811?hl=en)
++- [Bing: add and verify a site](https://www.bing.com/webmasters/help/add-and-verify-site-12184f8b)
++- [Render: static sites](https://render.com/docs/static-sites)
++- [Render: redirect/rewrite rules](https://render.com/docs/redirects-rewrites)
++- [Google Analytics configuration](https://developers.google.com/analytics/devguides/collection/ga4/reference/config)
++- [Formspree: JavaScript submissions](https://help.formspree.io/articles/building-your-form/submit-forms-with-javascript-ajax/)
++
++## Changed files
++
++- `.env.example`
++- `README.md`
++- `docs/SEO-DEPLOY.md`
++- `docs/SEO-REPORT.md`
++- `index.html`
++- `netlify.toml`
++- `public/sitemap.xml`
++- `render.yaml`
++- `scripts/check-deployment.mjs`
++- `scripts/prerender.mjs`
++- `scripts/seo.mjs`
++- `scripts/set-site-url.mjs`
++- `scripts/verify-build.mjs`
++- `src/App.jsx`
++- `src/MarketingPages.jsx`
++- `src/components/AnalyticsPreference.jsx`
++- `src/components/ContactActions.jsx`
++- `src/components/EnquiryForm.jsx`
++- `src/components/ServiceLinks.jsx`
++- `src/data/portfolio.js`
++- `src/data/site.js`
++- `src/enquiries/form.js`
++- `src/entry-server.jsx`
++- `src/main.jsx`
++- `src/seo/analytics.js`
++- `src/seo/pages.js`
++- `src/styles.css`
++- `tests/browser.html`
++- `tests/seo-browser.html`
++- `tests/seo.test.mjs`
++- `vercel.json`
++- `vite.config.js`
+diff --git a/index.html b/index.html
+index 674abadc89add7432d332a718aef6a697ea5aa1a..95650ea6dc1effcde9f27bae32aaf5e3f91e0c6e 100644
+--- a/index.html
++++ b/index.html
+@@ -1,36 +1,19 @@
+ <!doctype html>
+-<html lang="en">
++<html lang="en-IN">
+   <head>
+-    <meta charset="UTF-8" />
+-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <meta name="theme-color" content="#0b0b0c" />
+-    <title>Muhammed Favas K — MERN Stack Developer | The Forge</title>
+-    <meta name="description" content="Explore the portfolio of Muhammed Favas K, a MERN Stack / Full Stack Developer in Kozhikode, Kerala. Explore the GymDrobe case study and get in touch." />
+-    <link rel="stylesheet" href="/fonts/fonts.css" />
+-    <link rel="preload" href="/fonts/forge-type-6.woff2" as="font" type="font/woff2" crossorigin />
+-    <link rel="canonical" href="https://fazhere.com/" />
+-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+-    <meta property="og:type" content="website" />
+-    <meta property="og:locale" content="en_IN" />
+-    <meta property="og:site_name" content="Favas — The Forge" />
+-    <meta property="og:title" content="Muhammed Favas K — The Forge" />
+-    <meta property="og:description" content="I build web experiences that turn ideas into reality. Full stack development. The GymDrobe project. A closer look at the work." />
+-    <meta property="og:url" content="https://fazhere.com/" />
+-    <meta property="og:image" content="https://fazhere.com/social-card.png" />
+-    <meta property="og:image:width" content="1200" />
+-    <meta property="og:image:height" content="630" />
+-    <meta property="og:image:alt" content="Muhammed Favas K, MERN Stack / Full Stack Developer. I build web experiences that turn ideas into reality." />
+-    <meta name="twitter:card" content="summary_large_image" />
+-    <meta name="twitter:title" content="Muhammed Favas K — The Forge" />
+-    <meta name="twitter:description" content="MERN Stack / Full Stack Developer. Discover the work, meet the builder, and start a conversation." />
+-    <meta name="twitter:image" content="https://fazhere.com/social-card.png" />
+-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"Muhammed Favas K","jobTitle":"MERN Stack / Full Stack Developer","url":"https://fazhere.com/","email":"mailto:favas5291@gmail.com","sameAs":["https://github.com/favas5291-coder"],"homeLocation":{"@type":"Place","name":"Kozhikode, Kerala, India"},"knowsAbout":["JavaScript","React","Node.js","Express","MongoDB","Tailwind CSS","Git"]}</script>
++    <meta charset="UTF-8"/>
++    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
++    <meta name="theme-color" content="#0b0b0c"/>
++    <!--page-meta-->
++    <link rel="stylesheet" href="/fonts/fonts.css"/>
++    <link rel="preload" href="/fonts/forge-type-6.woff2" as="font" type="font/woff2" crossorigin/>
++    <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
++    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"/>
++    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"/>
+   </head>
+   <body>
+     <div id="root"><!--app-html--></div>
+-    <noscript><style>.scene-loader,.view-controls,.custom-cursor,.copy-email{display:none!important}.project-screenshot{cursor:default}main{pointer-events:auto}</style></noscript>
++    <noscript><style>.scene-loader,.view-controls,.custom-cursor,.copy-email,.enquiry-form fieldset{display:none!important}.project-screenshot{cursor:default}main{pointer-events:auto}</style></noscript>
+     <script type="module" src="/src/main.jsx"></script>
+   </body>
+ </html>
+diff --git a/netlify.toml b/netlify.toml
+index 277d858dd0dd210dea66bcb9d2d76667fe33b8f1..06be7c8911f7489e97a830918aa84a9ff6872871 100644
+--- a/netlify.toml
++++ b/netlify.toml
+@@ -9,3 +9,10 @@
+   for = "/assets/*"
+   [headers.values]
+     Cache-Control = "public, max-age=31536000, immutable"
++
++# All routes are prerendered. Do not add an SPA catch-all rewrite.
++[[headers]]
++  for = "/*"
++  [headers.values]
++    Referrer-Policy = "strict-origin-when-cross-origin"
++    X-Content-Type-Options = "nosniff"
+diff --git a/public/sitemap.xml b/public/sitemap.xml
+index 4b1808eadfc3dcbcbc061c64b342bef5110591b5..3ce6f237a07dfe199ca3162d5db8112de22716d4 100644
+--- a/public/sitemap.xml
++++ b/public/sitemap.xml
+@@ -1,2 +1,2 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://fazhere.com/</loc></url></urlset>
++<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://fazhere.com/</loc></url><url><loc>https://fazhere.com/services/</loc></url><url><loc>https://fazhere.com/services/business-websites/</loc></url><url><loc>https://fazhere.com/services/ecommerce-development/</loc></url><url><loc>https://fazhere.com/services/landing-pages/</loc></url><url><loc>https://fazhere.com/services/website-redesign/</loc></url><url><loc>https://fazhere.com/projects/gymdrobe/</loc></url><url><loc>https://fazhere.com/contact/</loc></url><url><loc>https://fazhere.com/privacy/</loc></url></urlset>
+diff --git a/render.yaml b/render.yaml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ebb2f68d291698b792ca9455239908c5927e8b5e
+--- /dev/null
++++ b/render.yaml
+@@ -0,0 +1,25 @@
++# Reference configuration. An existing Dashboard-managed service does not
++# automatically adopt this file: apply the settings in docs/SEO-DEPLOY.md.
++services:
++  - type: web
++    name: portfolio-1
++    runtime: static
++    buildCommand: npm ci --include=dev && node scripts/set-site-url.mjs https://fazhere.com && npm run verify
++    staticPublishPath: dist
++    envVars:
++      - key: NODE_VERSION
++        value: 22.22.0
++      - key: SITE_ENV
++        value: production
++    headers:
++      - path: /assets/*
++        name: Cache-Control
++        value: public, max-age=31536000, immutable
++      - path: /*
++        name: Referrer-Policy
++        value: strict-origin-when-cross-origin
++      - path: /*
++        name: X-Content-Type-Options
++        value: nosniff
++    # No /* -> /index.html rewrite: every public page is a real HTML file.
++    # Leave missing URLs to Render's genuine 404 response.
+diff --git a/scripts/check-deployment.mjs b/scripts/check-deployment.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..94e9f2f8b5bb3bbeffa4134ab70a51128359c724
+--- /dev/null
++++ b/scripts/check-deployment.mjs
+@@ -0,0 +1,49 @@
++import assert from 'node:assert/strict';
++import { pages } from '../src/seo/pages.js';
++import { SITE_ORIGIN } from '../src/data/site.js';
++import { escapeHTML } from './seo.mjs';
++
++// Read-only HTTP checks. Run after Render reports the new deployment is Live.
++const base = new URL(process.argv[2] || SITE_ORIGIN).origin;
++const get = (url, redirect = 'follow') => fetch(url, { redirect, signal: AbortSignal.timeout(20000) });
++for (const page of pages) {
++  const response = await get(`${base}${page.path}`);
++  assert.equal(response.status, 200, `${page.path}: expected 200`);
++  const html = await response.text();
++  assert.ok(html.includes(`<title>${escapeHTML(page.title)}</title>`), `${page.path}: old or incorrect deployment`);
++  assert.ok(html.includes(`rel="canonical" href="${SITE_ORIGIN}${page.path}"`), `${page.path}: wrong canonical`);
++  assert.ok(!html.includes('content="noindex'), `${page.path}: production is noindex`);
++  console.log(`PASS 200, initial content and canonical: ${page.path}`);
++}
++for (const path of ['/services', '/services/business-websites', '/contact']) {
++  const response = await get(`${base}${path}`, 'manual');
++  assert.ok([200, 301, 302, 307, 308].includes(response.status), `Clean URL inaccessible: ${path}`);
++  if (response.status === 200) {
++    const html = await response.text();
++    assert.ok(html.includes(`href="${SITE_ORIGIN}${path}/"`), `Duplicate path must canonicalize: ${path}`);
++    console.log(`PASS clean URL 200 with slash canonical: ${path}`);
++  } else {
++    const target = new URL(response.headers.get('location'), base);
++    assert.equal(target.pathname, `${path}/`); console.log(`PASS ${response.status} slash redirect: ${path}`);
++  }
++}
++const missing = await get(`${base}/__forge-missing-page-check-2026/`, 'manual');
++assert.equal(missing.status, 404, 'Missing URL must return 404. Remove the /* -> /index.html rewrite in Render.');
++const tracked = await get(`${base}/services/?utm_source=verification`);
++assert.ok((await tracked.text()).includes(`rel="canonical" href="${SITE_ORIGIN}/services/"`));
++const robots = await get(`${base}/robots.txt`);
++assert.equal(robots.status, 200); assert.ok((await robots.text()).includes(`${SITE_ORIGIN}/sitemap.xml`));
++const sitemap = await get(`${base}/sitemap.xml`);
++assert.equal(sitemap.status, 200);
++const xml = await sitemap.text();
++for (const page of pages) assert.ok(xml.includes(`<loc>${SITE_ORIGIN}${page.path}</loc>`));
++if (base === SITE_ORIGIN) {
++  for (const alias of ['http://fazhere.com/', 'https://www.fazhere.com/']) {
++    const initial = await get(alias, 'manual');
++    assert.ok([301, 302, 307, 308].includes(initial.status), `Expected redirect: ${alias}`);
++    const final = await get(alias);
++    assert.equal(new URL(final.url).origin, SITE_ORIGIN, `Wrong final domain: ${alias}`);
++  }
++}
++console.log('PASS live HTML, sitemap, robots, missing-page status, tracking canonical and available redirects.');
++console.log('This does not submit a form, validate an inbox, run Lighthouse or verify a GPU.');
+diff --git a/scripts/prerender.mjs b/scripts/prerender.mjs
+index 1c2a962af6fa35168a7f6efe256f0bea0fd8238e..57dc87dcecab5bf87d1f3d4a7e0ad14c40bb41a6 100644
+--- a/scripts/prerender.mjs
++++ b/scripts/prerender.mjs
+@@ -1,15 +1,23 @@
+-import { build } from 'vite';
+-import { readFile, writeFile } from 'node:fs/promises';
+-import { resolve } from 'node:path';
++import { build, loadEnv } from 'vite';
++import { readFile, writeFile, mkdir } from 'node:fs/promises';
++import { dirname, resolve } from 'node:path';
+ import { pathToFileURL } from 'node:url';
++import { pages, notFound } from '../src/seo/pages.js';
++import { SITE_ORIGIN } from '../src/data/site.js';
++import { renderHead, isPreview } from './seo.mjs';
+ 
+-// Build-time HTML keeps portfolio text and links available before JS loads.
+-await build({
+-  build: { ssr: 'src/entry-server.jsx', outDir: '.sites-runtime/ssr', emptyOutDir: true },
+-  logLevel: 'warn',
+-});
++const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
++await build({ build: { ssr: 'src/entry-server.jsx', outDir: '.sites-runtime/ssr', emptyOutDir: true }, logLevel: 'warn' });
+ const { render } = await import(pathToFileURL(resolve('.sites-runtime/ssr/entry-server.js')).href);
+-const html = await readFile('dist/index.html', 'utf8');
+-if (!html.includes('<!--app-html-->')) throw new Error('Missing prerender placeholder');
+-await writeFile('dist/index.html', html.replace('<!--app-html-->', render()));
+-console.log('Prerendered portfolio content into dist/index.html');
++const template = await readFile('dist/index.html', 'utf8');
++if (!template.includes('<!--app-html-->') || !template.includes('<!--page-meta-->')) throw new Error('Missing prerender placeholders');
++for (const page of [...pages, notFound]) {
++  const output = page.path === '/' ? 'dist/index.html' : page.noindex ? 'dist/404.html' : `dist${page.path}index.html`;
++  await mkdir(dirname(output), { recursive: true });
++  await writeFile(output, template.replace('<!--page-meta-->', renderHead(page, env)).replace('<!--app-html-->', render(page.path)));
++}
++const indexable = isPreview(env) ? [] : pages;
++await writeFile('dist/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${indexable.map(p => `<url><loc>${SITE_ORIGIN}${p.path}</loc></url>`).join('')}</urlset>\n`);
++await writeFile('dist/robots.txt', `User-agent: *\nAllow: /\n${isPreview(env) ? '' : `Sitemap: ${SITE_ORIGIN}/sitemap.xml\n`}`);
++await writeFile('dist/_headers', `/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/*\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Content-Type-Options: nosniff\n${isPreview(env) ? '  X-Robots-Tag: noindex, follow\n' : ''}`);
++console.log(`Prerendered ${pages.length} pages and a 404 document. Environment: ${isPreview(env) ? 'preview (noindex)' : 'production'}.`);
+diff --git a/scripts/seo.mjs b/scripts/seo.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..27909aa7b39f64a0a6395639b1959f00b7ef58f1
+--- /dev/null
++++ b/scripts/seo.mjs
+@@ -0,0 +1,31 @@
++import { SITE_ORIGIN } from '../src/data/site.js';
++import { structuredData } from '../src/seo/pages.js';
++
++export const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
++export const isPreview = env => env.SITE_ENV === 'preview' || env.IS_PULL_REQUEST === 'true';
++export function renderHead(page, env = {}) {
++  const esc = escapeHTML, origin = SITE_ORIGIN, url = `${origin}${page.path}`;
++  const noindex = page.noindex || isPreview(env);
++  const verification = [['google-site-verification', env.GOOGLE_SITE_VERIFICATION], ['msvalidate.01', env.BING_SITE_VERIFICATION]].filter(([, token]) => token && !page.noindex).map(([name, token]) => `<meta name="${name}" content="${esc(token)}"/>`).join('\n');
++  const json = JSON.stringify(structuredData(page, origin)).replaceAll('<', '\\u003c');
++  return `<title>${esc(page.title)}</title>
++    <meta name="description" content="${esc(page.description)}"/>
++    <meta name="robots" content="${noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'}"/>
++    ${page.noindex ? '' : `<link rel="canonical" href="${esc(url)}"/>`}
++    <meta property="og:type" content="website"/>
++    <meta property="og:locale" content="en_IN"/>
++    <meta property="og:site_name" content="Favas — The Forge"/>
++    <meta property="og:title" content="${esc(page.title)}"/>
++    <meta property="og:description" content="${esc(page.description)}"/>
++    <meta property="og:url" content="${esc(url)}"/>
++    <meta property="og:image" content="${origin}/social-card.png"/>
++    <meta property="og:image:width" content="1200"/>
++    <meta property="og:image:height" content="630"/>
++    <meta property="og:image:alt" content="Muhammed Favas K — web developer, The Forge portfolio"/>
++    <meta name="twitter:card" content="summary_large_image"/>
++    <meta name="twitter:title" content="${esc(page.title)}"/>
++    <meta name="twitter:description" content="${esc(page.description)}"/>
++    <meta name="twitter:image" content="${origin}/social-card.png"/>
++    ${verification}
++    ${page.noindex ? '' : `<script type="application/ld+json">${json}</script>`}`;
++}
+diff --git a/scripts/set-site-url.mjs b/scripts/set-site-url.mjs
+index 65260e03e9f8970b80a4b894c23124b9b1aef598..bdaed1b6fafcb8926448ee06ad794f76bc10c7cd 100644
+--- a/scripts/set-site-url.mjs
++++ b/scripts/set-site-url.mjs
+@@ -1,17 +1,20 @@
+ import { readFile, writeFile } from 'node:fs/promises';
++import { pathToFileURL } from 'node:url';
++import { resolve } from 'node:path';
+ 
+-const input = process.argv[2];
+-if (!input) throw new Error('Usage: node scripts/set-site-url.mjs https://your-domain.com');
+-const url = new URL(input);
+-if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+-  throw new Error('Supply an HTTPS origin without a path, credentials, query or hash.');
++export async function setSiteURL(input) {
++  if (!input) throw new Error('Usage: node scripts/set-site-url.mjs https://your-domain.com');
++  const url = new URL(input);
++  if (url.protocol !== 'https:' || !/^[a-z0-9.-]+$/i.test(url.hostname) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('Supply an HTTPS origin without a path, credentials, query or hash.');
++  const path = 'src/data/site.js';
++  const source = await readFile(path, 'utf8');
++  const match = source.match(/export const SITE_ORIGIN = '([^']+)';/);
++  if (!match) throw new Error('SITE_ORIGIN is missing from src/data/site.js');
++  await writeFile(path, source.replace(match[0], `export const SITE_ORIGIN = '${url.origin}';`));
++  for (const publicPath of ['public/robots.txt', 'public/sitemap.xml']) {
++    const content = await readFile(publicPath, 'utf8');
++    await writeFile(publicPath, content.replaceAll(match[1], url.origin));
++  }
++  console.log(`Site origin set to ${url.origin}. Rebuild to regenerate every page, canonical, graph and sitemap.`);
+ }
+-const html = await readFile('index.html', 'utf8');
+-const oldUrl = html.match(/<link rel="canonical" href="(https:\/\/[^\"]+)"/);
+-if (!oldUrl) throw new Error('Canonical URL is missing from index.html.');
+-const oldOrigin = new URL(oldUrl[1]).origin;
+-for (const path of ['index.html', 'public/robots.txt', 'public/sitemap.xml']) {
+-  const content = await readFile(path, 'utf8');
+-  await writeFile(path, content.replaceAll(oldOrigin, url.origin));
+-}
+-console.log(`Updated canonical metadata and sitemap to ${url.origin}. Rebuild before deploying.`);
++if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await setSiteURL(process.argv[2]);
+diff --git a/scripts/verify-build.mjs b/scripts/verify-build.mjs
+index 94068feb0458b92e088d9d1355e0a2a183b59c48..89bc9c6582132301aa501a861b3291eca9019261 100644
+--- a/scripts/verify-build.mjs
++++ b/scripts/verify-build.mjs
+@@ -1,23 +1,83 @@
+ import assert from 'node:assert/strict';
+-import { readFile, stat } from 'node:fs/promises';
++import { readFile, stat, writeFile, mkdir } from 'node:fs/promises';
+ import { gzipSync } from 'node:zlib';
++import { loadEnv } from 'vite';
+ import { profile, chapters, project } from '../src/data/portfolio.js';
++import { SITE_ORIGIN } from '../src/data/site.js';
++import { pages, normalizePath } from '../src/seo/pages.js';
++import { escapeHTML, isPreview } from './seo.mjs';
+ 
+-const html = await readFile('dist/index.html', 'utf8');
+-for (const chapter of chapters) assert.ok(html.includes(`id="${chapter.id}"`), `Missing prerendered ${chapter.id}`);
+-for (const destination of [`mailto:${profile.email}`, profile.github, project.website, project.repository]) {
+-  assert.ok(html.includes(destination), `Missing working contact/project destination: ${destination}`);
++const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
++const preview = isPreview(env);
++const home = await readFile('dist/index.html', 'utf8');
++for (const chapter of chapters) assert.ok(home.includes(`id="${chapter.id}"`), `Missing chapter ${chapter.id}`);
++for (const url of [`mailto:${profile.email}`, profile.github, profile.linkedin, project.website, project.repository, 'tel:+918156805806', 'https://wa.me/918156805806']) assert.ok(home.includes(url), `Missing contact/project link: ${url}`);
++for (const asset of [project.screenshot, '/environment/forge-studio.hdr', '/social-card.png', '/favicon.svg']) assert.ok((await stat(`dist${asset}`)).size > 0);
++const rendered = new Map();
++for (const page of pages) {
++  const file = page.path === '/' ? 'dist/index.html' : `dist${page.path}index.html`;
++  const html = await readFile(file, 'utf8');
++  rendered.set(page.path, html);
++  assert.equal((html.match(/<h1\b/g) || []).length, 1, `One clear H1 required: ${page.path}`);
++  assert.ok(html.includes(`<title>${escapeHTML(page.title)}</title>`), `Wrong title: ${page.path}`);
++  assert.ok(html.includes(`name="description" content="${escapeHTML(page.description)}"`));
++  assert.equal((html.match(/rel="canonical"/g) || []).length, 1);
++  assert.ok(html.includes(`rel="canonical" href="${SITE_ORIGIN}${page.path}"`));
++  assert.ok(html.includes(preview ? 'noindex, follow' : 'index, follow, max-image-preview:large'));
++  assert.ok(html.includes('og:image') && html.includes('twitter:card'));
++  const graph = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
++  assert.equal(graph['@graph'][0].name, 'Muhammed Favas K');
++  if (page.service) {
++    for (const [q, answer] of page.service.faqs) assert.ok(html.includes(escapeHTML(q)) && html.includes(escapeHTML(answer)));
++    assert.ok(graph['@graph'].some(n => n['@type'] === 'Service'));
++  }
++  assert.ok(html.includes('href="/contact/"') || page.path === '/contact/');
++  assert.ok(!html.includes('<!--app-html-->') && !html.includes('<!--page-meta-->'));
+ }
+-for (const asset of [project.screenshot, '/environment/forge-studio.hdr', '/social-card.png', '/favicon.svg']) {
+-  assert.ok((await stat(`dist${asset}`)).size > 0, `Missing asset: ${asset}`);
++for (const [path, html] of rendered) {
++  const ids = target => new Set([...target.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
++  for (const [, href] of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)) {
++    if (/^(mailto:|tel:|https?:)/.test(href)) continue;
++    const url = new URL(href.replaceAll('&amp;', '&'), `${SITE_ORIGIN}${path}`);
++    const targetPath = normalizePath(url.pathname);
++    const target = rendered.get(targetPath);
++    if (!target && /\.[a-z0-9]+$/i.test(url.pathname)) { await stat(`dist${url.pathname}`); continue; }
++    assert.ok(target, `Broken internal link on ${path}: ${href}`);
++    if (url.hash) assert.ok(ids(target).has(decodeURIComponent(url.hash.slice(1))), `Broken fragment: ${path} -> ${href}`);
++  }
++  for (const [, src] of html.matchAll(/<(?:img|script)\b[^>]*\bsrc="([^"]+)"/g)) {
++    if (src.startsWith('/')) assert.ok((await stat(`dist${src}`)).size > 0, `Missing ${src}`);
++  }
+ }
+-assert.ok(html.includes('application/ld+json') && html.includes('og:image') && html.includes('rel="canonical"'), 'Missing search/sharing metadata');
+-const entry = html.match(/<script\b[^>]*type="module"[^>]*src="([^\"]+)"/);
+-assert.ok(entry, 'Missing Vite entry');
+-const js = await readFile(`dist${entry[1]}`);
+-const bytes = gzipSync(js).byteLength;
+-assert.ok(bytes <= 125 * 1024, `Initial JavaScript exceeds the 125 KiB gzip budget: ${bytes}`);
+-assert.ok(!js.toString().includes('WebGLRenderer'), 'The 3D renderer must remain outside the initial bundle');
+-console.log(`Build verification passed: all chapters, contact/project links, assets and metadata present.`);
+-console.log(`Initial JavaScript: ${(bytes / 1024).toFixed(1)} KiB gzip (budget: 125 KiB). 3D renderer remains lazy-loaded.`);
+-console.log('This checks output and transfer budgets; it does not produce a Lighthouse score or GPU frame-rate result.');
++const sitemap = await readFile('dist/sitemap.xml', 'utf8');
++const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
++assert.deepEqual(locations.sort(), (preview ? [] : pages.map(p => `${SITE_ORIGIN}${p.path}`)).sort());
++const robots = await readFile('dist/robots.txt', 'utf8');
++assert.ok(robots.includes('Allow: /'));
++assert.equal(robots.includes(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`), !preview);
++const error = await readFile('dist/404.html', 'utf8');
++assert.ok(error.includes('noindex, follow') && !error.includes('rel="canonical"'));
++const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
++const sizes = {};
++for (const [name, route] of [['home', 'src/App.jsx'], ['services', 'src/MarketingPages.jsx']]) {
++  const seen = new Set();
++  const visit = key => {
++    if (seen.has(key)) return;
++    const chunk = manifest[key]; assert.ok(chunk, `Missing manifest ${key}`);
++    seen.add(key); for (const child of chunk.imports || []) visit(child);
++  };
++  visit('index.html'); visit(route);
++  let bytes = 0;
++  for (const key of seen) {
++    const source = await readFile(`dist/${manifest[key].file}`);
++    assert.ok(!source.toString().includes('WebGLRenderer'), '3D renderer must stay deferred');
++    bytes += gzipSync(source).byteLength;
++  }
++  sizes[name] = Number((bytes / 1024).toFixed(1));
++  assert.ok(bytes <= 125 * 1024, `${name} initial JavaScript exceeds 125 KiB gzip: ${bytes}`);
++}
++await mkdir('.sites-runtime', { recursive: true });
++await writeFile('.sites-runtime/seo-results.json', JSON.stringify({ environment: preview ? 'preview' : 'production', pages: pages.length, staticHTML: true, sitemapURLs: locations.length, internalLinks: 'passed', structuredData: 'JSON and local consistency passed; external validator not run', initialJavaScriptKiBGzip: sizes, lighthouse: 'not run', fieldCoreWebVitals: 'unavailable', renderedWebGL: 'not verified in cloud browser' }, null, 2));
++console.log(`Verified ${pages.length} static pages: unique metadata, headings, canonical URLs, schema, sitemap, robots, contact actions and internal links.`);
++console.log(`Initial JavaScript including the selected page and shared imports: home ${sizes.home} KiB gzip; services ${sizes.services} KiB gzip (budget 125 KiB). 3D remains deferred.`);
++console.log('404 document verified. HTTP status codes and redirects require the host checks; these checks are not Lighthouse or field Core Web Vitals.');
+diff --git a/src/App.jsx b/src/App.jsx
+index 5ee7623c8656b24a99741488a85dace388bacda7..549c87aaf58ce6dd6554df306bbaf9ff1538cf05 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -2,6 +2,9 @@ import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from
+ import { profile, chapters, skillGroups, skills, project } from './data/portfolio';
+ import { useExperience } from './hooks/useExperience';
+ import ForgeFallback from './components/ForgeFallback';
++import { ContactActions, ContactDetails, MobileContact } from './components/ContactActions.jsx';
++import { services, whatsappHref } from './data/site.js';
++import AnalyticsPreference from './components/AnalyticsPreference.jsx';
+ 
+ class SceneBoundary extends Component {
+   state = { failed: false };
+@@ -17,24 +20,24 @@ function Mask({ children, className = '' }) { return <span className={`line-mask
+ function Header({ experience: e }) {
+   return <header className="site-header">
+     <a href="#home" className="wordmark" onClick={event => e.navigate(event, 'home')} aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>{profile.shortName.toUpperCase()}<span className="wordmark-period">.</span></a>
+-    <nav aria-label="Main navigation">{chapters.map(c => <a href={`#${c.id}`} key={c.id} aria-current={e.active === c.id ? 'location' : undefined} onClick={event => e.navigate(event, c.id)}>{c.label}</a>)}</nav>
+-    <a href={`mailto:${profile.email}`} className="header-contact" data-cursor="Hello">LET’S TALK <Arrow/></a>
++    <nav aria-label="Main navigation">{chapters.map(c => <a href={`/#${c.id}`} key={c.id} aria-current={e.active === c.id ? 'location' : undefined} onClick={event => e.navigate(event, c.id)}>{c.label}</a>)}<a href="/services/">Services</a></nav>
++    <a href="/contact/" className="header-contact" data-cursor="Hello">LET’S TALK <Arrow/></a>
+     <div ref={e.progressElement} className="scroll-line" aria-hidden="true"/>
+     <span className="sr-only" role="progressbar" aria-label="Page scroll progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={e.progress}/>
+   </header>;
+ }
+ function Hero({ experience: e }) {
+-  return <section id="home" tabIndex="-1" aria-labelledby="hero-name" className="chapter hero">
++  return <section id="home" tabIndex="-1" aria-labelledby="hero-services" className="chapter hero">
+     <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
+-    <h1 id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</h1>
+-    <div className="hero-bottom"><div className="hero-copy text-panel"><p className="role mono"><span/> {profile.role}</p><h2>{profile.headline}</h2><p className="intro">{profile.intro}</p><div className="hero-actions"><a href="#projects" onClick={event => e.navigate(event,'projects')} className="button-solid" data-magnetic data-cursor="View">Explore My Work <Arrow/></a><a href="#contact" onClick={event => e.navigate(event,'contact')} className="text-link">Contact Me <Arrow/></a></div></div><div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div></div>
++    <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
++    <div className="hero-bottom"><div className="hero-copy text-panel"><p className="role mono"><span/> {profile.role}</p><h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div><div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div></div>
+     <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
+   </section>;
+ }
+ function About() {
+   return <section id="about" tabIndex="-1" aria-labelledby="about-title" className="chapter about">
+     <ChapterLabel id="about"/><span className="chapter-numeral" aria-hidden="true">01</span>
+-    <div className="about-copy text-panel" data-reveal><p className="mono overline">THE PERSON BEHIND THE PARTS</p><h2 id="about-title" className="display-heading">{profile.aboutTitle.map((line,i)=><span key={line} className={i === 1 ? 'muted' : ''}>{line}</span>)}</h2><p>{profile.about}</p><p>{profile.approach}</p><div className="about-signoff"><span className="signature">{profile.signature}</span><span className="mono">DEVELOPER<br/>{profile.location}</span></div></div>
++    <div className="about-copy text-panel" data-reveal><p className="mono overline">THE PERSON BEHIND THE PARTS</p><h2 id="about-title" className="display-heading">{profile.aboutTitle.map((line,i)=><span key={line} className={i === 1 ? 'muted' : ''}>{line}</span>)}</h2><p>{profile.about}</p><p>{profile.approach}</p><div className="home-services"><h3>Websites for your next step.</h3><ul>{services.map(service => <li key={service.slug}><a href={`/services/${service.slug}/`}>{service.name} <span aria-hidden="true">↗</span></a></li>)}</ul><a className="text-link" href="/services/">Explore website development services <Arrow/></a></div><div className="about-signoff"><span className="signature">{profile.signature}</span><span className="mono">DEVELOPER<br/>{profile.location}</span></div></div>
+   </section>;
+ }
+ function Skills({ experience: e }) {
+@@ -50,7 +53,7 @@ function Projects() {
+   const [imageFailed,setImageFailed] = useState(false);
+   return <section id="projects" tabIndex="-1" aria-labelledby="project-title" className="chapter projects">
+     <ChapterLabel id="projects"/>
+-    <div className="project-intro text-panel" data-reveal><p className="mono overline">SELECTED WORK / 01</p><h2 id="project-title" className="project-title">{project.name}<span aria-hidden="true">↗</span></h2><p className="project-tagline">{project.tagline}</p><p>{project.description}</p><div className="project-links"><External href={project.website} className="button-solid" data-magnetic data-cursor="Visit">Visit Website <Arrow/></External><External href={project.repository} className="text-link" data-cursor="Code">View Code <Arrow/></External></div><p className="mono project-role">{project.role}<br/>{project.stack.join(' / ')}</p></div>
++    <div className="project-intro text-panel" data-reveal><p className="mono overline">SELECTED WORK / 01</p><h2 id="project-title" className="project-title">{project.name}<span aria-hidden="true">↗</span></h2><p className="project-tagline">{project.tagline}</p><p>{project.description}</p><div className="project-links"><External href={project.website} className="button-solid" data-magnetic data-cursor="Visit">Visit Website <Arrow/></External><External href={project.repository} className="text-link" data-cursor="Code">View Code <Arrow/></External></div><a href="/projects/gymdrobe/" className="text-link case-link">Read the GymDrobe case study <Arrow/></a><p className="mono project-role">{project.role}<br/>{project.stack.join(' / ')}</p></div>
+     <div className="project-visual"><button className="project-screenshot" onClick={()=>dialog.current?.showModal()} data-cursor="View" aria-label="Enlarge real GymDrobe screenshot">{!imageFailed ? <img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async" onError={()=>setImageFailed(true)}/> : <span>GYMDROBE<br/>Storefront screenshot unavailable</span>}<span className="screenshot-action mono">ACTUAL STOREFRONT <Arrow/></span></button><span className="mono image-caption">GYMDROBE.COM — CAPTURED {project.reviewed}</span></div>
+     <div className="case-study text-panel">
+       <div className="case-meta"><span className="mono">A CLOSER LOOK</span><p>A shopping flow.<br/>A connected system.</p></div>
+@@ -64,7 +67,7 @@ function Contact() {
+   const timer = useRef(null);
+   useEffect(()=>()=>clearTimeout(timer.current),[]);
+   const copy = async()=>{try { await navigator.clipboard.writeText(profile.email);setCopyState('Email copied.');}catch{setCopyState('Select the email address to copy it, or use the email link.');}clearTimeout(timer.current);timer.current=setTimeout(()=>setCopyState(''),6000);};
+-  return <section id="contact" tabIndex="-1" aria-labelledby="contact-title" className="chapter contact"><ChapterLabel id="contact"/><div className="contact-copy text-panel"><p className="mono overline" data-reveal>THE NEXT BUILD STARTS HERE</p><h2 id="contact-title" className="contact-title" data-reveal>{profile.contactTitle.map((line,i)=><span key={line} className={i===1?'accent':''}>{line}</span>)}</h2><p className="contact-intro">{profile.contactIntro}</p><a href={`mailto:${profile.email}`} className="email-link" data-magnetic data-cursor="Hello">{profile.email} <Arrow/></a><div className="contact-links"><External href="https://wa.me/918156805806" className="text-link">WhatsApp · +91 8156805806 <Arrow/></External><External href={profile.github} className="text-link">GitHub <Arrow/></External>{profile.linkedin && <External href={profile.linkedin} className="text-link">LinkedIn <Arrow/></External>}{profile.cv && <a href={profile.cv} className="text-link" download>Download CV <Arrow/></a>}<button className="copy-email" onClick={copy}>Copy email address</button></div><p className="copy-status" role="status">{copyState}</p></div><div className="contact-location mono">{profile.location}</div></section>;
++  return <section id="contact" tabIndex="-1" aria-labelledby="contact-title" className="chapter contact"><ChapterLabel id="contact"/><div className="contact-copy text-panel"><p className="mono overline" data-reveal>THE NEXT BUILD STARTS HERE</p><h2 id="contact-title" className="contact-title" data-reveal>{profile.contactTitle.map((line,i)=><span key={line} className={i===1?'accent':''}>{line}</span>)}</h2><p className="contact-intro">{profile.contactIntro}</p><ContactActions compact/><ContactDetails showEmail={false}/><a href={`mailto:${profile.email}`} className="email-link" data-contact="email" data-magnetic data-cursor="Hello">{profile.email} <Arrow/></a><div className="contact-links"><External href={whatsappHref()} data-contact="whatsapp" className="text-link">WhatsApp · +91 8156805806 <Arrow/></External><External href={profile.github} className="text-link">GitHub <Arrow/></External>{profile.linkedin && <External href={profile.linkedin} className="text-link">LinkedIn <Arrow/></External>}{profile.cv && <a href={profile.cv} className="text-link" download>Download CV <Arrow/></a>}<button className="copy-email" onClick={copy}>Copy email address</button></div><p className="copy-status" role="status">{copyState}</p></div><div className="contact-location mono">{profile.location}</div></section>;
+ }
+ export default function App() {
+   const e = useExperience();
+@@ -76,7 +79,8 @@ export default function App() {
+     <div className="film-grain" aria-hidden="true"/>
+     <Header experience={e}/>
+     <main id="main" tabIndex="-1"><Hero experience={e}/><About/><Skills experience={e}/><Projects/><Contact/></main>
+-    <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><span className="mono">BUILT WITH INTENTION.</span><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a></footer>
++    <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><nav className="home-footer-links" aria-label="Footer navigation"><a href="/services/">Services</a><a href="/projects/gymdrobe/">GymDrobe case study</a><a href="/contact/">Request a Quote</a><a href="/privacy/">Privacy</a></nav><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a><AnalyticsPreference/></footer>
++    <MobileContact/>
+     <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <div className="experience-options"><button className="view-toggle" onClick={e.toggleMotion} aria-pressed={!e.reduced}>{e.reduced?'Enable full motion':'Use gentle motion'}</button><button className="view-toggle" onClick={e.toggleMode} aria-pressed={e.mode==='static'}>{e.mode==='three'?'Switch to 2D':e.sceneStatus==='error'?'Retry 3D':'Enable 3D'}<span className="view-dot"/></button></div>}</div>
+     {e.initialized && e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">{e.sceneStatus==='recovering'?'RESTORING THE FORGE':'ASSEMBLING THE FORGE'} {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.toggleMode}>Use 2D view <span aria-hidden="true">↗</span></button></div>}
+     {e.sceneStatus==='error' && <div className="scene-loader" role="status"><p>{e.reason}</p><button onClick={e.retry}>Retry 3D <span aria-hidden="true">↗</span></button></div>}
+diff --git a/src/MarketingPages.jsx b/src/MarketingPages.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..59112e0952115572ac2acfcf5baf79ca6157ff7b
+--- /dev/null
++++ b/src/MarketingPages.jsx
+@@ -0,0 +1,40 @@
++import { profile, project } from './data/portfolio.js';
++import { services, processSteps } from './data/site.js';
++import { ContactActions, ContactDetails, MobileContact } from './components/ContactActions.jsx';
++import ServiceLinks from './components/ServiceLinks.jsx';
++import EnquiryForm from './components/EnquiryForm.jsx';
++import AnalyticsPreference from './components/AnalyticsPreference.jsx';
++
++const External = ({ href, children, ...props }) => <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}<span className="sr-only"> (opens in a new tab)</span></a>;
++export function Process() {
++  return <section className="marketing-section" aria-labelledby="process-title"><p className="mono overline">FROM BRIEF TO BUILD</p><h2 id="process-title">A clear process, together.</h2><ol className="process-list">{processSteps.map(([name, detail], i) => <li key={name}><span className="mono">0{i + 1}</span><div><h3>{name}</h3><p>{detail}</p></div></li>)}</ol><p className="scope-note">Scope, quote, schedule and any support arrangement are agreed for your project.</p></section>;
++}
++function ProjectEvidence({ text }) {
++  return <aside className="project-proof"><div><p className="mono overline">REAL PROJECT / MY OWN BUILD</p><h2>GymDrobe, from product to purchase.</h2><p>{text || 'My own fitness e-commerce platform brings clothing, supplements and accessories into one store. See how the interface, shopping state and checkout connect.'}</p><a href="/projects/gymdrobe/" className="text-link">Read the GymDrobe case study <span aria-hidden="true">↗</span></a></div><a href="/projects/gymdrobe/" aria-label="View the GymDrobe case study"><img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async"/></a></aside>;
++}
++function QuoteCTA() { return <section className="quote-cta"><p className="mono overline">YOUR NEXT WEBSITE</p><h2>Tell me what your business needs.</h2><p>Share your idea or existing website. We can define the right scope and a quote.</p><ContactActions/></section>; }
++function ServicePage({ service }) {
++  return <><section className="marketing-hero"><p className="mono overline">{service.name} / KOZHIKODE · KERALA · REMOTE</p><h1>{service.heading}</h1><p className="marketing-lead">{service.audience}</p><ContactActions compact/><a className="text-link" href="/projects/gymdrobe/">View my work <span aria-hidden="true">↗</span></a></section>
++    <section className="marketing-section split-copy"><div><p className="mono overline">BUILT AROUND YOUR CUSTOMERS</p><h2>Make the next step easier.</h2><p>{service.problem}</p></div><div><h2 className="small-heading">What we can include</h2><p>The final deliverables depend on the scope we agree.</p><ul className="deliverables">{service.deliverables.map(item => <li key={item}>{item}</li>)}</ul></div></section>
++    <ProjectEvidence text={service.evidence}/><Process/>
++    <section className="marketing-section faq-section" aria-labelledby="faq-title"><p className="mono overline">BEFORE WE START</p><h2 id="faq-title">Useful questions.</h2>{service.faqs.map(([q, a]) => <details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</section>
++    <QuoteCTA/><section className="marketing-section"><h2>Need something different?</h2><ServiceLinks exclude={service.slug}/></section></>;
++}
++function ServicesPage() {
++  return <><section className="marketing-hero"><p className="mono overline">FREELANCE WEBSITE DEVELOPMENT</p><h1>A website that works for your business.</h1><p className="marketing-lead">I’m Muhammed Favas K, a freelance web developer in Kozhikode (Calicut), Kerala. I build business websites, online stores and focused landing pages, with remote availability across India.</p><ContactActions compact/></section><section className="marketing-section" aria-labelledby="services-title"><p className="mono overline">FIND YOUR STARTING POINT</p><h2 id="services-title">What do you need to build?</h2><ServiceLinks/></section><ProjectEvidence/><Process/><QuoteCTA/></>;
++}
++function GymDrobePage() {
++  return <><section className="marketing-hero"><p className="mono overline">CASE STUDY / OWN PROJECT</p><h1>GymDrobe.<br/><span className="muted">One connected store.</span></h1><p className="marketing-lead">{project.description} I built GymDrobe as my own project; this is not a paid client engagement.</p><div className="enquiry-actions"><External className="button-solid" href={project.website}>Visit GymDrobe <span aria-hidden="true">↗</span></External><External className="text-link" href={project.repository}>Explore the source <span aria-hidden="true">↗</span></External></div></section>
++    <figure className="case-image"><img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" decoding="async" fetchPriority="high"/><figcaption className="mono">ACTUAL PUBLIC STOREFRONT / CAPTURED {project.reviewed}</figcaption></figure>
++    <section className="marketing-section split-copy"><div><p className="mono overline">THE BUSINESS PROBLEM</p><h2>Workout essentials, brought together.</h2><p>{project.problem}</p></div><div><p className="mono overline">MY ROLE / {project.role}</p><h2 className="small-heading">Connecting the customer journey.</h2><p>{project.contribution}</p><ul className="deliverables">{project.features.map(feature => <li key={feature}>{feature}</li>)}</ul></div></section>
++    <section className="marketing-section"><p className="mono overline">TECHNOLOGY & DECISIONS</p><h2>The parts behind the purchase.</h2><p>{project.stack.join(' · ')}</p><div className="case-decisions">{project.decisions.map(d => <article key={d.title}><h3>{d.title}</h3><p>{d.challenge}</p><p>{d.decision}</p><External className="text-link" href={`${project.repository}/blob/${project.commit}/${d.file}`}>Read the implementation <span aria-hidden="true">↗</span></External></article>)}</div><p className="scope-note">{project.evidence}</p><p className="scope-note">No sales, traffic or conversion results are claimed in this case study.</p></section><QuoteCTA/></>;
++}
++function ContactPage() {
++  return <><section className="marketing-hero"><p className="mono overline">LET’S TALK ABOUT YOUR WEBSITE</p><h1>A useful website starts with your business.</h1><p className="marketing-lead">Tell me what you sell or offer, who you want to reach, and what you need the website to do. Request a quote for an agreed scope.</p><ContactActions quote={false} compact/><ContactDetails/></section><section className="marketing-section contact-page-grid" aria-labelledby="enquiry-title"><div><p className="mono overline">PROJECT ENQUIRY</p><h2 id="enquiry-title">What are you planning?</h2><p>A few details help us start with the right questions.</p><p>You can also send your current website link on WhatsApp or by email.</p></div><EnquiryForm/></section><Process/></>;
++}
++function PrivacyPage() {
++  return <><section className="marketing-hero"><p className="mono overline">YOUR INFORMATION</p><h1>Privacy & enquiries.</h1><p className="marketing-lead">This site is operated by Muhammed Favas K in Kozhikode, Kerala, India. Contact <a href={`mailto:${profile.email}`} data-contact="email">{profile.email}</a> with questions about your information.</p></section><section className="marketing-section privacy-copy"><h2>Project details you choose to share</h2><p>The enquiry form asks for your name, a way to reply and a short project description. Business name and budget are optional. These details are used to discuss your project, rather than added to a marketing list.</p><p>When the form offers a WhatsApp handoff, your brief is prepared in a link. You review it and send it in WhatsApp yourself; opening the link does not prove a message was sent. WhatsApp handles that conversation under its own privacy terms.</p><p>When direct form delivery is enabled, Formspree processes the submitted details and forwards them to the site owner. Its processing and retention policies also apply. Please avoid sharing passwords, payment details or sensitive personal information.</p><p>You can ask me to correct or delete enquiry information by email. Information needed for an agreed project or required records may need to be retained. No fixed deletion schedule is promised here.</p><h2>Optional analytics</h2><p>Analytics are off by default. If configured, you can choose to enable Google Analytics using the control below. The integration records page views, contact-button clicks and form-service confirmations, without form contents, query strings, WhatsApp message text or contact details as event parameters. Google may process device and network data and use analytics cookies when you opt in.</p><p>A contact click does not confirm an enquiry, and an enquiry does not confirm a sale. You can turn analytics off below. Previously recorded data and cookies may remain subject to the provider’s settings; clearing this site’s browser data removes local preferences.</p><AnalyticsPreference/><h2>Local preferences & hosting</h2><p>Your chosen 2D/3D view, motion preference and analytics choice may be stored in your browser. The hosting provider may process ordinary request and security logs.</p><p><External href="https://formspree.io/legal/privacy-policy/" className="text-link">Formspree privacy information ↗</External></p><p><External href="https://policies.google.com/privacy" className="text-link">Google privacy information ↗</External></p></section></>;
++}
++export default function MarketingPages({ page }) {
++  return <div className="marketing-shell"><a className="skip-link" href="#main">Skip to content</a><header className="marketing-header"><a href="/" className="wordmark" aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>FAVAS<span className="wordmark-period">.</span></a><nav aria-label="Main navigation"><a href="/">Portfolio</a><a href="/services/" aria-current={page.path.startsWith('/services/') ? 'page' : undefined}>Services</a><a href="/projects/gymdrobe/" aria-current={page.path === '/projects/gymdrobe/' ? 'page' : undefined}>Work</a><a href="/contact/" aria-current={page.path === '/contact/' ? 'page' : undefined}>Contact</a></nav><a href="/contact/" className="header-contact">REQUEST A QUOTE <span aria-hidden="true">↗</span></a></header><main id="main" tabIndex={-1} className="marketing-main"><nav aria-label="Breadcrumb" className="breadcrumbs"><ol><li><a href="/">Home</a></li>{page.service && <li><a href="/services/">Services</a></li>}<li aria-current="page">{page.label}</li></ol></nav>{page.service ? <ServicePage service={page.service}/> : page.path === '/services/' ? <ServicesPage/> : page.path === '/contact/' ? <ContactPage/> : page.path === '/projects/gymdrobe/' ? <GymDrobePage/> : page.path === '/privacy/' ? <PrivacyPage/> : <section className="marketing-hero"><p className="mono overline">404 / PAGE NOT FOUND</p><h1>This page is missing.</h1><p className="marketing-lead">Explore my website development services or tell me what you need to build.</p><a className="button-solid" href="/services/">Explore services ↗</a></section>}</main><footer className="marketing-footer"><div><span className="mono">MUHAMMED FAVAS K / THE FORGE</span><p>Web development from Kozhikode, Kerala.<br/>Remote projects across India.</p></div><nav aria-label="Footer navigation"><a href="/services/">Services</a><a href="/projects/gymdrobe/">GymDrobe</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><External href={profile.github}>GitHub</External><External href={profile.linkedin}>LinkedIn</External></nav><AnalyticsPreference/></footer><MobileContact/></div>;
++}
+diff --git a/src/components/AnalyticsPreference.jsx b/src/components/AnalyticsPreference.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..d710dcb1d2f21398733b7de9ef32ccb563a1073c
+--- /dev/null
++++ b/src/components/AnalyticsPreference.jsx
+@@ -0,0 +1,9 @@
++import { useEffect, useState } from 'react';
++import { analyticsAvailable, consentAnalytics, storedConsent } from '../seo/analytics.js';
++export default function AnalyticsPreference() {
++  const [allowed, setAllowed] = useState(false);
++  const [available, setAvailable] = useState(false);
++  useEffect(() => { setAllowed(storedConsent()); setAvailable(analyticsAvailable()); }, []);
++  if (!available) return null;
++  return <div className="analytics-choice"><p>Optional analytics measure page views and contact actions. Form contents are excluded.</p><button type="button" className="text-link" aria-pressed={allowed} onClick={() => { consentAnalytics(!allowed); setAllowed(!allowed); }}>{allowed ? 'Turn analytics off' : 'Allow optional analytics'}</button></div>;
++}
+diff --git a/src/components/ContactActions.jsx b/src/components/ContactActions.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a85d7a0b29766a63946b59cb6c1785ad6786b52c
+--- /dev/null
++++ b/src/components/ContactActions.jsx
+@@ -0,0 +1,14 @@
++import { PHONE_DISPLAY, PHONE_HREF, whatsappHref } from '../data/site.js';
++import { profile } from '../data/portfolio.js';
++
++export function ContactActions({ quote = true, compact = false }) {
++  return <div className={`enquiry-actions ${compact ? 'compact' : ''}`}>
++    {quote && <a className="button-solid" href="/contact/">Discuss Your Website <span aria-hidden="true">↗</span></a>}
++    <a className={quote ? 'button-outline' : 'button-solid'} href={whatsappHref()} target="_blank" rel="noopener noreferrer" data-contact="whatsapp">WhatsApp Me <span className="sr-only">(opens in a new tab)</span><span aria-hidden="true">↗</span></a>
++    {!compact && <a className="text-link" href={PHONE_HREF} data-contact="call">Call {PHONE_DISPLAY}</a>}
++  </div>;
++}
++export function ContactDetails({ showEmail = true }) {
++  return <div className="direct-contact"><a href={PHONE_HREF} data-contact="call">Call {PHONE_DISPLAY}</a>{showEmail && <a href={`mailto:${profile.email}`} data-contact="email">{profile.email}</a>}<p>{profile.location}<br/>Remote projects across India.</p></div>;
++}
++export function MobileContact() { return <a className="mobile-contact" href={whatsappHref()} target="_blank" rel="noopener noreferrer" data-contact="whatsapp">Discuss a website on WhatsApp <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>; }
+diff --git a/src/components/EnquiryForm.jsx b/src/components/EnquiryForm.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..aca77b0a7c9f28e89185c2d5711f0250dc4f73c0
+--- /dev/null
++++ b/src/components/EnquiryForm.jsx
+@@ -0,0 +1,58 @@
++import { useEffect, useRef, useState } from 'react';
++import { services, whatsappHref } from '../data/site.js';
++import { readEnquiry, validateEnquiry, formEndpoint, enquiryMessage, submitEnquiry } from '../enquiries/form.js';
++import { trackContact } from '../seo/analytics.js';
++
++export default function EnquiryForm() {
++  const endpoint = formEndpoint(import.meta.env.VITE_FORMSPREE_FORM_ID || '');
++  const [errors, setErrors] = useState({});
++  const [status, setStatus] = useState('');
++  const [pending, setPending] = useState(false);
++  const [handoff, setHandoff] = useState('');
++  const controller = useRef(null), busy = useRef(false), statusNode = useRef(null);
++  useEffect(() => () => controller.current?.abort(), []);
++  const submit = async event => {
++    event.preventDefault();
++    if (busy.current) return;
++    const form = event.currentTarget;
++    const data = readEnquiry(new FormData(form));
++    const nextErrors = validateEnquiry(data);
++    setErrors(nextErrors); setStatus(''); setHandoff('');
++    if (Object.keys(nextErrors).length) {
++      form.elements.namedItem(Object.keys(nextErrors)[0])?.focus(); return;
++    }
++    if (data._gotcha) { setStatus('The request could not be submitted. Please use a direct contact link.'); return; }
++    if (!endpoint) {
++      setHandoff(whatsappHref(enquiryMessage(data)));
++      setStatus('Your brief is ready. Open WhatsApp, review it and press Send there. Nothing has been sent from this form.');
++      requestAnimationFrame(() => statusNode.current?.focus()); return;
++    }
++    busy.current = true; setPending(true);
++    const abort = new AbortController(); controller.current = abort;
++    const timeout = setTimeout(() => abort.abort(), 15000);
++    try {
++      await submitEnquiry(endpoint, data, { signal: abort.signal });
++      setStatus('Your enquiry was accepted by the form service. Thank you for sharing your project.');
++      form.reset(); trackContact('enquiry_submitted');
++    } catch (error) {
++      setStatus(error.name === 'AbortError' ? 'Confirmation timed out. Delivery is unconfirmed. Your details are still here; contact me on WhatsApp before sending again.' : error.message);
++    } finally { clearTimeout(timeout); busy.current = false; setPending(false); }
++  };
++  const field = (name, label, props = {}) => <div className="form-field"><label htmlFor={`enquiry-${name}`}>{label}</label><input id={`enquiry-${name}`} name={name} aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `error-${name}` : undefined} {...props}/>{errors[name] && <p className="field-error" id={`error-${name}`}>{errors[name]}</p>}</div>;
++  return <form className="enquiry-form" onSubmit={submit} noValidate aria-describedby="form-help" aria-busy={pending}>
++    <p id="form-help">Share a short brief. Add at least one contact method. {endpoint ? 'Enquiries are delivered through Formspree.' : 'This form prepares a WhatsApp message for you to review and send.'}</p>
++    <fieldset disabled={pending}><legend className="sr-only">Your project enquiry</legend>
++      {field('name', 'Your name', { autoComplete: 'name', required: true, minLength: 2, maxLength: 100 })}
++      <div className="form-row">{field('email', 'Email (or add a phone number)', { type: 'email', autoComplete: 'email', maxLength: 254 })}{field('phone', 'Phone (or add an email)', { type: 'tel', autoComplete: 'tel', maxLength: 32 })}</div>
++      {field('business', 'Business name — optional', { autoComplete: 'organization', maxLength: 150 })}
++      <div className="form-field"><label htmlFor="enquiry-service">Service needed</label><select id="enquiry-service" name="service" defaultValue="" required aria-invalid={!!errors.service} aria-describedby={errors.service ? 'error-service' : undefined}><option value="" disabled>Select a service</option>{services.map(s => <option key={s.slug}>{s.name}</option>)}<option>Not sure yet</option></select>{errors.service && <p className="field-error" id="error-service">{errors.service}</p>}</div>
++      <div className="form-field"><label htmlFor="enquiry-message">What would you like to build or improve?</label><textarea id="enquiry-message" name="message" rows={5} minLength={20} maxLength={3000} required aria-invalid={!!errors.message} aria-describedby={errors.message ? 'error-message' : 'message-help'}/><p id="message-help" className="field-hint">Describe your business, the goal and any existing website. Please do not include passwords or payment details.</p>{errors.message && <p className="field-error" id="error-message">{errors.message}</p>}</div>
++      {field('budget', 'Budget range — optional', { maxLength: 100, placeholder: 'Your planned budget, if you have one' })}
++      <div className="form-trap" aria-hidden="true"><label htmlFor="enquiry-website">Leave this field empty</label><input id="enquiry-website" name="_gotcha" tabIndex={-1} autoComplete="off"/></div>
++      <button type="submit" className="button-solid">{pending ? 'Submitting…' : endpoint ? 'Request a Quote' : 'Prepare WhatsApp Enquiry'} <span aria-hidden="true">↗</span></button>
++    </fieldset>
++    <p className="form-privacy">Your details are used to discuss your project. <a href="/privacy/">Privacy & enquiry information</a>.</p>
++    <div className="form-status" role="status" aria-live="polite" ref={statusNode} tabIndex={-1}>{status}{handoff && <a href={handoff} target="_blank" rel="noopener noreferrer" className="button-outline" data-contact="whatsapp">Open WhatsApp and review <span className="sr-only">(opens in a new tab)</span><span aria-hidden="true">↗</span></a>}</div>
++    <noscript><p>The interactive form needs JavaScript. Please use the WhatsApp, call or email links above to discuss your project.</p></noscript>
++  </form>;
++}
+diff --git a/src/components/ServiceLinks.jsx b/src/components/ServiceLinks.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..ab47ebd70437365cdeb9f332a06938b8910a7847
+--- /dev/null
++++ b/src/components/ServiceLinks.jsx
+@@ -0,0 +1,4 @@
++import { services } from '../data/site.js';
++export default function ServiceLinks({ exclude }) {
++  return <div className="service-grid">{services.filter(service => service.slug !== exclude).map((service, index) => <a className="service-card" href={`/services/${service.slug}/`} key={service.slug}><span className="mono">0{index + 1} / DEVELOPMENT</span><h3>{service.name}<span aria-hidden="true">↗</span></h3><p>{service.short}</p><span className="text-link">Explore {service.name.toLowerCase()}</span></a>)}</div>;
++}
+diff --git a/src/data/portfolio.js b/src/data/portfolio.js
+index 8fa192551490ebfff08ca493c5e3f40ca94fb7ff..1f3a2455123c85f60b1ba8a1c1f1df9e508733f0 100644
+--- a/src/data/portfolio.js
++++ b/src/data/portfolio.js
+@@ -1,6 +1,6 @@
+ // All personal and project copy lives here. Empty optional destinations stay hidden.
+ export const profile = {
+-  name: 'Muhammed Favas k ',
++  name: 'Muhammed Favas K',
+   displayName: ['Muhammed', 'Favas '],
+   shortName: 'Favas',
+   signature: 'Favas .',
+@@ -8,10 +8,10 @@ export const profile = {
+   location: 'Kozhikode, Kerala, India',
+   email: 'favas5291@gmail.com',
+   github: 'https://github.com/favas5291-coder',
+-  linkedin: '',
++  linkedin: 'https://www.linkedin.com/in/muhammed-favas-2aa4b03aa',
+   cv: '',
+-  headline: 'I build web experiences that turn ideas into reality.',
+-  intro: 'From the interface to the database. I build useful, responsive applications with the MERN stack.',
++  headline: 'Freelance Web Developer in Kozhikode — Websites Built for Your Business.',
++  intro: 'I’m Favas. I build business websites, online stores and landing pages that make your offer clear and help customers contact you. Based in Calicut, Kerala; available for remote projects across India.',
+   aboutTitle: ['Good ideas.', 'Built to work.'],
+   about: 'I’m Favas, a full stack developer based in Kozhikode, Kerala. I work with JavaScript, React, Node.js, Express and MongoDB.',
+   approach: 'My work connects what people see with what happens behind it. GymDrobe puts that into practice: products, accounts, shopping and checkout in one connected experience.',
+diff --git a/src/data/site.js b/src/data/site.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..ec45afd6e9652b2321db67868a3ca56279bbe12b
+--- /dev/null
++++ b/src/data/site.js
+@@ -0,0 +1,81 @@
++// Updated by scripts/set-site-url.mjs. Never put credentials in this file.
++export const SITE_ORIGIN = 'https://fazhere.com';
++export const WHATSAPP_NUMBER = '918156805806';
++export const PHONE_DISPLAY = '+91 8156805806';
++export const PHONE_HREF = 'tel:+918156805806';
++export const DEFAULT_MESSAGE = 'Hi Favas, I’m interested in a website for my business.';
++export const whatsappHref = (message = DEFAULT_MESSAGE) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
++
++export const processSteps = [
++  ['Discuss requirements', 'Tell me about your business, customers and what the website needs to do.'],
++  ['Agree scope and quote', 'We agree on the pages, features, responsibilities and quote before development.'],
++  ['Design and development', 'I build the interface and the agreed functionality, with mobile use in mind.'],
++  ['Review', 'We check the content, forms and important journeys together before launch.'],
++  ['Launch and handover', 'Publish the approved website and hand over the agreed access and project information.'],
++];
++
++export const services = [
++  {
++    slug: 'business-websites', name: 'Business websites', short: 'Help customers understand your business and take the next step.',
++    heading: 'A clear website for your business.',
++    title: 'Business Website Development in Kozhikode | Favas',
++    description: 'Business website development for small businesses in Kozhikode and Kerala. Clear service pages, mobile layouts and easy customer contact. Request a quote.',
++    audience: 'For small businesses and independent professionals who need a useful home online, beyond a social media profile.',
++    problem: 'Customers should be able to find what you offer, where you work and how to reach you. A confusing page or a contact link that is hard to find adds friction to that decision.',
++    deliverables: ['A responsive layout for phones, tablets and desktops', 'Agreed pages for your business, services and contact details', 'Clear WhatsApp, phone and email actions', 'Page titles, descriptions, sitemap and crawlable content', 'A launch review of links, forms and key pages'],
++    evidence: 'This portfolio shows a responsive, prerendered website with service information and direct contact actions. GymDrobe shows how I organise more detailed product information and navigation.',
++    faqs: [
++      ['What should I prepare?', 'Your business name, the services you offer, the customers you want to reach, and any existing logo, photos or website. We can identify missing content when agreeing the scope.'],
++      ['Can a business in Calicut work with you?', 'Yes. I am based in Kozhikode, also known as Calicut, and work remotely with businesses across Kerala and India.'],
++      ['What will it cost?', 'Request a quote. The number of pages, content, functionality and existing setup determine the scope and price.'],
++      ['Will the site be guaranteed to rank on Google?', 'No ranking is guaranteed. Clear content and sound technical foundations help search engines understand a site; competition and many other factors affect visibility.'],
++    ],
++  },
++  {
++    slug: 'ecommerce-development', name: 'E-commerce development', short: 'Connect product browsing, selection and checkout in one store.',
++    heading: 'An online store built around the purchase.',
++    title: 'E-commerce Website Developer in Kerala | Favas',
++    description: 'Custom e-commerce website development with React and the MERN stack. Product variants, cart, checkout and order flows. Explore GymDrobe and request a quote.',
++    audience: 'For businesses that need a custom online store and want to discuss their product, payment and order-management requirements.',
++    problem: 'Selling online involves more than a product grid. Customers need to choose the right variant, understand the total and complete checkout; the business needs to manage the resulting orders.',
++    deliverables: ['A responsive storefront and product detail pages', 'Product variants, stock selection and a cart within the agreed scope', 'Checkout and payment-provider integration where agreed', 'Customer and order-management flows matched to the project', 'A review of purchase, cancellation and error states before launch'],
++    evidence: 'GymDrobe is my own fitness e-commerce project. Its React storefront includes variant selection, cart and wishlist state, checkout, Razorpay integration and order-management interfaces.',
++    faqs: [
++      ['Can you build a custom React store?', 'Yes. My current work uses React, Node.js, Express and MongoDB. We first define the catalogue, purchase flow and admin requirements.'],
++      ['Can I use Razorpay?', 'I have integrated Razorpay in GymDrobe. A live integration depends on your approved payment-provider account and credentials, which stay on the server.'],
++      ['Do you offer Shopify or WordPress store development?', 'Those platforms are not listed as services here. My demonstrated stack is React and MERN; tell me about an existing platform before we agree on work.'],
++      ['Can I see a real example?', 'Yes. Visit GymDrobe or read the case study on this site. It is my own project, rather than paid client work.'],
++    ],
++  },
++  {
++    slug: 'landing-pages', name: 'Landing pages', short: 'Give one offer one focused page and a clear enquiry action.',
++    heading: 'One offer. A clear next step.',
++    title: 'Landing Page Developer for Business Enquiries | Favas',
++    description: 'Focused, responsive landing pages for a business, service or campaign. Clear copy, useful proof and WhatsApp or enquiry actions. Request a project quote.',
++    audience: 'For a business introducing a service, sharing a campaign link or explaining a specific offer to potential customers.',
++    problem: 'A visitor arriving from an ad or a shared link needs to understand the offer quickly. Competing messages, heavy loading and a hidden contact option make that harder.',
++    deliverables: ['A focused page structure for one agreed audience and offer', 'Responsive layout, clear headings and prominent contact actions', 'Space for your real product images or project evidence', 'An enquiry path using WhatsApp, email or a configured form service', 'Optional contact-click measurement with your analytics configuration'],
++    evidence: 'The service pages on this site keep the message and contact actions in the returned HTML. The main portfolio demonstrates how motion can remain separate from essential content.',
++    faqs: [
++      ['Can the page be used with an advertising campaign?', 'Yes. We can match the page to a specific offer and prepare contact-action measurement. Ad accounts, campaign management and ad spend are separate from page development.'],
++      ['Will you promise more leads?', 'No. A clearer page can remove avoidable friction, but results also depend on the offer, audience and traffic. Enquiry quality needs to be measured after launch.'],
++      ['Do I need a full website first?', 'No. A landing page can be a focused starting point. We should still make your identity, offer and contact information clear.'],
++    ],
++  },
++  {
++    slug: 'website-redesign', name: 'Website redesign', short: 'Improve an existing site’s clarity, mobile layout and enquiry flow.',
++    heading: 'Make your existing website easier to use.',
++    title: 'Website Redesign Services in Kozhikode | Favas',
++    description: 'Website redesign and React website improvements for businesses in Kozhikode and Kerala. Review mobile layouts, service clarity, speed and contact journeys.',
++    audience: 'For businesses with an existing website that is difficult to use on mobile, unclear about its services or awkward to contact through.',
++    problem: 'A redesign should address a specific problem. Before proposing changes, I inspect the existing site and available code, identify the important pages and agree on what should be preserved.',
++    deliverables: ['A review of your current pages, navigation and contact journey', 'An agreed redesign scope based on the existing stack and access', 'Responsive layouts and clearer service information', 'A plan for preserving working URLs and redirecting moved pages', 'Checks of agreed pages, links and enquiry actions before launch'],
++    evidence: 'This portfolio has been improved while retaining its 3D identity: essential content is prerendered, mobile rendering quality adapts, and direct contact options remain available.',
++    faqs: [
++      ['Can you improve my existing React website?', 'Yes, subject to reviewing the source and requirements. Share the current URL and the problems you want to solve.'],
++      ['My site is on WordPress. Can you work on it?', 'Share the URL and explain the change first. I will confirm whether I can deliver it before quoting; WordPress-specific development is not an advertised capability here.'],
++      ['Will existing links keep working?', 'Preserving useful URLs is part of the review. If pages need to move, we plan redirects and check them after deployment.'],
++      ['Is ongoing maintenance included?', 'Any maintenance, hosting responsibilities or support arrangement must be discussed and included in the agreed scope.'],
++    ],
++  },
++];
+diff --git a/src/enquiries/form.js b/src/enquiries/form.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6a5add61e9487b00023f5b46541b78f6a3e159a
+--- /dev/null
++++ b/src/enquiries/form.js
+@@ -0,0 +1,29 @@
++const text = (value, max) => String(value || '').trim().slice(0, max);
++export function readEnquiry(form) {
++  const data = Object.fromEntries(form);
++  return { name: text(data.name, 100), email: text(data.email, 254), phone: text(data.phone, 32), business: text(data.business, 150), service: text(data.service, 100), message: text(data.message, 3000), budget: text(data.budget, 100), _gotcha: text(data._gotcha, 200) };
++}
++export function validateEnquiry(data) {
++  const errors = {};
++  if (data.name.length < 2) errors.name = 'Enter your name (at least 2 characters).';
++  if (!data.email && !data.phone) errors.email = 'Add an email address or phone number so I can reply.';
++  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = 'Enter a valid email address.';
++  if (data.phone && (!/^[+()\d\s.-]+$/.test(data.phone) || data.phone.replace(/\D/g, '').length < 7 || data.phone.replace(/\D/g, '').length > 15)) errors.phone = 'Enter a phone number with 7–15 digits, including country code if needed.';
++  if (!data.service) errors.service = 'Choose a service, or select “Not sure yet”.';
++  if (data.message.length < 20) errors.message = 'Tell me a little more about the project (at least 20 characters).';
++  return errors;
++}
++export function formEndpoint(id = '') { return /^[a-zA-Z0-9]{6,40}$/.test(id) ? `https://formspree.io/f/${id}` : ''; }
++export function enquiryMessage(data) {
++  return [`Hi Favas, I’d like to discuss a website.`, `Name: ${data.name}`, data.business && `Business: ${data.business}`, `Service: ${data.service}`, data.email && `Email: ${data.email}`, data.phone && `Phone: ${data.phone}`, data.budget && `Budget: ${data.budget}`, '', data.message].filter(line => line !== false && line !== '').join('\n');
++}
++export async function submitEnquiry(endpoint, data, { fetcher = fetch, signal } = {}) {
++  // Only the public form ID goes in Vite. Delivery credentials belong to Formspree.
++  if (!/^https:\/\/formspree\.io\/f\/[a-zA-Z0-9]{6,40}$/.test(endpoint)) throw new Error('Form delivery is not configured. Please use WhatsApp or email.');
++  if (data._gotcha) throw new Error('The request could not be submitted. Please use WhatsApp or email.');
++  const response = await fetcher(endpoint, { method: 'POST', credentials: 'omit', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, _subject: 'Website project enquiry — fazhere.com' }), signal });
++  const body = await response.json().catch(() => null);
++  if (response.status === 429) throw new Error('Too many attempts. Please wait before trying again, or use WhatsApp.');
++  if (!response.ok || body?.ok !== true) throw new Error('The form service did not confirm your enquiry. Your details are still here; please try WhatsApp or email.');
++  return true;
++}
+diff --git a/src/entry-server.jsx b/src/entry-server.jsx
+index 8dce2557562ccc9c9bd49c9fbc5c7e77961146e9..0e04c61653438352efbfa55baa6eef4f09a94a17 100644
+--- a/src/entry-server.jsx
++++ b/src/entry-server.jsx
+@@ -1,5 +1,10 @@
+ import React from 'react';
+ import { renderToString } from 'react-dom/server';
+ import App from './App';
++import MarketingPages from './MarketingPages.jsx';
++import { pageForPath } from './seo/pages.js';
+ 
+-export const render = () => renderToString(<React.StrictMode><App/></React.StrictMode>);
++export const render = (path = '/') => {
++  const page = pageForPath(path);
++  return renderToString(<React.StrictMode>{page.path === '/' ? <App/> : <MarketingPages page={page}/>}</React.StrictMode>);
++};
+diff --git a/src/main.jsx b/src/main.jsx
+index 9534b48255b052b6d43f0f9ceac13f16d665a75a..b5add788d6ed050353cbbc1bbe58cb80563f42c4 100644
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -1,10 +1,17 @@
+ import React from 'react';
+ import { createRoot, hydrateRoot } from 'react-dom/client';
+-import App from './App';
++import { pageForPath } from './seo/pages.js';
++import { initAnalytics } from './seo/analytics.js';
+ import './styles.css';
+ 
+-const root = document.getElementById('root');
+-const app = <React.StrictMode><App/></React.StrictMode>;
+-// The development template contains a comment, but only production has HTML.
+-if (root.childElementCount > 0) hydrateRoot(root, app);
+-else createRoot(root).render(app);
++async function start() {
++  const page = pageForPath(location.pathname);
++  const { default: Page } = page.path === '/' ? await import('./App.jsx') : await import('./MarketingPages.jsx');
++  const root = document.getElementById('root');
++  const app = <React.StrictMode><Page page={page}/></React.StrictMode>;
++  // All public pages have build-time HTML; navigation uses ordinary links.
++  if (root.childElementCount > 0) hydrateRoot(root, app);
++  else createRoot(root).render(app);
++  initAnalytics();
++}
++start().catch(() => { /* Prerendered content and direct contact links stay usable. */ });
+diff --git a/src/seo/analytics.js b/src/seo/analytics.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..4d50340e372bcfdc75a624822096cfd6a64971e6
+--- /dev/null
++++ b/src/seo/analytics.js
+@@ -0,0 +1,43 @@
++import { SITE_ORIGIN } from '../data/site.js';
++import { pageForPath } from './pages.js';
++
++const key = 'forge-analytics-consent';
++let active = false, initialized = false;
++const measurementId = import.meta.env?.VITE_GA_MEASUREMENT_ID || '';
++export const analyticsConfigured = () => /^G-[A-Z0-9]+$/.test(measurementId);
++export const analyticsAllowed = (id, robots = '') => /^G-[A-Z0-9]+$/.test(id) && !/\bnoindex\b/i.test(robots);
++export const analyticsAvailable = () => analyticsAllowed(measurementId, document.querySelector('meta[name="robots"]')?.content || '');
++export function storedConsent() { try { return localStorage.getItem(key) === 'granted'; } catch { return false; } }
++export function consentAnalytics(granted) {
++  try { localStorage.setItem(key, granted ? 'granted' : 'denied'); } catch { /* session only */ }
++  active = !!granted && analyticsAvailable();
++  if (!analyticsAvailable()) return;
++  window[`ga-disable-${measurementId}`] = !granted;
++  if (!granted) { window.gtag?.('consent', 'update', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }); return; }
++  window.dataLayer ||= [];
++  window.gtag ||= function () { window.dataLayer.push(arguments); };
++  window.gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
++  if (initialized) return;
++  initialized = true;
++  const page = pageForPath(location.pathname);
++  // Do not transmit query strings, fragments, enquiry fields or WhatsApp URLs.
++  window.gtag('js', new Date());
++  window.gtag('config', measurementId, { send_page_view: false, allow_google_signals: false, allow_ad_personalization_signals: false, page_location: `${SITE_ORIGIN}${page.path}`, page_referrer: '' });
++  window.gtag('event', 'page_view', { page_location: `${SITE_ORIGIN}${page.path}`, page_title: page.title, page_referrer: '' });
++  const script = document.createElement('script');
++  script.async = true; script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`; document.head.append(script);
++}
++export function trackContact(event) {
++  if (!active || !['whatsapp_click', 'call_click', 'email_click', 'enquiry_submitted'].includes(event)) return;
++  window.gtag?.('event', event, { page_location: `${SITE_ORIGIN}${pageForPath(location.pathname).path}`, page_referrer: '' });
++}
++export function initAnalytics() {
++  if (!analyticsAvailable()) return () => {};
++  consentAnalytics(storedConsent());
++  const click = event => {
++    const type = event.target.closest?.('a[data-contact]')?.dataset.contact;
++    if (['whatsapp', 'call', 'email'].includes(type)) trackContact(`${type}_click`);
++  };
++  document.addEventListener('click', click);
++  return () => document.removeEventListener('click', click);
++}
+diff --git a/src/seo/pages.js b/src/seo/pages.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..f52e188c77d4f48d5d196b70e3e9dacc6f8ae70d
+--- /dev/null
++++ b/src/seo/pages.js
+@@ -0,0 +1,35 @@
++import { SITE_ORIGIN, services } from '../data/site.js';
++import { profile } from '../data/portfolio.js';
++
++export const pages = [
++  { path: '/', label: 'Home', title: 'Freelance Web Developer in Kozhikode | Muhammed Favas K', description: 'I’m Favas, a freelance web developer in Kozhikode (Calicut), Kerala. Business websites, online stores and landing pages. Available for remote projects across India.' },
++  { path: '/services/', label: 'Services', title: 'Freelance Website Development Services | Favas, Kerala', description: 'Explore business websites, custom e-commerce development, landing pages and website redesign with Favas in Kozhikode, Kerala. Find the right scope and request a quote.' },
++  ...services.map(service => ({ path: `/services/${service.slug}/`, label: service.name, title: service.title, description: service.description, service })),
++  { path: '/projects/gymdrobe/', label: 'GymDrobe', title: 'GymDrobe Case Study — MERN E-commerce Project | Favas', description: 'Explore GymDrobe, Muhammed Favas K’s own fitness e-commerce project: the business problem, React storefront, purchase flow and full stack development contribution.' },
++  { path: '/contact/', label: 'Contact', title: 'Discuss Your Website — Contact Favas in Kozhikode', description: 'Need a business website, online store or landing page? Contact freelance web developer Muhammed Favas K in Kozhikode by WhatsApp, phone, email or project enquiry.' },
++  { path: '/privacy/', label: 'Privacy', title: 'Privacy & Enquiry Information | Favas', description: 'How project enquiries and optional analytics are handled on fazhere.com. Contact Favas about your information or update your analytics preference.' },
++];
++export const notFound = { path: '/404.html', label: 'Page not found', title: 'Page Not Found | Favas', description: 'This page could not be found. Browse website development services or contact Muhammed Favas K.', noindex: true };
++export function normalizePath(path = '/') {
++  const clean = String(path).split(/[?#]/)[0];
++  if (clean === '/index.html') return '/';
++  return clean === '/' || clean.endsWith('.html') ? clean : `${clean.replace(/\/+$/, '')}/`;
++}
++export function pageForPath(path) { return pages.find(page => page.path === normalizePath(path)) || notFound; }
++export function structuredData(page, origin = SITE_ORIGIN) {
++  const personID = `${origin}/#person`, siteID = `${origin}/#website`;
++  const url = `${origin}${page.path}`;
++  const graph = [
++    { '@type': 'Person', '@id': personID, name: 'Muhammed Favas K', url: `${origin}/`, jobTitle: 'Freelance Web Developer / MERN Stack Developer', email: `mailto:${profile.email}`, telephone: '+918156805806', sameAs: [profile.github, profile.linkedin].filter(Boolean), homeLocation: { '@type': 'Place', name: 'Kozhikode (Calicut), Kerala, India' }, knowsAbout: ['JavaScript', 'React', 'Node.js', 'Express', 'MongoDB', 'Tailwind CSS', 'Git', 'GitHub'] },
++    { '@type': 'WebSite', '@id': siteID, url: `${origin}/`, name: 'Favas — The Forge', publisher: { '@id': personID }, inLanguage: 'en-IN' },
++    { '@type': page.path === '/contact/' ? 'ContactPage' : page.path === '/services/' ? 'CollectionPage' : 'WebPage', '@id': `${url}#page`, url, name: page.title, description: page.description, isPartOf: { '@id': siteID }, about: { '@id': personID }, inLanguage: 'en-IN' },
++  ];
++  if (page.service) graph.push({ '@type': 'Service', '@id': `${url}#service`, name: page.service.name, serviceType: page.service.name, description: page.service.short, url, provider: { '@id': personID }, areaServed: ['Kozhikode', 'Kerala', 'India'].map(name => ({ '@type': 'Place', name })) });
++  if (page.path !== '/' && !page.noindex) {
++    const crumbs = [{ name: 'Home', path: '/' }];
++    if (page.service) crumbs.push({ name: 'Services', path: '/services/' });
++    crumbs.push({ name: page.label, path: page.path });
++    graph.push({ '@type': 'BreadcrumbList', '@id': `${url}#breadcrumbs`, itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, item: `${origin}${c.path}` })) });
++  }
++  return { '@context': 'https://schema.org', '@graph': graph };
++}
+diff --git a/src/styles.css b/src/styles.css
+index b2078fc82c4166df5fdeb16bc8619e0e3672bb32..7e6043d53ee78e0c8e451ba922d4bcef27d7dc23 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -205,3 +205,167 @@ main a,main button,main details,.text-panel,.project-visual {pointer-events:auto
+ .portfolio[data-motion='gentle'] .project-screenshot {transform:none;}
+ @media(pointer:coarse){.webgl-stage{pointer-events:none;}}
+ @media(max-width:767px){.view-controls{bottom:max(12px,env(safe-area-inset-bottom));}.scroll-counter{display:none;}.experience-options{margin-left:auto;}.view-toggle{font-size:8px;padding:0 9px;min-height:44px;gap:7px;}}
++
++/* Service information stays usable while the decorative scene loads. */
++input,select,textarea {font:inherit;color:inherit;max-width:100%;}
++input:focus-visible,select:focus-visible,textarea:focus-visible {outline:2px solid var(--accent);outline-offset:3px;}
++main input,main select,main textarea,main form,main label {pointer-events:auto;}
++.hero-copy {width:565px;max-width:50%;background:linear-gradient(90deg,#0b0b0cf2 70%,#0b0b0c55);}
++.hero-copy h1 {font-family:var(--display);font-size:clamp(22px,2.1vw,33px);line-height:1.18;font-weight:500;letter-spacing:-.035em;margin-top:16px;max-width:565px;}
++.hero-copy .intro {max-width:490px;}
++.enquiry-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px 20px;margin:24px 0 8px;}
++.enquiry-actions .button-solid,.enquiry-actions .button-outline {font-size:12px;gap:18px;}
++.button-outline {min-height:49px;border:1px solid #898a7b;padding:14px 18px;display:inline-flex;align-items:center;justify-content:space-between;gap:24px;font-size:12px;transition:background .2s,color .2s;}
++.button-outline:hover {background:var(--paper);color:var(--ink);}
++.home-services {margin:28px 0 14px;border-top:1px solid var(--rule);padding-top:22px;}
++.home-services h3 {font:500 23px var(--display);letter-spacing:-.04em;margin-bottom:10px;}
++.home-services ul {list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;}
++.home-services li a {display:flex;justify-content:space-between;gap:8px;align-items:center;min-height:44px;font-size:13px;border-bottom:1px solid var(--rule);}
++.home-services li a:hover {color:var(--accent);}
++.case-link {margin-top:12px;}
++.direct-contact {display:grid;gap:4px;margin-top:22px;font-size:15px;line-height:1.8;overflow-wrap:anywhere;}
++.direct-contact a {min-height:44px;display:flex;align-items:center;width:fit-content;text-decoration:underline;text-underline-offset:5px;}
++.direct-contact p {color:var(--muted);font-size:13px;margin:8px 0;}
++.contact-copy .direct-contact {margin-top:12px;}
++.home-footer-links {display:flex;flex-wrap:wrap;gap:8px 18px;max-width:460px;}
++.home-footer-links a {font-size:12px;min-height:44px;display:flex;align-items:center;}
++.analytics-choice {font-size:12px;line-height:1.8;max-width:480px;color:var(--muted);}
++.site-footer .analytics-choice {flex-basis:100%;}
++.site-footer {flex-wrap:wrap;}
++.mobile-contact {display:none;}
++.marketing-shell {background:var(--ink);min-height:100vh;}
++.marketing-header {min-height:88px;padding:16px 4.3vw;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:24px;}
++.marketing-header nav {display:flex;gap:28px;align-items:center;}
++.marketing-header nav a {font-size:13px;min-height:44px;display:flex;align-items:center;color:var(--muted);}
++.marketing-header a:hover,.marketing-header a[aria-current] {color:var(--accent);}
++.marketing-main {pointer-events:auto;max-width:1348px;margin:auto;padding:0 4.3vw;}
++.breadcrumbs {font-family:var(--mono);font-size:10px;color:var(--muted);padding:20px 0;}
++.breadcrumbs ol {list-style:none;display:flex;flex-wrap:wrap;gap:8px 14px;margin:0;padding:0;align-items:center;}
++.breadcrumbs li {display:flex;align-items:center;gap:14px;min-height:44px;}
++.breadcrumbs li + li::before {content:'/';color:#77796d;}
++.breadcrumbs a {min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:4px;}
++.marketing-hero {padding:60px 0 80px;max-width:1050px;}
++.marketing-hero h1 {font:600 clamp(42px,5.8vw,83px)/1.07 var(--display);letter-spacing:-.065em;max-width:1030px;text-wrap:balance;}
++.marketing-lead {font-size:18px;line-height:1.85;max-width:720px;margin-top:28px;color:#c7c5bb;}
++.marketing-lead a {text-decoration:underline;text-underline-offset:4px;}
++.marketing-section {padding:65px 0;border-top:1px solid var(--rule);}
++.marketing-section h2,.project-proof h2,.quote-cta h2 {font:500 clamp(29px,3.4vw,48px)/1.15 var(--display);letter-spacing:-.045em;margin-bottom:24px;max-width:750px;}
++.marketing-section p,.project-proof p,.quote-cta > p:not(.overline) {font-size:15px;line-height:1.85;color:#bab8ae;max-width:720px;margin:14px 0;}
++.marketing-section .overline,.project-proof .overline,.quote-cta .overline {font-size:10px;color:var(--accent);margin:0 0 20px;}
++.service-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;margin-top:35px;}
++.service-card {display:block;padding:28px 0;border-top:1px solid var(--rule);}
++.service-card > .mono {color:var(--muted);}
++.service-card h3 {font:500 clamp(23px,2.4vw,32px)/1.3 var(--display);letter-spacing:-.04em;margin:18px 0;display:flex;justify-content:space-between;gap:18px;}
++.service-card h3 span {color:var(--accent);}
++.service-card p {max-width:440px;}
++.service-card .text-link {text-decoration:underline;text-underline-offset:5px;}
++.service-card:hover h3 {color:var(--accent);}
++.project-proof {display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:6vw;padding:55px 35px;background:#151511;border:1px solid #3c3e32;margin:20px 0 65px;}
++.project-proof img {height:auto;width:100%;border:1px solid #535547;}
++.project-proof .text-link {margin-top:8px;color:var(--paper);}
++.split-copy {display:grid;grid-template-columns:1fr 1fr;gap:7vw;}
++.marketing-section .small-heading {font-size:28px;}
++.deliverables {padding:0;list-style:none;}
++.deliverables li {font-size:15px;line-height:1.7;padding:13px 0 13px 24px;border-bottom:1px solid var(--rule);position:relative;color:#c6c3b7;}
++.deliverables li::before {content:'↗';color:var(--accent);position:absolute;left:0;}
++.process-list {padding:0;list-style:none;margin:20px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px 32px;}
++.process-list li {border-top:1px solid var(--rule);padding:22px 0;}
++.process-list li > .mono {color:var(--accent);}
++.process-list h3 {font:500 22px/1.3 var(--display);letter-spacing:-.03em;margin:15px 0 10px;}
++.process-list p {font-size:14px;}
++.marketing-section .scope-note {font-size:12px;color:var(--muted);max-width:850px;}
++.faq-section details {border-top:1px solid var(--rule);padding:0;max-width:920px;}
++.faq-section summary {font-size:17px;line-height:1.6;padding:20px 0;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:24px;}
++.faq-section summary::-webkit-details-marker {display:none;}
++.faq-section summary span {color:var(--accent);}
++.faq-section details p {margin:0 0 25px;}
++.quote-cta {padding:55px 0 70px;border-top:1px solid var(--accent);}
++.case-image {margin:0 0 65px;}
++.case-image img {height:auto;width:100%;border:1px solid var(--rule);}
++.case-image figcaption {color:var(--muted);margin:18px 0;}
++.case-decisions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px;margin:35px 0;}
++.case-decisions article {padding:25px 0;border-top:1px solid var(--rule);}
++.case-decisions h3 {font:500 24px/1.3 var(--display);letter-spacing:-.04em;}
++.contact-page-grid {display:grid;grid-template-columns:1fr 1.3fr;gap:7vw;}
++.enquiry-form {min-width:0;}
++.enquiry-form > p {font-size:13px;margin-top:0;}
++.enquiry-form fieldset {padding:0;margin:24px 0 0;border:0;min-width:0;}
++.form-field {display:grid;gap:9px;margin-bottom:20px;min-width:0;}
++.form-field label {font-size:13px;line-height:1.6;}
++.form-field input,.form-field select,.form-field textarea {width:100%;border:1px solid #626353;background:#131410;padding:13px 14px;min-height:48px;border-radius:0;}
++.form-field textarea {resize:vertical;line-height:1.7;}
++.form-field [aria-invalid='true'] {border-color:#ff9877;}
++.form-row {display:grid;grid-template-columns:1fr 1fr;gap:20px;}
++.enquiry-form .field-error {font-size:12px;color:#ffb49a;margin:0;}
++.enquiry-form .field-hint,.enquiry-form .form-privacy {font-size:12px;line-height:1.8;color:var(--muted);margin:0;}
++.form-privacy a {text-decoration:underline;text-underline-offset:4px;}
++.enquiry-form .form-privacy {margin-top:18px;}
++.form-trap {position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;}
++.form-status {font-size:14px;line-height:1.8;margin:20px 0;}
++.form-status .button-outline {display:flex;width:fit-content;margin-top:16px;}
++.enquiry-form fieldset:disabled {opacity:.65;}
++.privacy-copy h2:not(:first-child) {margin-top:45px;}
++.marketing-footer {max-width:1348px;padding:40px 4.3vw;margin:auto;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;justify-content:space-between;gap:28px;}
++.marketing-footer p {font-size:12px;line-height:1.8;color:var(--muted);margin-top:12px;}
++.marketing-footer nav {display:flex;gap:8px 24px;flex-wrap:wrap;max-width:600px;}
++.marketing-footer nav a {min-height:44px;display:flex;align-items:center;font-size:12px;}
++.marketing-footer nav a:hover {color:var(--accent);}
++.marketing-footer .analytics-choice {flex-basis:100%;}
++@media(max-width:1100px){.site-header nav{gap:17px;}.enquiry-actions .button-solid,.enquiry-actions .button-outline{font-size:11px;padding:13px 14px;gap:12px;}.hero-copy{max-width:52%;}.hero-copy h1{font-size:27px;}.hero-bottom{padding-bottom:25px;}}
++@media(max-width:767px){
++  body{padding-bottom:calc(65px + env(safe-area-inset-bottom));}
++  .hero{min-height:100svh;padding-top:128px;}
++  .hero-bottom{padding-top:30px;padding-bottom:28px;}
++  .hero-copy{max-width:100%;width:100%;background:linear-gradient(90deg,#0b0b0cf2,#0b0b0cce);padding:0 0 15px;}
++  .hero-copy h1{font-size:clamp(23px,6.7vw,32px);max-width:600px;margin-top:14px;}
++  .hero-copy .intro{font-size:13px;margin-top:12px;max-width:100%;line-height:1.65;}
++  .hero-copy .enquiry-actions{gap:10px;margin:18px 0 4px;}
++  .hero-copy .enquiry-actions .button-solid,.hero-copy .enquiry-actions .button-outline{font-size:11px;min-height:44px;padding:12px;gap:10px;}
++  .object-caption{display:none;}
++  .hero-footer{min-height:70px;}
++  .site-header nav{gap:0;}
++  .site-header nav a{font-size:10px;}
++  .home-services h3{font-size:22px;}
++  .home-services ul{grid-template-columns:1fr;}
++  .contact{min-height:850px;padding-bottom:95px;}
++  .contact .email-link{margin-top:18px;}
++  .site-footer{display:flex;gap:12px;align-items:flex-start;padding-bottom:85px;}
++  .home-footer-links{order:3;flex-basis:100%;}
++  .view-controls{margin-bottom:75px;}
++  .scene-loader{bottom:calc(84px + env(safe-area-inset-bottom));}
++  .mobile-contact{position:fixed;bottom:0;left:0;right:0;z-index:55;min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 6vw calc(17px + env(safe-area-inset-bottom));font:500 12px var(--mono);background:var(--accent);color:var(--ink);border-top:1px solid #a83b18;}
++  .marketing-header{padding:13px 6vw 0;display:grid;grid-template-columns:1fr auto;gap:4px 20px;}
++  .marketing-header .wordmark{font-size:21px;}
++  .marketing-header nav{grid-row:2;grid-column:1/-1;justify-content:space-between;gap:0;}
++  .marketing-header nav a{font-size:12px;min-height:48px;}
++  .marketing-header .header-contact{grid-column:2;grid-row:1;font-size:8px;gap:8px;}
++  .marketing-main{padding:0 6vw;}
++  .breadcrumbs{font-size:9px;padding:10px 0;}
++  .breadcrumbs ol,.breadcrumbs li{gap:10px;}
++  .marketing-hero{padding:30px 0 55px;}
++  .marketing-hero .overline{font-size:8px;line-height:1.8;}
++  .marketing-hero h1{font-size:clamp(38px,10.2vw,66px);letter-spacing:-.06em;}
++  .marketing-lead{font-size:15px;line-height:1.8;margin-top:22px;}
++  .marketing-section{padding:40px 0;}
++  .marketing-section h2,.project-proof h2,.quote-cta h2{font-size:31px;}
++  .marketing-section p,.project-proof p,.quote-cta>p:not(.overline){font-size:14px;}
++  .service-grid{grid-template-columns:1fr;gap:0;margin-top:25px;}
++  .service-card h3{font-size:25px;}
++  .split-copy,.contact-page-grid{grid-template-columns:1fr;gap:35px;}
++  .project-proof{grid-template-columns:1fr;padding:28px 20px;gap:28px;margin-bottom:45px;}
++  .process-list{grid-template-columns:1fr;gap:0;}
++  .process-list li{display:grid;grid-template-columns:26px 1fr;gap:15px;padding:20px 0;}
++  .process-list h3{margin-top:0;font-size:22px;}
++  .process-list p{margin-bottom:0;}
++  .faq-section summary{font-size:15px;}
++  .quote-cta{padding:40px 0;}
++  .case-decisions{grid-template-columns:1fr;gap:5px;}
++  .case-decisions article{padding:25px 0 10px;}
++  .case-image{margin-bottom:45px;}
++  .case-image figcaption{font-size:8px;}
++  .form-row{grid-template-columns:1fr;gap:0;}
++  .form-field input,.form-field select,.form-field textarea{font-size:16px;}
++  .marketing-footer{padding:30px 6vw 55px;}
++  .marketing-footer nav{gap:0 20px;}
++}
++@media(max-width:359px){.hero-copy h1{font-size:22px;}.hero-kicker{margin-bottom:17px;}.hero-copy .enquiry-actions{gap:8px;}.hero-copy .enquiry-actions .button-solid,.hero-copy .enquiry-actions .button-outline{font-size:10px;padding:12px 9px;gap:6px;}.marketing-hero h1{font-size:36px;}}
+diff --git a/tests/browser.html b/tests/browser.html
+index 0f7a2cf4ec6228e14ccb26c66ca635ddafe325e1..795d240d1572e740a507a312589c668bc5fd8ec7 100644
+--- a/tests/browser.html
++++ b/tests/browser.html
+@@ -1,23 +1,24 @@
+ <!doctype html><meta charset="utf-8"><title>Portfolio layout checks</title>
+-<style>body{margin:18px;background:#151515;color:#eee;font:14px system-ui}button{padding:10px;margin:4px}iframe{border:1px solid #666;background:#0b0b0c;display:block;max-width:none}pre{white-space:pre-wrap}#stage{max-width:100%;overflow:auto}</style>
+-<h1>Portfolio browser checks</h1><p>Chromium with simulated viewport and device hints. This does not emulate Safari or a real phone GPU.</p>
++<style>body{margin:18px;background:#151515;color:#eee;font:14px system-ui}button{padding:10px;margin:4px}iframe{border:1px solid #666;background:#0b0b0c;display:block;max-width:none}pre{white-space:pre-wrap;max-height:200px;overflow:auto}#stage{max-width:100%;overflow:auto}</style>
++<h1>Portfolio browser checks</h1><p>Chromium with real page navigation and iframe viewport sizes. This does not emulate Safari, hardware hints, touch input or a real phone GPU; hardware policies are covered by Node tests.</p>
+ <button id="run">Run checks</button><button id="phone">Show phone layout</button><button id="tablet">Show tablet layout</button><button id="desktop">Show desktop layout</button><pre id="results">Ready</pre><div id="stage"></div>
+ <script type="module">
+ const stage=document.querySelector('#stage'),results=document.querySelector('#results');let frame;
+ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+-async function load(width,height,{reduced=false,coarse=false,legacy=false,keep=false}={}) {
++async function load(width,height,{legacy=false,keep=false}={}) {
++ if(!keep){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');}
++ if(legacy)localStorage.setItem('forge-view','static');
+  if(frame)frame.remove();frame=document.createElement('iframe');frame.title='Portfolio under test';frame.width=width;frame.height=height;stage.append(frame);
+- const html=await (await fetch('/')).text();
+- const bootstrap=`<script>if(!${keep}){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');}if(${legacy})localStorage.setItem('forge-view','static');const actual=window.matchMedia.bind(window);window.matchMedia=q=>{if(q==='(prefers-reduced-motion: reduce)'||q==='(pointer: coarse)'||q==='(pointer: fine)'){const result=actual(q);Object.defineProperty(result,'matches',{value:q==='(prefers-reduced-motion: reduce)'?${reduced}:q==='(pointer: coarse)'?${coarse}:!${coarse}});return result;}return actual(q)};Object.defineProperty(navigator,'deviceMemory',{value:2,configurable:true});Object.defineProperty(navigator,'hardwareConcurrency',{value:2,configurable:true});<\/script>`;
+- frame.srcdoc=html.replace('<head>','<head>'+bootstrap);
++ await new Promise((resolve,reject)=>{frame.onload=resolve;frame.onerror=reject;frame.src='/';});
+  for(let i=0;i<100;i++){await sleep(150);const p=frame.contentDocument?.querySelector('.portfolio');if(p&&p.dataset.sceneStatus!=='loading')return frame.contentDocument;}
+  throw Error('Timed out waiting for initialization');
+ }
+ const assert=(ok,message)=>{results.textContent+='\n'+(ok?'PASS ':'FAIL ')+message;if(!ok)throw Error(message)};
++const clickMotion=async(doc,label)=>{const button=[...doc.querySelectorAll('.experience-options button')].find(b=>b.textContent.includes(label));if(button){button.click();await sleep(100);}};
+ document.querySelector('#run').onclick=async()=>{results.textContent='Running';try{
+  for(const [name,w,h] of [['phone',390,844],['small phone',320,780],['tablet',820,1180],['desktop',1348,900]]){
+-  const doc=await load(w,h,{coarse:w<1000});const p=doc.querySelector('.portfolio');
+-  assert(['ready','error'].includes(p.dataset.sceneStatus),name+': 3D attempted automatically despite 2GB / 2-core hints');
++  const doc=await load(w,h);const p=doc.querySelector('.portfolio');
++  assert(['ready','error'].includes(p.dataset.sceneStatus),name+': 3D attempted automatically');
+   assert(doc.documentElement.scrollWidth<=w,name+': no horizontal document overflow');
+   assert([...doc.querySelectorAll('nav a')].every(a=>{const r=a.getBoundingClientRect();return r.left>=0&&r.right<=w}),name+': navigation fits');
+   const sceneStatus=p.dataset.sceneStatus;results.textContent+='\nINFO '+name+': renderer '+sceneStatus+(sceneStatus==='error'?' (cloud WebGL unavailable)':'');
+@@ -28,17 +29,19 @@ document.querySelector('#run').onclick=async()=>{results.textContent='Running';t
+   frame.width=h;frame.height=w;await sleep(350);
+   assert(doc.documentElement.scrollWidth<=h,name+': rotation-sized viewport has no overflow');
+  }
+- let doc=await load(390,844,{reduced:true,coarse:true});
+- assert(doc.querySelector('.portfolio').dataset.motion==='gentle','reduced-motion system preference selects gentle 3D');
+- doc.querySelector('.experience-options button').click();await sleep(150);
++ let doc=await load(390,844);
++ assert(doc.querySelector('.portfolio').dataset.motion===(frame.contentWindow.matchMedia('(prefers-reduced-motion: reduce)').matches?'gentle':'full'),'system motion preference is respected');
++ await clickMotion(doc,'Use gentle motion');
++ assert(doc.querySelector('.portfolio').dataset.motion==='gentle','intentional gentle motion works');
++ await clickMotion(doc,'Enable full motion');
+  assert(doc.querySelector('.portfolio').dataset.motion==='full','explicit full-motion override works');
+- doc=await load(390,844,{reduced:true,coarse:true,keep:true});
++ doc=await load(390,844,{keep:true});
+  assert(doc.querySelector('.portfolio').dataset.motion==='full','full-motion choice survives refresh');
+- doc=await load(390,844,{legacy:true,coarse:true});
++ doc=await load(390,844,{legacy:true});
+  assert(doc.querySelector('.portfolio').dataset.sceneStatus==='user-static','deliberate legacy 2D preference is preserved');
+  [...doc.querySelectorAll('button')].find(b=>b.textContent.includes('Enable 3D')).click();await sleep(1200);
+  assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static','explicit 3D selection exits saved 2D');
+- results.textContent+='\nDONE. Actual rendered 3D, touch gestures, context restoration on a GPU, Android Chrome and iPhone Safari still require device testing.';
++ results.textContent+='\nDONE. Successful GPU drawing, actual touch gestures, context restoration, Android Chrome and iPhone Safari still require device testing.';
+ }catch(error){results.textContent+='\nERROR '+error.message;}};
+-for(const [id,w,h] of [['phone',390,844],['tablet',820,1180],['desktop',1348,900]])document.querySelector('#'+id).onclick=()=>load(w,h,{coarse:w<1000});
++for(const [id,w,h] of [['phone',390,844],['tablet',820,1180],['desktop',1348,900]])document.querySelector('#'+id).onclick=()=>load(w,h);
+ </script>
+diff --git a/tests/seo-browser.html b/tests/seo-browser.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..533758dea1c2e9e0f77b9b7988dc8fccd661eecc
+--- /dev/null
++++ b/tests/seo-browser.html
+@@ -0,0 +1,45 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Service page layout checks</title><style>body{font:14px system-ui;background:#181818;color:white;margin:16px}button,select{padding:10px;margin:4px}iframe{display:block;border:1px solid #666;max-width:none;background:#0b0b0c}#stage{overflow:auto;max-width:100%}pre{white-space:pre-wrap;max-height:120px;overflow:auto}</style></head><body>
++<h1>Production SEO checks</h1><p>Chromium iframe viewports. No Safari or device-GPU emulation.</p>
++<button id="run">Run service checks</button><button id="mobile">Show mobile home</button><button id="tablet">Show tablet services</button><button id="desktop">Show desktop home</button><button id="contact">Show mobile contact</button><pre id="results">Ready</pre><div id="stage"></div>
++<script type="module">
++const stage=document.querySelector('#stage'),results=document.querySelector('#results');
++let frame;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
++async function load(path,w,h){if(frame)frame.remove();frame=document.createElement('iframe');frame.width=w;frame.height=h;frame.title='Site under test';stage.append(frame);await new Promise((resolve,reject)=>{frame.onload=resolve;frame.onerror=reject;frame.src=path;});await frame.contentDocument.fonts.ready;await sleep(200);return frame.contentDocument;}
++const assert=(ok,message)=>{results.textContent+='\n'+(ok?'PASS ':'FAIL ')+message;if(!ok)throw Error(message)};
++document.querySelector('#run').onclick=async()=>{results.textContent='Running';try{
++for(const [name,w,h] of [['small phone',320,780],['phone',390,844],['tablet',820,1180],['desktop',1348,900]]){
++for(const path of ['/','/services/','/services/business-websites/','/services/ecommerce-development/','/services/landing-pages/','/services/website-redesign/','/projects/gymdrobe/','/contact/','/privacy/']){
++const doc=await load(path,w,h);
++assert(doc.querySelectorAll('h1').length===1,name+' '+path+': one clear H1');
++assert(doc.documentElement.scrollWidth<=w,name+' '+path+': no horizontal overflow');
++assert([...doc.querySelectorAll('header a')].every(a=>{const r=a.getBoundingClientRect();return r.left>=0&&r.right<=w}),name+' '+path+': header navigation fits');
++assert(!!doc.querySelector('a[href^="https://wa.me/918156805806"]'),name+' '+path+': WhatsApp action available');
++if(path==='/'){const c=doc.querySelector('.hero-copy .button-solid').getBoundingClientRect();assert(c.bottom<h-60,name+': discuss website visible in first screen');assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static',name+': automatic 3D not disabled by marketing changes');}
++else assert(!doc.querySelector('canvas'),name+' '+path+': service content independent of 3D');
++}
++}
++const doc=await load('/contact/',390,844);const f=doc.querySelector('form');
++f.querySelector('button[type="submit"]').click();await sleep(50);
++assert(doc.querySelectorAll('[aria-invalid="true"]').length>=3,'empty form gives associated field errors');
++assert(doc.activeElement?.name==='name','first invalid field receives focus');
++const fill=(name,value)=>{const input=f.elements.namedItem(name);input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
++fill('name','QA Example');fill('phone','+91 9999999999');fill('service','Business websites');fill('message','I need a responsive site to explain my business services.');
++f.querySelector('button[type="submit"]').click();await sleep(50);
++assert(doc.querySelectorAll('[aria-invalid="true"]').length===0,'phone-only enquiry is valid');
++assert(f.textContent.includes('Nothing has been sent'),'WhatsApp handoff never claims delivery');
++const link=f.querySelector('a[href^="https://wa.me/"]');assert(!!link,'review-and-send WhatsApp link prepared without submitting externally');
++assert(new URL(link.href).searchParams.get('text').includes('QA Example'),'prepared message includes the brief');
++for(const path of ['/services/','/contact/','/projects/gymdrobe/']){const response=await fetch(path);assert(response.status===200,path+': production HTTP 200');const html=await response.text();assert(html.includes('rel="canonical"'),'canonical is in HTTP HTML before JS');}
++assert((await fetch('/__forge-missing-page-check-2026/')).status===404,'unknown route has genuine HTTP 404');
++assert((await fetch('/assets/nonexistent.js')).status===404,'missing asset has HTTP 404');
++const clean=await fetch('/services',{redirect:'follow'});assert(clean.status===200,'clean URL without trailing slash resolves');
++assert((await (await fetch('/services/?utm_source=qa')).text()).includes('href="https://fazhere.com/services/"'),'tracking parameters do not change canonical');
++assert((await (await fetch('/sitemap.xml')).text()).includes('<loc>https://fazhere.com/services/</loc>'),'sitemap served as generated');
++assert((await (await fetch('/robots.txt')).text()).includes('Sitemap: https://fazhere.com/sitemap.xml'),'robots sitemap declaration served');
++results.textContent+='\nDONE. No external form or WhatsApp message was sent.';
++}catch(e){results.textContent+='\nERROR '+e.message;}};
++document.querySelector('#mobile').onclick=()=>load('/',390,844);
++document.querySelector('#tablet').onclick=()=>load('/services/',820,1180);
++document.querySelector('#desktop').onclick=()=>load('/',1348,900);
++document.querySelector('#contact').onclick=()=>load('/contact/',390,844);
++</script></body></html>
+diff --git a/tests/seo.test.mjs b/tests/seo.test.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0ed4b3a5ad0bf1e54626533125c4184427870280
+--- /dev/null
++++ b/tests/seo.test.mjs
+@@ -0,0 +1,79 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { pages, pageForPath, structuredData, notFound } from '../src/seo/pages.js';
++import { renderHead, isPreview } from '../scripts/seo.mjs';
++import { readEnquiry, validateEnquiry, formEndpoint, enquiryMessage, submitEnquiry } from '../src/enquiries/form.js';
++import { SITE_ORIGIN, whatsappHref } from '../src/data/site.js';
++import { analyticsAllowed } from '../src/seo/analytics.js';
++
++const valid = { name: 'QA Example', email: 'example@example.com', phone: '', business: '', service: 'Business websites', message: 'A responsive website to explain my services.', budget: '', _gotcha: '' };
++test('marketing routes have unique canonical URLs and unique titles/descriptions', () => {
++  for (const key of ['path', 'title', 'description']) assert.equal(new Set(pages.map(p => p[key])).size, pages.length);
++  assert.equal(pageForPath('/services?utm_source=example').path, '/services/');
++  assert.equal(pageForPath('/services/').path, '/services/');
++  assert.equal(pageForPath('/not-a-real-page').noindex, true);
++  assert.equal(pageForPath('/services//').path, '/services/');
++});
++test('metadata is initial HTML, escapes verification values, and noindexes previews/404s', () => {
++  const page = pages[2];
++  const production = renderHead(page, { GOOGLE_SITE_VERIFICATION: '"><script>unsafe</script>' });
++  assert.ok(production.includes(`href="${SITE_ORIGIN}${page.path}"`));
++  assert.ok(production.includes('index, follow, max-image-preview:large'));
++  assert.ok(production.includes('&lt;script&gt;unsafe&lt;/script&gt;'));
++  for (const env of [{ SITE_ENV: 'preview' }, { IS_PULL_REQUEST: 'true', SITE_ENV: 'production' }]) {
++    assert.equal(isPreview(env), true); assert.ok(renderHead(page, env).includes('noindex, follow'));
++  }
++  assert.ok(renderHead(notFound).includes('noindex, follow'));
++  assert.ok(!renderHead(notFound).includes('rel="canonical"'));
++});
++test('structured data connects the person, site, visible service and breadcrumbs without invented business details', () => {
++  for (const page of pages) {
++    const graph = structuredData(page)['@graph'];
++    assert.equal(graph[0]['@type'], 'Person');
++    assert.equal(graph[0].name, 'Muhammed Favas K');
++    assert.ok(graph[0].sameAs.some(url => url.includes('linkedin.com')));
++    assert.ok(!JSON.stringify(graph).match(/aggregateRating|openingHours|streetAddress|priceCurrency|reviewRating/));
++    if (page.service) {
++      const service = graph.find(n => n['@type'] === 'Service');
++      assert.equal(service.provider['@id'], graph[0]['@id']);
++      assert.equal(service.name, page.service.name);
++      assert.equal(graph.find(n => n['@type'] === 'BreadcrumbList').itemListElement.length, 3);
++    }
++  }
++});
++test('enquiry requires one contact method and validates supplied email and phone', () => {
++  assert.deepEqual(validateEnquiry(valid), {});
++  assert.ok(validateEnquiry({ ...valid, email: '', phone: '' }).email);
++  assert.deepEqual(validateEnquiry({ ...valid, email: '', phone: '+91 8156805806' }), {});
++  assert.ok(validateEnquiry({ ...valid, email: 'broken', phone: '+91 8156805806' }).email);
++  assert.ok(validateEnquiry({ ...valid, phone: '123' }).phone);
++  assert.ok(validateEnquiry({ ...valid, name: ' ', message: 'short', service: '' }).message);
++});
++test('enquiry values are bounded and WhatsApp handoff preserves readable information', () => {
++  const data = readEnquiry(new Map(Object.entries({ ...valid, message: 'x'.repeat(4000), irrelevant: 'ignored' })));
++  assert.equal(data.message.length, 3000); assert.equal(data.irrelevant, undefined);
++  const url = new URL(whatsappHref(enquiryMessage(valid)));
++  assert.equal(url.pathname, '/918156805806'); assert.ok(url.searchParams.get('text').includes(valid.message));
++});
++test('form endpoint accepts public Formspree IDs only and never needs a browser secret', () => {
++  assert.equal(formEndpoint('https://bad.example'), ''); assert.equal(formEndpoint(''), '');
++  assert.equal(formEndpoint('exampleid'), 'https://formspree.io/f/exampleid');
++});
++test('analytics require a configured ID and an indexable page; preview and 404 documents cannot enable tracking', () => {
++  assert.equal(analyticsAllowed('', 'index, follow'), false);
++  assert.equal(analyticsAllowed('invalid', 'index, follow'), false);
++  assert.equal(analyticsAllowed('G-EXAMPLE123', 'index, follow'), true);
++  assert.equal(analyticsAllowed('G-EXAMPLE123', 'noindex, follow'), false);
++});
++test('form only confirms a successful provider response; errors and unconfirmed delivery are rejected', async () => {
++  const endpoint = formEndpoint('exampleid');
++  let options;
++  assert.equal(await submitEnquiry(endpoint, valid, { fetcher: async (url, opts) => { options = opts; return { ok: true, status: 200, json: async () => ({ ok: true }) }; } }), true);
++  assert.equal(options.credentials, 'omit'); assert.equal(options.headers.Accept, 'application/json');
++  for (const response of [{ ok: false, status: 400 }, { ok: false, status: 429 }, { ok: true, status: 200 }]) {
++    await assert.rejects(submitEnquiry(endpoint, valid, { fetcher: async () => ({ ...response, json: async () => ({}) }) }));
++  }
++  await assert.rejects(submitEnquiry(endpoint, valid, { fetcher: async () => { throw new TypeError('network unavailable'); } }));
++  await assert.rejects(submitEnquiry(endpoint, { ...valid, _gotcha: 'bot' }, { fetcher: () => { throw new Error('Must not request'); } }));
++  await assert.rejects(submitEnquiry('', valid));
++});
+diff --git a/vercel.json b/vercel.json
+index 556a306451d9b2a765a8c71867f780219f3b9fbd..7c8d76c2a47a3d2f2342c625095014f776abe85a 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -3,5 +3,10 @@
+   "framework": "vite",
+   "installCommand": "npm ci",
+   "buildCommand": "npm run build",
+-  "outputDirectory": "dist"
++  "outputDirectory": "dist",
++  "trailingSlash": true,
++  "headers": [
++    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
++    { "source": "/(.*)", "headers": [{ "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }] }
++  ]
+ }
+diff --git a/vite.config.js b/vite.config.js
+index eaa15dc6925c69e44a384c5976d34aded34615d2..0413dad2e768ca1d11511d791548de789bb4e5b4 100644
+--- a/vite.config.js
++++ b/vite.config.js
+@@ -1,10 +1,42 @@
+ import { defineConfig } from 'vite';
+ import react from '@vitejs/plugin-react';
+ import tailwindcss from '@tailwindcss/vite';
++import { readFile, stat } from 'node:fs/promises';
++import { resolve } from 'node:path';
++import { pageForPath } from './src/seo/pages.js';
++import { renderHead } from './scripts/seo.mjs';
++
++// Production preview uses real static routes rather than an SPA catch-all.
++function staticPages() {
++  return {
++    name: 'forge-static-pages',
++    transformIndexHtml: { order: 'pre', handler(html, context) {
++      return context.server ? html.replace('<!--page-meta-->', renderHead(pageForPath(context.path), { SITE_ENV: 'preview' })) : html;
++    } },
++    configurePreviewServer(server) {
++      server.middlewares.use(async (req, res, next) => {
++        const url = new URL(req.url, 'http://localhost');
++        const page = pageForPath(url.pathname);
++        if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.end(); return; }
++        if (page.noindex) {
++          if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/') || /\.(png|webp|svg|hdr|txt|xml|woff2)$/.test(url.pathname)) {
++            const file = resolve('dist', `.${decodeURIComponent(url.pathname)}`);
++            if (file.startsWith(`${resolve('dist')}/`) && (await stat(file).catch(() => null))?.isFile()) return next();
++            res.statusCode = 404; res.end('Not found'); return;
++          }
++          const html = await readFile('dist/404.html', 'utf8').catch(() => 'Not found');
++          res.statusCode = 404; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('X-Robots-Tag', 'noindex'); res.end(req.method === 'HEAD' ? undefined : html); return;
++        }
++        if (url.pathname !== page.path) { res.statusCode = 301; res.setHeader('Location', `${page.path}${url.search}`); res.end(); return; }
++        next();
++      });
++    },
++  };
++}
+ 
+ export default defineConfig({
+-  plugins: [react(), tailwindcss()],
++  plugins: [staticPages(), react(), tailwindcss()],
+   server: { host: '0.0.0.0', port: 4173, strictPort: true, allowedHosts: ['terminal.local'] },
+   preview: { host: '0.0.0.0', port: 4173, allowedHosts: ['terminal.local'] },
+-  build: { target: 'es2022', sourcemap: false },
++  build: { target: 'es2022', sourcemap: false, manifest: true },
+ });

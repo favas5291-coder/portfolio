@@ -1,0 +1,301 @@
+diff --git a/docs/MOBILE-LAYOUT.md b/docs/MOBILE-LAYOUT.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..591b89784b1c7d099f4f0b852c615afe702c0b89
+--- /dev/null
++++ b/docs/MOBILE-LAYOUT.md
+@@ -0,0 +1,68 @@
++# Mobile hero layout update
++
++## What changed
++
++The previous mobile overrides put the business copy directly below the name, over the sculpture, with a dark gradient behind it. A full-width fixed WhatsApp strip was also visible from the first screen.
++
++The introduction is now a single `business-introduction` section, immediately after the complete `hero-visual` section and before About. Mobile keeps the name, developer role, scene space, compact View My Work link and hero footer together. The business section uses the existing black, off-white and orange palette with smaller type and normal-flow spacing.
++
++The same single copy of the content occupies the original desktop composition using CSS Grid. It is not duplicated, moved by JavaScript or conditionally inserted after hydration. The descriptive H1 remains in the prerendered HTML, with its original text, links and metadata.
++
++The WhatsApp strip is replaced with a 50px icon with an accessible label and a 44px+ touch target. It respects safe-area insets, stays hidden while the hero is visible, and is available after the hero where it has clear space. It temporarily hides when its footprint would cover text, images, links, form fields, scene controls, the header or footer. Ordinary contact buttons remain available in the introduction and Contact section.
++
++The icon caches its collision targets and schedules at most one measurement frame per scroll or layout change. There is no continuous animation loop. Media, scroll, resize, visibility, mutation and resize-observer subscriptions are cleaned up. Visibility changes do not change document layout.
++
++The renderer, camera, scene, scroll hook, motion preferences and contact destinations are unchanged.
++
++## Files
++
++- `src/App.jsx` — separate visual hero and business-introduction sections, one copy of each element.
++- `src/styles.css` — desktop composition and mobile layout/icon styling.
++- `src/components/ContactActions.jsx` — accessible compact WhatsApp icon and scroll/collision handling.
++- `tests/seo-browser.html` — update the old first-screen CTA assertion to reflect the requested new mobile position.
++- `tests/mobile-layout.html` — actual production-browser layout, scroll, collision, resize and desktop-baseline checks.
++- `docs/MOBILE-LAYOUT.md` — this implementation and application guide.
++
++## Verification
++
++- `npm test`: all 35 tests passed.
++- Production build, prerender and `scripts/verify-build.mjs`: passed for all nine public pages and the 404 document.
++- Mobile-specific production-browser fixture: 82 assertions passed at 320×780, 375×844, 390×844, 430×844, plus desktop comparisons at 1024×900, 1348×900 and 1920×900.
++- Existing service-page production-browser fixture: 202 assertions passed, including forms, contact destinations, returned HTML, sitemap, robots and preview HTTP behavior.
++- Desktop baseline differences: no measured differences above 1px at all three tested desktop widths.
++- Initial JavaScript: Home 84.5 KiB gzip; service pages 83.8 KiB gzip, both within the existing 125 KiB limit.
++- No external contact link was opened and no message was sent.
++
++The desktop baseline measures Home bounds, name, kicker, role, heading, description, buttons, work link, caption and footer. The fixture compares the same elements against the pre-change build within a 1px tolerance.
++
++Browser tests use Chromium iframe viewports. They are not physical Android/iOS device tests. Successful WebGL drawing cannot be verified in this cloud browser because its GL renderer is disabled; the fallback illustration allows layout inspection. Real Android Chrome, iPhone Safari and GPU rendering still require owner verification.
++
++## Apply the update
++
++The source was inspected directly from current GitHub and matched the local baseline. This prepared patch is not live: the connected GitHub integration cannot push changes.
++
++1. Extract `Favas-Mobile-Hero-Layout-Fix.zip`.
++2. Copy `mobile-hero-layout.patch` into your existing project beside `package.json`.
++3. In Git Bash, run one command at a time:
++
++```bash
++cd "/c/portfolio 3d/portfolio"
++git apply --check mobile-hero-layout.patch
++git apply mobile-hero-layout.patch
++npm run verify
++```
++
++Stop if the patch check fails and share the output. Do not force it over newer edits. The ZIP also includes the complete replacement version of every changed file, preserving its project path. It is a subset of the project, not a replacement for the whole `src` folder.
++
++After reviewing `git diff`, stage only the update files:
++
++```bash
++git add src/App.jsx src/styles.css src/components/ContactActions.jsx tests/seo-browser.html tests/mobile-layout.html docs/MOBILE-LAYOUT.md
++git --no-pager diff --cached --stat
++git commit -m "Restore clear mobile hero and compact WhatsApp contact"
++git push origin main
++```
++
++Render can auto-deploy the push. Otherwise open the existing **portfolio-1 Static Site → Manual Deploy → Deploy latest commit**. Keep the existing `dist` publish directory, production build command and domain settings. This layout update does not require DNS changes.
++
++After Live, refresh on your phone and check the full hero, the introduction below it, View My Work, orientation changes, returning to the top, and WhatsApp accessibility without opening/sending an enquiry unintentionally.
+diff --git a/src/App.jsx b/src/App.jsx
+index 549c87aaf58ce6dd6554df306bbaf9ff1538cf05..1f85666b37e38c66a4fbeaff1f918454486f060a 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -27,13 +27,22 @@ function Header({ experience: e }) {
+   </header>;
+ }
+ function Hero({ experience: e }) {
+-  return <section id="home" tabIndex="-1" aria-labelledby="hero-services" className="chapter hero">
+-    <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
+-    <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
+-    <div className="hero-bottom"><div className="hero-copy text-panel"><p className="role mono"><span/> {profile.role}</p><h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div><div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div></div>
+-    <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
+-  </section>;
++  return <div id="home" tabIndex="-1" className="chapter hero-opening">
++    <section id="hero-visual" aria-labelledby="hero-name" className="hero">
++      <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
++      <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
++      <p className="role mono hero-role"><span/> {profile.role}</p>
++      <div className="hero-scene-space" aria-hidden="true"/>
++      <div className="hero-work"><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div>
++      <div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div>
++      <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
++    </section>
++    <section id="business-introduction" aria-labelledby="hero-services" className="business-intro text-panel">
++      <h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/>
++    </section>
++  </div>;
+ }
++
+ function About() {
+   return <section id="about" tabIndex="-1" aria-labelledby="about-title" className="chapter about">
+     <ChapterLabel id="about"/><span className="chapter-numeral" aria-hidden="true">01</span>
+diff --git a/src/components/ContactActions.jsx b/src/components/ContactActions.jsx
+index a85d7a0b29766a63946b59cb6c1785ad6786b52c..b63d3feb463c7898f891fc0e16d926e97af13261 100644
+--- a/src/components/ContactActions.jsx
++++ b/src/components/ContactActions.jsx
+@@ -1,3 +1,4 @@
++import { useEffect, useRef, useState } from 'react';
+ import { PHONE_DISPLAY, PHONE_HREF, whatsappHref } from '../data/site.js';
+ import { profile } from '../data/portfolio.js';
+ 
+@@ -11,4 +12,61 @@ export function ContactActions({ quote = true, compact = false }) {
+ export function ContactDetails({ showEmail = true }) {
+   return <div className="direct-contact"><a href={PHONE_HREF} data-contact="call">Call {PHONE_DISPLAY}</a>{showEmail && <a href={`mailto:${profile.email}`} data-contact="email">{profile.email}</a>}<p>{profile.location}<br/>Remote projects across India.</p></div>;
+ }
+-export function MobileContact() { return <a className="mobile-contact" href={whatsappHref()} target="_blank" rel="noopener noreferrer" data-contact="whatsapp">Discuss a website on WhatsApp <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>; }
++export function MobileContact() {
++  const button = useRef(null);
++  const [visible, setVisible] = useState(false);
++  useEffect(() => {
++    const media = window.matchMedia('(max-width: 767px)');
++    let dispose = () => {};
++    const configure = () => {
++      dispose(); setVisible(false);
++      if (!media.matches || !button.current) return;
++      const hero = document.getElementById('hero-visual') || document.querySelector('.marketing-hero');
++      const selector = 'main p, main h1, main h2, main h3, main li, main a, main button, main label, main img, main input, main select, main textarea, main summary, .view-controls, .scene-loader, header, footer';
++      let blockers = [], refreshTargets = true, raf = 0, disposed = false, wasVisible = false;
++      const publish = next => {
++        if (next !== wasVisible) { wasVisible = next; setVisible(next); }
++      };
++      const measure = () => {
++        raf = 0;
++        if (disposed) return;
++        if (document.hidden || (hero && hero.getBoundingClientRect().bottom > 0)) { publish(false); return; }
++        if (refreshTargets) { blockers = [...document.querySelectorAll(selector)]; refreshTargets = false; }
++        const rect = button.current.getBoundingClientRect();
++        if (!rect.width || !rect.height) { publish(false); return; }
++        // One scheduled read pass per scroll/layout change, no continuous loop.
++        // Keep the icon out of text, controls, screenshots and footer content.
++        const overlaps = blockers.some(target => {
++          if (!target.isConnected) return false;
++          const box = target.getBoundingClientRect();
++          return box.width > 0 && box.height > 0 && box.left < rect.right &&
++            box.right > rect.left && box.top < rect.bottom && box.bottom > rect.top;
++        });
++        publish(!overlaps);
++      };
++      const request = () => { if (!raf && !disposed) raf = requestAnimationFrame(measure); };
++      const changed = () => { refreshTargets = true; request(); };
++      const mutations = new MutationObserver(changed);
++      mutations.observe(document.querySelector('main')?.parentElement || document.body, { childList: true, subtree: true });
++      const resize = new ResizeObserver(request);
++      const main = document.querySelector('main'); if (main) resize.observe(main);
++      window.addEventListener('scroll', request, { passive: true });
++      window.addEventListener('resize', request);
++      window.visualViewport?.addEventListener('resize', request);
++      document.addEventListener('visibilitychange', request);
++      document.fonts?.ready.then(() => { if (!disposed) request(); });
++      request();
++      dispose = () => {
++        disposed = true; cancelAnimationFrame(raf); mutations.disconnect(); resize.disconnect();
++        window.removeEventListener('scroll', request); window.removeEventListener('resize', request);
++        window.visualViewport?.removeEventListener('resize', request);
++        document.removeEventListener('visibilitychange', request);
++      };
++    };
++    configure(); media.addEventListener('change', configure);
++    return () => { dispose(); media.removeEventListener('change', configure); };
++  }, []);
++  return <a ref={button} className="mobile-contact" data-visible={visible} aria-hidden={!visible} tabIndex={visible ? 0 : -1} href={whatsappHref()} target="_blank" rel="noopener noreferrer" data-contact="whatsapp" aria-label="Discuss your website on WhatsApp (opens in a new tab)">
++    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M27 15.7A11.1 11.1 0 0 1 10.5 25.5L4 27l1.8-6.2A11.1 11.1 0 1 1 27 15.7Z"/><path d="M12 9.5c-.8 0-1.7 1.2-1.7 2.6 0 3.5 5.2 8.7 8.9 8.7 1.3 0 2.5-1.2 2.5-2l-3-1.6-1.4 1.1c-1.8-.8-3.5-2.5-4.2-4.2l1-1.4Z"/></svg>
++  </a>;
++}
+diff --git a/src/styles.css b/src/styles.css
+index 7e6043d53ee78e0c8e451ba922d4bcef27d7dc23..db743db6eac035dc19326eab9e835d23d6b75585 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -369,3 +369,41 @@ main input,main select,main textarea,main form,main label {pointer-events:auto;}
+   .marketing-footer nav{gap:0 20px;}
+ }
+ @media(max-width:359px){.hero-copy h1{font-size:22px;}.hero-kicker{margin-bottom:17px;}.hero-copy .enquiry-actions{gap:8px;}.hero-copy .enquiry-actions .button-solid,.hero-copy .enquiry-actions .button-outline{font-size:10px;padding:12px 9px;gap:6px;}.marketing-hero h1{font-size:36px;}}
++
++/* One introduction in the HTML: shared desktop composition, separate mobile section. */
++.hero-opening {display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(30px,1fr) auto auto auto 35px auto;min-height:100svh;padding-top:128px;isolation:isolate;}
++.hero-opening > .hero {display:contents;}
++.hero-opening::before {content:'';grid-column:1;grid-row:4/7;width:565px;max-width:50%;background:linear-gradient(90deg,#0b0b0cf2 70%,#0b0b0c55);z-index:-1;}
++.hero-opening .hero-kicker {grid-column:1;grid-row:1;}
++.hero-opening .hero-name {grid-column:1;grid-row:2;}
++.hero-role {grid-column:1;grid-row:4;width:565px;max-width:50%;}
++.business-intro {grid-column:1;grid-row:5;width:565px;max-width:50%;min-width:0;}
++.business-intro h1 {font-family:var(--display);font-size:clamp(22px,2.1vw,33px);line-height:1.18;font-weight:500;letter-spacing:-.035em;margin-top:16px;max-width:565px;}
++.business-intro .intro {font-size:13px;line-height:1.7;color:#aaa99f;max-width:490px;margin-top:14px;}
++.hero-work {grid-column:1;grid-row:6;width:565px;max-width:50%;}
++.hero-opening .object-caption {grid-column:1;grid-row:4/7;align-self:end;justify-self:end;}
++.hero-opening .hero-footer {grid-column:1;grid-row:8;}
++.hero-scene-space {display:none;}
++@media(min-width:1600px){.hero-opening{padding-top:145px;}}
++@media(min-width:768px) and (max-width:1100px){.hero-opening{grid-template-rows:auto auto minmax(30px,1fr) auto auto auto 25px auto;}.hero-opening::before,.hero-role,.business-intro,.hero-work{max-width:52%;}.business-intro h1{font-size:27px;}}
++@media(max-width:767px){
++  body{padding-bottom:0;}
++  .hero-opening{display:block;min-height:0;padding:0;margin:0;isolation:auto;}
++  .hero-opening::before{display:none;}
++  .hero-opening > .hero{display:flex;flex-direction:column;min-height:max(720px,100svh);padding:130px 0 0;margin:0 6vw;}
++  .hero-opening .hero-kicker{margin-bottom:24px;}
++  .hero-opening .hero-name{flex-shrink:0;}
++  .hero-role{width:100%;max-width:none;margin-top:20px;flex-shrink:0;}
++  .hero-scene-space{display:block;flex:1;min-height:340px;pointer-events:none;}
++  .hero-work{width:auto;max-width:none;margin-bottom:12px;}
++  .hero-opening .hero-footer{min-height:70px;margin-top:0;flex-shrink:0;}
++  .business-intro{width:auto;max-width:none;position:relative;margin:0 6vw;padding:38px 0 46px;border-top:1px solid var(--rule);background:var(--ink);box-shadow:0 0 0 6vw var(--ink);}
++  .business-intro h1{font-size:clamp(23px,6.2vw,28px);line-height:1.25;letter-spacing:-.04em;margin:0;max-width:600px;text-wrap:balance;}
++  .business-intro .intro{font-size:14px;line-height:1.8;max-width:600px;margin-top:18px;}
++  .business-intro .enquiry-actions{gap:10px;margin:22px 0 0;}
++  .business-intro .enquiry-actions a{min-height:46px;max-width:100%;font-size:11px;padding:13px 12px;gap:10px;}
++  .view-controls{margin-bottom:20px;}
++  .mobile-contact{position:fixed;inset:auto;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:50px;height:50px;min-height:50px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #ff855b;border-radius:50%;background:var(--accent);color:var(--ink);box-shadow:0 5px 18px #0008;z-index:55;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;}
++  .mobile-contact[data-visible='true']{opacity:1;visibility:visible;pointer-events:auto;}
++  .mobile-contact svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
++}
+diff --git a/tests/mobile-layout.html b/tests/mobile-layout.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..c331001b4838c06ad3f8817c638ee45186fa2d73
+--- /dev/null
++++ b/tests/mobile-layout.html
+@@ -0,0 +1,57 @@
++<!doctype html><html lang="en"><meta charset="utf-8"><title>Mobile hero layout verification</title>
++<style>body{margin:16px;background:#151515;color:#eee;font:14px system-ui}button{padding:10px;margin:4px}iframe{display:block;border:1px solid #666;max-width:none}#stage{overflow:auto;max-width:100%}pre{white-space:pre-wrap;max-height:140px;overflow:auto}</style>
++<h1>Mobile hero checks</h1><p>Chromium viewport checks; physical phones and successful GPU drawing need device verification.</p>
++<button id="run">Run layout checks</button><button id="phone">Show 390px hero</button><button id="intro">Show introduction</button><button id="desktop">Show desktop</button>
++<pre id="results">Ready</pre><div id="stage"></div><script type="module">
++const baseline={"1024":{"#home":[44.03125,0,920.9375,900],".hero-kicker":[44.03125,128,920.9375,17],".hero-name":[44.03125,166,877.84375,169.234375],".role":[44.03125,510.703125,478.875,15.296875],"#hero-services":[44.03125,542,478.875,63.71875],".intro":[44.03125,619.71875,478.875,66.28125],".enquiry-actions":[44.03125,710,478.875,49],".hero-work a":[44.03125,767,108.25,44],".hero-footer":[44.03125,836,920.9375,64],".object-caption":[784.578125,779.8125,149.671875,31.1875]},"1348":{"#home":[57.953125,0,1217.09375,900],".hero-kicker":[57.953125,128,1217.09375,17],".hero-name":[57.953125,166,1159.078125,222.8125],".role":[57.953125,497.609375,565,15.296875],"#hero-services":[57.953125,528.90625,565,66.8125],".intro":[57.953125,609.71875,490,66.28125],".enquiry-actions":[57.953125,700,565,49],".hero-work a":[57.953125,757,108.25,44],".hero-footer":[57.953125,836,1217.09375,64],".object-caption":[1084.9375,769.8125,149.671875,31.1875]},"1920":{"#home":[152.5,0,1600,929.859375],".hero-kicker":[152.5,145,1600,17],".hero-name":[152.5,183,1373.359375,264.46875],".role":[152.5,477.46875,565,15.296875],"#hero-services":[152.5,508.765625,565,116.8125],".intro":[152.5,639.578125,490,66.28125],".enquiry-actions":[152.5,729.859375,565,49],".hero-work a":[152.5,786.859375,108.25,44],".hero-footer":[152.5,865.859375,1600,64],".object-caption":[1545.234375,799.671875,149.671875,31.1875]}};
++const stage=document.querySelector('#stage'),out=document.querySelector('#results');let frame;
++const sleep=ms=>new Promise(r=>setTimeout(r,ms));
++async function load(w,h){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');if(frame)frame.remove();frame=document.createElement('iframe');frame.width=w;frame.height=h;frame.title='Portfolio layout';stage.append(frame);await new Promise(r=>{frame.onload=r;frame.src='/'});await frame.contentDocument.fonts.ready;for(let i=0;i<100;i++){if(frame.contentDocument.querySelector('.portfolio')?.dataset.sceneStatus!=='loading')break;await sleep(50);}await sleep(100);return frame.contentDocument;}
++const assert=(v,m)=>{out.textContent+='\n'+(v?'PASS ':'FAIL ')+m;if(!v)throw Error(m)};
++const waitFor=async test=>{for(let i=0;i<40;i++){if(test())return true;await sleep(50);}return false;};
++const shown=doc=>{const css=doc.defaultView.getComputedStyle(doc.querySelector('.mobile-contact'));return css.display!=='none'&&css.visibility==='visible';};
++document.querySelector('#run').onclick=async()=>{out.textContent='Running';try{
++for(const width of [1024,1348,1920]){
++const doc=await load(width,900),diffs=[];
++for(const [selector,expected] of Object.entries(baseline[width])){
++const r=doc.querySelector(selector).getBoundingClientRect(),actual=[r.x,r.y,r.width,r.height];
++if(actual.some((v,i)=>Math.abs(v-expected[i])>1))diffs.push({selector,expected,actual});
++}
++out.textContent+='\nMETRICS '+width+' '+JSON.stringify(diffs);
++assert(!diffs.length,width+': desktop positions and sizes match baseline within 1px');
++assert(!shown(doc),width+': floating mobile icon absent on desktop');
++}
++for(const w of [320,375,390,430]){
++const h=w===320?780:844,doc=await load(w,h),win=frame.contentWindow,hero=doc.querySelector('#hero-visual'),intro=doc.querySelector('#business-introduction'),fab=doc.querySelector('.mobile-contact');
++const visual=hero.getBoundingClientRect(),business=intro.getBoundingClientRect(),about=doc.querySelector('#about').getBoundingClientRect();
++assert(doc.documentElement.scrollWidth<=w,w+': no horizontal overflow');
++assert(business.top>=visual.bottom-1&&business.bottom<=about.top+1,w+': business section follows full hero and precedes About');
++assert(hero.nextElementSibling===intro,w+': separate sibling sections in the DOM');
++assert(!hero.querySelector('h1')&&doc.querySelectorAll('#hero-services').length===1,w+': one copy of the marketing heading');
++assert(doc.querySelector('.hero-scene-space').getBoundingClientRect().height>=300,w+': clear scene space');
++assert(hero.querySelector('.hero-name')&&hero.querySelector('.role'),w+': name and developer role stay with the scene');
++assert(hero.querySelector('.hero-work a').getAttribute('href')==='/#projects',w+': compact work link stays near hero');
++assert(win.getComputedStyle(doc.querySelector('.hero-opening'),'::before').display==='none',w+': mobile overlay removed');
++assert(!shown(doc),w+': floating WhatsApp hidden in hero');
++assert(fab.getBoundingClientRect().width===50&&fab.getBoundingClientRect().height===50,w+': compact 50px icon replaces strip');
++const beforeHeight=doc.documentElement.scrollHeight;
++for(let step=0;step<16;step++){win.scrollTo(0,visual.bottom+1+step*60);await sleep(120);if(shown(doc))break;}
++assert(shown(doc),w+': WhatsApp appears past hero where clear');
++assert(fab.tabIndex===0&&fab.getAttribute('aria-hidden')==='false',w+': visible icon is keyboard accessible');
++const block=doc.createElement('button');block.textContent='QA collision';block.style.cssText='position:fixed;right:16px;bottom:16px;width:50px;height:50px';doc.querySelector('main').append(block);await waitFor(()=>!shown(doc));
++assert(!shown(doc),w+': icon hides rather than cover a control');
++block.remove();await waitFor(()=>shown(doc));if(!shown(doc)){for(let step=1;step<16;step++){win.scrollTo(0,visual.bottom+1+step*60);await sleep(120);if(shown(doc))break;}}assert(shown(doc),w+': icon resumes when space is clear');
++assert(doc.documentElement.scrollHeight===beforeHeight,w+': visibility causes no layout jump');
++win.scrollTo(0,0);await waitFor(()=>!shown(doc));assert(!shown(doc),w+': returning to hero hides icon');
++frame.width=844;frame.height=w;await sleep(250);
++assert(doc.documentElement.scrollWidth<=844,w+': landscape-sized resize stays scrollable without overflow');
++frame.width=w;frame.height=h;await sleep(250);
++assert(intro.getBoundingClientRect().top>=hero.getBoundingClientRect().bottom-1,w+': portrait layout restores without duplicated content');
++hero.querySelector('.hero-work a').click();await sleep(100);assert(win.location.hash==='#projects'&&doc.activeElement?.id==='projects',w+': View My Work preserves project navigation and focus');
++}
++out.textContent+='\nDONE. No external contact links were opened.';
++}catch(e){out.textContent+='\nERROR '+e.message;}};
++document.querySelector('#phone').onclick=()=>load(390,844);
++document.querySelector('#intro').onclick=async()=>{const d=await load(390,844);frame.contentWindow.scrollTo(0,d.querySelector('#business-introduction').offsetTop-115);};
++document.querySelector('#desktop').onclick=()=>load(1348,900);
++</script></html>
+diff --git a/tests/seo-browser.html b/tests/seo-browser.html
+index 533758dea1c2e9e0f77b9b7988dc8fccd661eecc..00c56a002af680b32cd67333bbdf05cdfcea6afa 100644
+--- a/tests/seo-browser.html
++++ b/tests/seo-browser.html
+@@ -14,7 +14,7 @@ assert(doc.querySelectorAll('h1').length===1,name+' '+path+': one clear H1');
+ assert(doc.documentElement.scrollWidth<=w,name+' '+path+': no horizontal overflow');
+ assert([...doc.querySelectorAll('header a')].every(a=>{const r=a.getBoundingClientRect();return r.left>=0&&r.right<=w}),name+' '+path+': header navigation fits');
+ assert(!!doc.querySelector('a[href^="https://wa.me/918156805806"]'),name+' '+path+': WhatsApp action available');
+-if(path==='/'){const c=doc.querySelector('.hero-copy .button-solid').getBoundingClientRect();assert(c.bottom<h-60,name+': discuss website visible in first screen');assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static',name+': automatic 3D not disabled by marketing changes');}
++if(path==='/'){const c=doc.querySelector('.business-intro').getBoundingClientRect();assert(w<768?c.top>=doc.querySelector('#hero-visual').getBoundingClientRect().bottom:c.bottom<h,name+': business introduction uses the intended mobile/desktop position');assert(doc.querySelector('.portfolio').dataset.sceneStatus!=='user-static',name+': automatic 3D not disabled by marketing changes');}
+ else assert(!doc.querySelector('canvas'),name+' '+path+': service content independent of 3D');
+ }
+ }

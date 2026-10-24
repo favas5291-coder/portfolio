@@ -1,0 +1,72 @@
+{
+  "github_base_commit": "c2488a0fada5825a4bb94500edfd8e8d11d0a846",
+  "local_base_commit": "b09697a42ad7d7592a084b9eb9b390f43969f933",
+  "local_change_commit": "b8bc537b26472954f7802d4cf4ea856d92ab1dab",
+  "changed_files": [
+    {
+      "path": "docs/RENDER-PARITY.md",
+      "base_git_blob": null,
+      "sha256": "70db58c9ced5b1a358fa7d1168adca809f0fb1f408c113bf0743c83d33680828"
+    },
+    {
+      "path": "src/experience/quality.js",
+      "base_git_blob": "eb0b45c80f7810979ad1bc5124483ac03cdcf227",
+      "sha256": "b1734dce21abbefc75400a23570effc1291eb3a3e244996cafa6ef35c9ca1c58"
+    },
+    {
+      "path": "src/experience/scroll.js",
+      "base_git_blob": "197951ffe5b3c6ce5b45d730203cec404d7ed71f",
+      "sha256": "30b2634b4caeb45fcf1668091ad12d73f0213a10eefdfca22cf60b38d313fe9b"
+    },
+    {
+      "path": "src/hooks/useExperience.js",
+      "base_git_blob": "c29adf05a5c87f12f83d3b72188c5b7525cae667",
+      "sha256": "faa308f9ba1daa9a3d06dad5e93dc3d11370191be1f1e9977977ddf28fc8fba3"
+    },
+    {
+      "path": "src/scene/ForgeEffects.jsx",
+      "base_git_blob": "bd236f9661d070b87e7bd42018662725dc4020fd",
+      "sha256": "292183d48f27e30c7e6a7496b8d30aa670a7859c6ba5b996b1b2e681b6b2422c"
+    },
+    {
+      "path": "src/scene/ForgeScene.jsx",
+      "base_git_blob": "4c09e3028cc643c794a50071e66beda33ce981b5",
+      "sha256": "cb371a39b63f146640484f309c21c84c04e9e21551da023df85179b12e3fd82f"
+    },
+    {
+      "path": "src/scene/dynamics.js",
+      "base_git_blob": null,
+      "sha256": "0dd8e494c22a7a40a15735b7526d15b13a3f4f5d9e1294178aca0a6902136273"
+    },
+    {
+      "path": "src/scene/framing.js",
+      "base_git_blob": "7b6660eaf6aedcf36e407c4c80396e5301dfbb36",
+      "sha256": "45765de138bb3921b76b3670b398c177e971b0d681a93780b57baffa1d7d09a3"
+    },
+    {
+      "path": "tests/dynamics.test.mjs",
+      "base_git_blob": null,
+      "sha256": "846c6cc26d71dd444560d5c39ff61559827c8a77e6fce2ebffba1fdc31c8f811"
+    },
+    {
+      "path": "tests/experience.test.mjs",
+      "base_git_blob": "c5c5a783d60afe0c2f8f949526fb6ac7e8d8dcd4",
+      "sha256": "24490939d5216a1d3b5040938ef76ec50d26a1e781aa54ccde6a4f5154b06015"
+    },
+    {
+      "path": "tests/framing.test.mjs",
+      "base_git_blob": "07cebba73ceba2d7def48f4373861cf13a1c460f",
+      "sha256": "178ca5524bc344b4cf6783577a4084dc7b47228120801d8a0e9cfba04e87cf75"
+    },
+    {
+      "path": "tests/mobile-layout.html",
+      "base_git_blob": "c331001b4838c06ad3f8817c638ee45186fa2d73",
+      "sha256": "e6fad4278853fb558eea4c46b16442e2243fb5de530327ab608c984af0f4e855"
+    },
+    {
+      "path": "tests/render-parity.html",
+      "base_git_blob": null,
+      "sha256": "230b318285408a60afff03c22a4733ac161d11b3d684999ac7ac2afc1dde50fc"
+    }
+  ]
+}

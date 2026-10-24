@@ -1,0 +1,948 @@
+diff --git a/docs/RENDER-PARITY.md b/docs/RENDER-PARITY.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..64f726fbd6df04654d27dfdf90267ba75d0e5c00
+--- /dev/null
++++ b/docs/RENDER-PARITY.md
+@@ -0,0 +1,132 @@
++# Responsive 3D quality update
++
++This update uses the laptop's existing scene, objects, materials, lights and authored camera timeline on supported phones and tablets. It removes device-based appearance reductions and changes rendering cost only in response to sustained measured frame times. The existing mobile hero, business introduction, WhatsApp button, content and links remain intact.
++
++Source baseline: `favas5291-coder/portfolio`, GitHub commit `c2488a0fada5825a4bb94500edfd8e8d11d0a846`. The relevant baseline file blobs were checked against the local checkout before editing. The patch is prepared for this version. These changes have not been pushed to GitHub or deployed to Render.
++
++## Causes found in the source
++
++| Cause | Result before this update | Change |
++| --- | --- | --- |
++| Width below 900px, touch, Data Saver, memory or core count selected tier 0 | Phones began at 0.75 DPR, 16 segments, 512px screen texture, no shadows or effects | Every device starts with the existing high-detail assets and geometry; no device-class ceiling |
++| Mobile/touch maximum tier was 1 | Fast phones could never reach the laptop tier | All devices can recover to high after sustained fast frames |
++| Antialiasing was selected once from the initial tier | Phones kept antialiasing disabled even after a quality increase | Context antialiasing enabled; HDR composer uses supported MSAA, with FXAA when float-buffer MSAA is unavailable |
++| Low/medium tiers used different environment lighting; bloom required width >= 900 | Mobile metal, light, depth and glow looked different | Same local HDR environment, light intensities, materials, shadow casting and bloom settings at all widths |
++| Composer and direct-render paths could use different tone mapping | Missing effects could also change colors | Explicit sRGB output and the approved composer's NoToneMapping behavior on both paths |
++| Mobile replaced authored object translation and scale; camera fitted one oversized box | Different apparent motion and unnecessarily small sculpture | Preserve object transforms and viewing direction; fit component bounds, including still-moving plates, into the available scene area |
++| Spring Euler integration and frame-delta caps varied with frame rate | Slow devices changed the motion response and could stretch timing | A shared spring update preserves the original 60Hz response, with equivalent fixed-target timing at 20–120Hz |
++| Scroll anchors used the changing visible viewport height | Browser address-bar changes shifted the sampled animation position | Stable `100svh` chapter measurements; the canvas still follows its actual visible size |
++
++## Rendering and lifecycle
++
++The normal laptop drawing ratio remains 1.5, limited by the screen's native DPR. Small phone canvases can use up to 2 DPR. The drawing buffer is recalculated from its displayed size, native DPR and GPU dimension limits, with a 4.8-million-pixel ceiling. A 390×844 phone at native DPR 3 therefore starts at 780×1688 rather than the old approximately 293×633 buffer. Rendering at the full native DPR of every high-density screen would add substantial cost; this cap is intentional.
++
++| Tier | DPR cap | Cylinder segments / cable segments | Screen texture limit | Shadow map | Bloom resolution scale |
++| --- | --- | --- | --- | --- | --- |
++| High | 1.5–2, subject to native DPR and buffer budget | 48 / 40 | 2048px | 1024px | 0.50 |
++| Detailed | 1.25 | 48 / 40 | 2048px | 1024px | 0.35 |
++| Balanced | 1 | 32 / 28 | 2048px | 512px | 0.25 |
++
++The screen image retains its original detail within the texture/hardware limit and uses up to 8× supported anisotropic filtering. The update adds no larger assets or new dependencies. It does not introduce a different mobile animation or replace the scene with 2D to improve performance.
++
++The monitor samples consecutive frames, ignores suspended/idle intervals, allows a warm-up after reconfiguration, and uses sustained slow/fast windows plus a cooldown. HDR lighting, materials, shadows and the main scene remain active even at the lowest tier. Optional HDR post-processing requires the actual `EXT_color_buffer_float` capability; unsupported or failed optional effects can be omitted while the main scene remains. A failed HDR asset uses the existing studio-light fallback.
++
++The existing demand-render loop, hidden-page pause, context recovery, retry and intentional 2D choice remain. Automatic failures do not overwrite saved preferences. Explicit reduced motion keeps the gentle assembled 3D presentation; the existing full-motion option remains available. Layout and DPR changes wake the same renderer. Texture copies and listeners are cleaned up on unmount.
++
++## Changed files
++
++| File | Purpose |
++| --- | --- |
++| `src/experience/quality.js` | Shared appearance tiers, density/buffer budget and recovery without a mobile ceiling |
++| `src/experience/scroll.js` | Stable chapter anchor helper |
++| `src/hooks/useExperience.js` | Stable viewport measurement and cleanup |
++| `src/scene/dynamics.js` | Shared frame-rate-independent spring update |
++| `src/scene/ForgeEffects.jsx` | Bloom at all supported widths and composer antialiasing |
++| `src/scene/ForgeScene.jsx` | Common lighting/material pipeline, accurate DPR, texture handling and shared transforms |
++| `src/scene/framing.js` | Responsive fitting along the authored viewing ray |
++| `tests/dynamics.test.mjs` | Original 60Hz response, frame-rate equivalence and idle/resume checks |
++| `tests/experience.test.mjs` | Quality, pixel budget, recovery, scroll and lifecycle regressions |
++| `tests/framing.test.mjs` | Framing, quick reverse scroll, viewing direction and unchanged desktop camera tests |
++| `tests/mobile-layout.html` | Wait for app initialization/fonts before existing layout assertions |
++| `tests/render-parity.html` | Manual comparison and browser checks at matching animation stages |
++| `docs/RENDER-PARITY.md` | Findings, validation, application and deployment guide |
++
++## Verification performed
++
++- 43 Node tests passed, including the existing preferences, context lifecycle, SEO and enquiry tests.
++- Production build, prerender and build verification passed: nine public pages and a 404 document.
++- Initial JavaScript: home 84.6 KiB gzip; services 83.8 KiB gzip, within the existing 125 KiB budget. The 3D renderer remains deferred.
++- The large optional renderer chunk still produces Vite's chunk-size warning. The build succeeds; this warning is not a measured GPU performance result.
++- Cloud Chromium: 82 production layout assertions passed at 320×780, 375×844, 390×844 and 430×844, with desktop comparisons at 1024×900, 1348×900 and 1920×900. No measured desktop element differences exceeded 1px.
++- The existing experience browser fixture passed 30 assertions covering native scrolling, resize, automatic 3D attempt/error fallback, persisted intentional 2D and gentle/full-motion controls.
++- The new production comparison fixture passed 54 non-GPU assertions at 320×780, 375×812, 390×844, 430×932, 820×1180 and 1348×900: all five chapters, initialization, overflow and orientation state. GPU drawing checks were explicitly unavailable at all six sizes.
++- Pure camera tests cover phone and tablet sizes through 1024×1366, including 375px and landscape; they verify geometric containment and authored desktop positions. They do not verify rendered pixels.
++
++The cloud browser has its GL renderer disabled. Successful WebGL drawing, matching-stage GPU screenshots, visual antialiasing, lighting, real frame rates and actual context restoration could not be verified there. No physical Android Chrome, iPhone Safari or iPad Safari device was available. Browser viewport tests are not substitutes for those device tests. Device-level thermal behavior, touch scrolling with browser chrome, background/resume and orientation also need the checks below. The implementation addresses the source causes; identical GPU output on every supported phone has not been demonstrated.
++
++## Apply and build, one command at a time
++
++1. Extract `Favas-Responsive-3D-Quality-Fix.zip`.
++2. Copy only `responsive-3d-quality.patch` into your existing project beside `package.json`.
++3. In Git Bash, run:
++
++```bash
++cd "/c/portfolio 3d/portfolio"
++git apply --check responsive-3d-quality.patch
++git apply responsive-3d-quality.patch
++npm run verify
++```
++
++The two `git apply` commands normally print nothing on success. If the check reports an error, stop and share it; do not force the patch over newer edits. `npm run verify` runs tests, builds `dist`, prerenders the pages and verifies the output. No dependency or lockfile changes are required. If dependencies are absent, run `npm ci --include=dev` first.
++
++The archive also contains complete replacement files under `replacement-files/`, using their exact project paths. This is a subset of the project. Use the patch or those individual replacements, not both; do not replace the entire `src` folder or build inside `replacement-files`.
++
++Review and commit only the intended files:
++
++```bash
++git --no-pager diff --stat
++git add src/experience/quality.js src/experience/scroll.js src/hooks/useExperience.js src/scene/dynamics.js src/scene/ForgeEffects.jsx src/scene/ForgeScene.jsx src/scene/framing.js tests/dynamics.test.mjs tests/experience.test.mjs tests/framing.test.mjs tests/mobile-layout.html tests/render-parity.html docs/RENDER-PARITY.md
++git --no-pager diff --cached --stat
++git commit -m "Match responsive 3D rendering to the laptop experience"
++git push origin main
++```
++
++Do not use `git add .`: downloaded ZIPs, patches and replacement folders are not part of the application update.
++
++## Render deployment
++
++Use the existing **portfolio-1 Static Site**, connected to `favas5291-coder/portfolio`, branch `main`. The project's configuration is:
++
++- Root directory: blank (repository root).
++- Publish directory: `dist`.
++- Node version: the existing `NODE_VERSION=22.22.0` setting.
++- `SITE_ENV=production`.
++- Build command:
++
++```bash
++npm ci --include=dev && node scripts/set-site-url.mjs https://fazhere.com && npm run verify
++```
++
++After the push, inspect the deploy for your new commit. If automatic deploys are off, use **Deploys → Manual Deploy → Deploy latest commit**. Wait for **Live**, then refresh the site on your laptop and phone. Render documents these options in [Deploying on Render](https://render.com/docs/deploys). This update needs no DNS or domain changes.
++
++The existing nine-page project should not use a catch-all `/*` → `/index.html` rewrite. If an earlier deployment still has that rule, follow `docs/SEO-DEPLOY.md` for its removal so missing URLs return a real 404. After Live, run:
++
++```bash
++node scripts/check-deployment.mjs https://fazhere.com
++```
++
++That checks HTTP/SEO behavior, not GPU visuals.
++
++## Matching-stage and real-device checks
++
++Run `npm run dev` in the real project, then open `http://localhost:4173/tests/render-parity.html`. For a phone on the same private Wi-Fi, use your computer's local network address shown by Vite, with the same port and path. The fixture is development-only and is not published by the normal production build.
++
++1. Compare the laptop with 320, 375, 390, 430 and 820px viewports. Use **Show stage** for Assembly, About, Exploded parts, Project screen and Contact. Capture the same settled stage for each viewport, then also watch movement between stages.
++2. On physical Android Chrome and iPhone Safari, choose **Current device**. Check a fresh private-window visit and refresh: 3D should initialize without pressing Enable 3D unless WebGL really fails. A deliberate saved 2D preference should still be honored in an ordinary window.
++3. Compare the metal reflections, orange glow, project-screen text, fine edges, shadows and framing. Use the fixture's buffer/DPR readout to confirm resolution follows the canvas size. A fallback image cannot establish visual parity.
++4. Scroll slowly, quickly and backwards through all chapters; rotate both ways; collapse/expand the browser address bar; background the page for 30 seconds and return. Check that the scene resumes, buttons remain usable and no horizontal overflow or blank canvas appears.
++5. Test system reduced motion, then the intentional full-motion option. Check both on refresh.
++6. On a WebGL-enabled device, use **Test context recovery** if the browser exposes `WEBGL_lose_context`. Verify recovery or a usable Retry 3D fallback. This button does not change stored view preferences.
++7. Observe sustained use on a slower phone. Cost may step down after sustained slow frames and recover later; the animation sequence, HDR lighting and main objects must stay present. Desktop CPU throttling is only a diagnostic and does not reproduce a mobile GPU or heat behavior.
++
++The fixture's **Run viewport checks** button checks native chapter progression, layout and resize state, and explicitly marks GPU checks as unavailable when the renderer cannot start. All checks avoid opening contact links or sending messages.
+diff --git a/src/experience/quality.js b/src/experience/quality.js
+index eb0b45c80f7810979ad1bc5124483ac03cdcf227..95dd93aa77a1cb0b279943e995f6337ab2de2b55 100644
+--- a/src/experience/quality.js
++++ b/src/experience/quality.js
+@@ -1,15 +1,23 @@
+ export const QUALITY = [
+-  { name: 'low', dpr: 0.75, segments: 16, cableSegments: 16, textureSize: 512, shadowSize: 0, effects: false },
+-  { name: 'medium', dpr: 1, segments: 32, cableSegments: 28, textureSize: 1024, shadowSize: 512, effects: false },
+-  { name: 'high', dpr: 1.5, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, effects: true },
++  { name: 'balanced', dpr: 1, segments: 32, cableSegments: 28, textureSize: 2048, shadowSize: 512, bloomScale: 0.25 },
++  { name: 'detailed', dpr: 1.25, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, bloomScale: 0.35 },
++  { name: 'high', dpr: 1.5, segments: 48, cableSegments: 40, textureSize: 2048, shadowSize: 1024, bloomScale: 0.5 },
+ ];
+-export function initialQuality({ width, coarse = false, saveData = false, memory, cores }) {
+-  return width < 900 || coarse || saveData || (memory && memory <= 4) || (cores && cores <= 4) ? 0 : 2;
++// Appearance is never inferred from touch input, viewport width or hardware hints.
++export function initialQuality() { return QUALITY.length - 1; }
++
++// Small canvases can afford more pixels per CSS pixel without exceeding the
++// laptop's buffer budget. Retain its 1.5 DPR at ordinary laptop/desktop sizes.
++export function renderDpr(tier, width, height, nativeDpr = 1, maxDimension = 8192) {
++  const area = Math.max(1, width * height);
++  const detail = tier === 2 ? Math.max(1.5, Math.min(2, Math.sqrt(1350000 / area))) : QUALITY[tier].dpr;
++  return Math.min(Math.max(0.5, nativeDpr || 1), detail, Math.sqrt(4800000 / area),
++    maxDimension / Math.max(1, width, height));
+ }
+ // Only consecutive frames are sampled. Idle demand frames and suspended tabs
+ // are not poor GPU performance. Hysteresis and a cooldown prevent churn.
+ export function createQualityMonitor(initial, maximum = 2) {
+-  let tier = initial, elapsed = 0, frames = 0, slow = 0, fast = 0, cooldown = 0, changes = 0;
++  let tier = initial, elapsed = 0, frames = 0, slow = 0, fast = 0, cooldown = 0;
+   return {
+     reset() { elapsed = 0; frames = 0; slow = 0; fast = 0; },
+     setTier(value) { tier = value; cooldown = 10; this.reset(); },
+@@ -23,9 +31,9 @@ export function createQualityMonitor(initial, maximum = 2) {
+       if (cooldown > 0) return null;
+       let next = tier;
+       if (slow >= 2) next = Math.max(0, tier - 1);
+-      else if (fast >= 4 && changes < 4) next = Math.min(maximum, tier + 1);
++      else if (fast >= 4) next = Math.min(maximum, tier + 1);
+       if (next === tier) return null;
+-      tier = next; changes++; cooldown = 10; slow = 0; fast = 0;
++      tier = next; cooldown = 10; slow = 0; fast = 0;
+       return tier;
+     },
+   };
+diff --git a/src/experience/scroll.js b/src/experience/scroll.js
+index 197951ffe5b3c6ce5b45d730203cec404d7ed71f..a1636101fbdc25d41e3e9fd1b93ecee60ad933d4 100644
+--- a/src/experience/scroll.js
++++ b/src/experience/scroll.js
+@@ -1,3 +1,8 @@
++export function chapterStops(tops, stableViewportHeight) {
++  const offset = Math.max(140, stableViewportHeight * 0.18);
++  return tops.map(top => Math.max(0, top - offset));
++}
++
+ export function sampleScroll(stops, y, fullHeight, viewportHeight) {
+   let index = 0;
+   while (index < stops.length - 1 && y >= stops[index + 1]) index++;
+diff --git a/src/hooks/useExperience.js b/src/hooks/useExperience.js
+index c29adf05a5c87f12f83d3b72188c5b7525cae667..bf9883f2df1942f68075ccdcf6bd792f53505888 100644
+--- a/src/hooks/useExperience.js
++++ b/src/hooks/useExperience.js
+@@ -1,7 +1,7 @@
+ import { useCallback, useEffect, useRef, useState } from 'react';
+ import { chapters } from '../data/portfolio';
+ import { gentleMotion, readPreferences, savePreferences } from '../experience/preferences.js';
+-import { sampleScroll } from '../experience/scroll.js';
++import { chapterStops, sampleScroll } from '../experience/scroll.js';
+ 
+ export function useExperience() {
+   const [active, setActive] = useState('home');
+@@ -70,13 +70,20 @@ export function useExperience() {
+   useEffect(() => {
+     let raf = 0, measure = true, previousIndex = -1, previousProgress = -1;
+     let stops = [];
++    // svh does not change when the browser address bar retracts. Use it for
++    // chapter anchors, while the canvas still follows the visible viewport.
++    const viewportProbe = document.createElement('div');
++    viewportProbe.setAttribute('aria-hidden', 'true');
++    viewportProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none;contain:strict';
++    document.body.append(viewportProbe);
+     const update = () => {
+       raf = 0;
+       if (document.hidden) return;
+       const y = window.scrollY;
+       const height = document.documentElement.clientHeight || innerHeight;
+       if (measure) {
+-        stops = chapters.map(c => Math.max(0, (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y - Math.max(140, height * 0.18)));
++        const stableHeight = viewportProbe.clientHeight || height;
++        stops = chapterStops(chapters.map(c => (document.getElementById(c.id)?.getBoundingClientRect().top || 0) + y), stableHeight);
+         measure = false;
+       }
+       const sample = sampleScroll(stops, y, document.documentElement.scrollHeight, height);
+@@ -105,7 +112,7 @@ export function useExperience() {
+     let disposed = false;
+     document.fonts?.ready.then(() => { if (!disposed) resize(); }); request();
+     return () => {
+-      disposed = true; observer.disconnect(); cancelAnimationFrame(raf);
++      disposed = true; observer.disconnect(); cancelAnimationFrame(raf); viewportProbe.remove();
+       window.removeEventListener('scroll', request); window.removeEventListener('resize', resize);
+       window.removeEventListener('orientationchange', resize); window.removeEventListener('pageshow', resize);
+       window.visualViewport?.removeEventListener('resize', resize);
+diff --git a/src/scene/ForgeEffects.jsx b/src/scene/ForgeEffects.jsx
+index bd236f9661d070b87e7bd42018662725dc4020fd..3e2c1618d1d73e3177acaadbb273b7d8ca7e21db 100644
+--- a/src/scene/ForgeEffects.jsx
++++ b/src/scene/ForgeEffects.jsx
+@@ -1,2 +1,16 @@
+-import { Bloom, EffectComposer } from '@react-three/postprocessing';
+-export default function ForgeEffects() { return <EffectComposer multisampling={0}><Bloom luminanceThreshold={1.15} luminanceSmoothing={0.2} intensity={0.18} mipmapBlur/></EffectComposer>; }
++import { Bloom, EffectComposer, FXAA } from '@react-three/postprocessing';
++import { useThree } from '@react-three/fiber';
++import { useMemo } from 'react';
++
++export default function ForgeEffects({ quality }) {
++  const gl = useThree(state => state.gl);
++  const samples = useMemo(() => {
++    const context = gl.getContext();
++    const supported = context.getInternalformatParameter(context.RENDERBUFFER, context.RGBA16F, context.SAMPLES);
++    return Array.from(supported || []).filter(value => value > 0 && value <= 4).sort((a, b) => a - b)[0] || 0;
++  }, [gl]);
++  return <EffectComposer multisampling={samples}>
++    <Bloom luminanceThreshold={1.15} luminanceSmoothing={0.2} intensity={0.18} mipmapBlur resolutionScale={quality.bloomScale}/>
++    {samples===0&&<FXAA/>}
++  </EffectComposer>;
++}
+diff --git a/src/scene/ForgeScene.jsx b/src/scene/ForgeScene.jsx
+index 4c09e3028cc643c794a50071e66beda33ce981b5..8169025e849e254cb2f1ca43e48057294f47bce2 100644
+--- a/src/scene/ForgeScene.jsx
++++ b/src/scene/ForgeScene.jsx
+@@ -1,11 +1,12 @@
+-import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
++import { Component, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+ import { Canvas, useFrame, useThree } from '@react-three/fiber';
+ import { Environment, Html, Lightformer, useProgress, useTexture } from '@react-three/drei';
+ import * as THREE from 'three';
+ import { project } from '../data/portfolio';
+ import { createCameraFraming, sampleCameraPose } from './framing.js';
+-import { QUALITY, createQualityMonitor, initialQuality } from '../experience/quality.js';
++import { QUALITY, createQualityMonitor, initialQuality, renderDpr } from '../experience/quality.js';
+ import { attachSceneLifecycle } from '../experience/lifecycle.js';
++import { advanceSpring, animationDelta } from './dynamics.js';
+ const ForgeEffects = lazy(() => import('./ForgeEffects.jsx'));
+ 
+ class AssetBoundary extends Component {
+@@ -16,10 +17,32 @@ class AssetBoundary extends Component {
+ function StudioLights({ resolution = 64 }) {
+   return <Environment resolution={resolution}><Lightformer intensity={3} position={[0,4,2]} scale={[8,4,1]} rotation={[Math.PI/2,0,0]}/><Lightformer intensity={2} position={[-4,1,2]} scale={[3,6,1]} rotation={[0,Math.PI/2,0]}/><Lightformer intensity={1.5} position={[4,0,-2]} scale={[3,5,1]} rotation={[0,-Math.PI/2,0]}/></Environment>;
+ }
+-function QualityController({ initialTier, maxTier, onQuality, onReady, onRecovering, onError, onPause, wakeRef }) {
+-  const { gl, invalidate, setDpr, setFrameloop } = useThree();
+-  const monitor = useMemo(() => createQualityMonitor(initialTier, maxTier), [initialTier, maxTier]);
++function QualityController({ initialTier, tier, onResolution, onQuality, onReady, onRecovering, onError, onPause, wakeRef }) {
++  const { gl, size, invalidate, setDpr, setFrameloop } = useThree();
++  const monitor = useMemo(() => createQualityMonitor(initialTier), [initialTier]);
+   const wasPaused = useRef(false);
++  const warmup = useRef(1.5);
++  useLayoutEffect(() => {
++    let media;
++    const update = () => {
++      media?.removeEventListener('change', update);
++      const context = gl.getContext();
++      // getParameter returns null during context loss; do not publish DPR 0
++      // while recovery lowers the quality tier.
++      const maxDimension = Math.min(gl.capabilities.maxTextureSize || 8192,
++        context.getParameter(context.MAX_RENDERBUFFER_SIZE) || gl.capabilities.maxTextureSize || 8192);
++      const dpr = renderDpr(tier, size.width, size.height, window.devicePixelRatio, maxDimension);
++      setDpr(dpr);
++      onResolution(dpr);
++      gl.domElement.dataset.renderDpr = String(dpr);
++      media = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
++      media.addEventListener('change', update);
++      wakeRef.current?.(); invalidate();
++    };
++    update();
++    return () => media?.removeEventListener('change', update);
++  }, [gl, size.width, size.height, tier, setDpr, onResolution, invalidate, wakeRef]);
++  useEffect(() => { warmup.current = 1.5; monitor.reset(); }, [tier, monitor]);
+   useEffect(() => attachSceneLifecycle({
+     canvas: gl.domElement, page: document, wakeTarget: window,
+     pause: value => { wasPaused.current = value; setFrameloop(value ? 'never' : 'demand'); onPause(value); monitor.reset(); },
+@@ -29,30 +52,33 @@ function QualityController({ initialTier, maxTier, onQuality, onReady, onRecover
+   }), [gl, invalidate, setFrameloop, monitor, onQuality, onReady, onRecovering, onError, onPause, wakeRef]);
+   useFrame((_, delta) => {
+     if (wasPaused.current) return;
++    if (warmup.current > 0) { warmup.current -= Math.min(delta, 0.05); return; }
+     const next = monitor.sample(delta);
+-    if (next !== null) { setDpr(Math.min(window.devicePixelRatio || 1, QUALITY[next].dpr)); onQuality(next); }
++    if (next !== null) onQuality(next);
+   });
+   return null;
+ }
+ function TextureScreen({ quality }) {
+   const source = useTexture(project.screenshot);
++  const gl = useThree(state => state.gl);
+   const texture = useMemo(() => {
+     const image = source.image;
+-    const ratio = Math.min(1, quality.textureSize / Math.max(image.width, image.height));
++    const ratio = Math.min(1, Math.min(quality.textureSize, gl.capabilities.maxTextureSize) / Math.max(image.width, image.height));
+     const canvas = document.createElement('canvas');
+     canvas.width = Math.max(1, Math.round(image.width * ratio)); canvas.height = Math.max(1, Math.round(image.height * ratio));
+     const context = canvas.getContext('2d');
+-    if (!context) return source;
+-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+-    const result = new THREE.CanvasTexture(canvas); result.colorSpace = THREE.SRGBColorSpace;
++    if (context) context.drawImage(image, 0, 0, canvas.width, canvas.height);
++    const result = context ? new THREE.CanvasTexture(canvas) : source.clone();
++    result.colorSpace = THREE.SRGBColorSpace;
++    result.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
++    result.needsUpdate = true;
+     return result;
+-  }, [source, quality.textureSize]);
++  }, [source, quality.textureSize, gl]);
+   useEffect(() => () => { if (texture !== source) texture.dispose(); }, [texture, source]);
+   return <meshBasicMaterial map={texture} toneMapped={false}/>;
+ }
+ 
+ const ACCENT = '#ff5c26';
+-const smooth = (a,b,t) => THREE.MathUtils.smoothstep(t,a,b);
+ const mix = THREE.MathUtils.lerp;
+ const partNames = ['React','Node.js','Express','MongoDB','Tailwind CSS','Git'];
+ function brushedTexture() {
+@@ -88,11 +114,10 @@ function Bolts({ spread }) {
+   });
+   return <instancedMesh ref={ref} args={[null,null,32]} castShadow><cylinderGeometry args={[0.045,0.045,0.06,6]}/><meshStandardMaterial color="#9b9a8f" roughness={0.3} metalness={1}/></instancedMesh>;
+ }
+-function Part({ index, spread, device, selected, roughness, onSelect, stage, quality }) {
++function Part({ index, spread, device, selected, roughness, onSelect, stage, quality, parts, motion }) {
+   const group=useRef();const ring=useRef();const [hover,setHover]=useState(false);
+   const name=partNames[index];
+   const target=useMemo(()=>new THREE.Vector3(),[]);
+-  const force=useMemo(()=>new THREE.Vector3(),[]);
+   const velocity=useRef(new THREE.Vector3());
+   const side=index%2===0?-1:1;
+   const base=side*(0.85+Math.floor(index/2)*0.34);
+@@ -103,15 +128,14 @@ function Part({ index, spread, device, selected, roughness, onSelect, stage, qua
+     const activated=selected.current===name||hover;
+     const row=Math.floor(index/2);
+     target.set(base + side*s*(0.35+row*0.35), (row-1)*s*0.87 + (activated&&stage.current>1.5&&stage.current<2.8?0.12:0), (index%2?0.2:-0.2)*s);
+-    // Damped response, with no physics engine or per-frame React state updates.
+-    const delta=Math.min(dt,0.04);force.copy(target).sub(group.current.position).multiplyScalar(75);
+-    velocity.current.addScaledVector(force,delta).multiplyScalar(Math.exp(-13*delta));
+-    group.current.position.addScaledVector(velocity.current,delta);
++    const delta=animationDelta(dt);
++    if (motion.current.gentle) { group.current.position.copy(target); velocity.current.set(0,0,0); }
++    else advanceSpring(group.current.position,velocity.current,target,delta);
+     const scale=1-device.current*0.7;group.current.scale.setScalar(scale);
+     group.current.rotation.y=mix(group.current.rotation.y, s*side*0.18 + (hover?0.13:0),1-Math.exp(-6*delta));
+     if(ring.current)ring.current.material.emissiveIntensity=activated ? 0.5 : 0.05;
+   });
+-  return <group ref={group} position={[base,0,0]} onPointerOver={e=>{e.stopPropagation();setHover(true);}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();onSelect(name);}}>
++  return <group ref={node=>{group.current=node;parts.current[index]=node;}} position={[base,0,0]} onPointerOver={e=>{e.stopPropagation();setHover(true);}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();onSelect(name);}}>
+     <group rotation={[0,0,Math.PI/2]}>
+       <mesh castShadow receiveShadow><cylinderGeometry args={[radius,radius,0.2,quality.segments]}/><meshPhysicalMaterial color={index<2?'#55554f':'#282a25'} roughness={0.34} metalness={0.9} roughnessMap={roughness} clearcoat={0.1}/></mesh>
+       <mesh position={[0,0.11,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[radius*0.82,0.035,quality.segments > 16 ? 8 : 4,quality.segments]}/><meshStandardMaterial color="#1b1c19" roughness={0.9}/></mesh>
+@@ -134,6 +158,7 @@ function SkillLabels({ motion, onSelect }) {
+ function Device({ device, motion, quality }) {
+   const ref=useRef();
+   useFrame((_,dt)=>{
++    dt=animationDelta(dt);
+     const v=device.current;ref.current.visible=v>0.01;
+     ref.current.scale.setScalar(Math.max(0.001,v));
+     ref.current.rotation.y=mix(ref.current.rotation.y,(motion.current.gentle ? 0 : motion.current.pointer[0]*0.12),1-Math.exp(-4*dt));
+@@ -153,6 +178,8 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
+   const elapsed=useRef(0), lastPosition=useRef(-1), settle=useRef(2.4), announced=useRef(false), cameraInitialized=useRef(false), lastViewport=useRef('');
+   const roughness=useMemo(brushedTexture,[]);
+   const cameraTarget=useMemo(()=>new THREE.Vector3(),[]);
++  const authoredCamera=useMemo(()=>new THREE.Vector3(),[]);
++  const parts=useRef([]);
+   const frameCamera=useMemo(createCameraFraming,[]);
+   const cablePoints=useMemo(()=>[[-1.4,-0.4,0],[-1.6,-1.35,0.3],[0,-1.65,0.6],[1.8,-1.2,-0.2],[1.5,0.2,-0.3]],[]);
+   useEffect(()=>{roughness.needsUpdate=true;return()=>roughness.dispose();},[roughness]);
+@@ -170,27 +197,27 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
+   useFrame((_,dt)=>{
+     if(document.hidden)return;
+     const gentle=motion.current.gentle;
+-    const delta=Math.min(dt,0.05);elapsed.current+=delta;
++    const delta=animationDelta(dt);elapsed.current+=delta;
+     const raw=gentle?0:motion.current.position;
+     stage.current=gentle?0:mix(stage.current,raw,1-Math.exp(-5*delta));
+     const p=THREE.MathUtils.clamp(stage.current,0,4);
+     const pose=sampleCameraPose(p);
+-    const mobile=size.width<768;
+     const intro=gentle||motion.current.position>0.15?1:1-Math.pow(1-Math.min(1,elapsed.current/1.6),4);
+     spread.current=pose.spread+(1-intro)*3.5;
+-    const frame=frameCamera({...pose,spread:spread.current},size.width,size.height);
+     const smoothing=!cameraInitialized.current||gentle?1:1-Math.exp(-5*delta);
+-    camera.position.lerp(frame.position,smoothing);
+-    if(size.width>=1100||size.width>=768&&size.width>=size.height)cameraTarget.copy(frame.target);
+-    else cameraTarget.lerp(frame.target,smoothing);
+-    camera.lookAt(cameraTarget);
++    // Smooth the authored path once on every screen, then fit the actual view.
++    // Smoothing the fitted distance afterwards can crop expanding parts.
++    authoredCamera.lerp(cameraTarget.fromArray(pose.camera),smoothing);
++    const frame=frameCamera({...pose,camera:authoredCamera.toArray(),spread:spread.current,parts:gentle?null:parts.current},size.width,size.height);
++    camera.position.copy(frame.position);
++    camera.lookAt(frame.target);
+     const viewportKey=`${size.width}:${size.height}:${frame.offsetX}:${frame.offsetY}`;
+     if(viewportKey!==lastViewport.current){camera.setViewOffset(size.width,size.height,frame.offsetX,frame.offsetY,size.width,size.height);lastViewport.current=viewportKey;}
+     cameraInitialized.current=true;
+-    device.current=gentle?0:smooth(2.55,2.98,p)*(1-smooth(3.8,4,p));
++    device.current=gentle?0:pose.device;
+     selected.current=motion.current.selected;
+-    rig.current.position.set(mobile?0:pose.object[0],mobile?-0.25:pose.object[1],0);
+-    rig.current.rotation.set(...pose.rotation);rig.current.scale.setScalar(mobile?1.12:1.08);
++    rig.current.position.set(...pose.object);
++    rig.current.rotation.set(...pose.rotation);rig.current.scale.setScalar(1.08);
+     core.current.rotation.y=spread.current*0.42;core.current.scale.setScalar(Math.max(0.001,1-device.current));
+     shaft.current.scale.y=1+spread.current*0.4;shaft.current.visible=device.current<0.9;
+     if(Math.abs(raw-lastPosition.current)>0.0001){settle.current=gentle?0.35:2.4;lastPosition.current=raw;}
+@@ -200,7 +227,7 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
+   },-1);
+   return <group ref={rig}>
+     <group ref={shaft} rotation={[0,0,Math.PI/2]}><mesh castShadow><cylinderGeometry args={[0.11,0.11,4.2,24]}/><meshStandardMaterial color="#aaa99d" metalness={1} roughness={0.24} roughnessMap={roughness}/></mesh><mesh><cylinderGeometry args={[0.135,0.135,1.3,24]}/><meshStandardMaterial color="#191b16" roughness={0.9}/></mesh></group>
+-    {partNames.map((_,index)=><Part key={index} index={index} spread={spread} device={device} selected={selected} roughness={roughness} onSelect={onSelect} stage={stage} quality={quality}/>)}
++    {partNames.map((_,index)=><Part key={index} index={index} spread={spread} device={device} selected={selected} roughness={roughness} onSelect={onSelect} stage={stage} quality={quality} parts={parts} motion={motion}/>)}
+     <Bolts spread={spread}/>
+     <group ref={core}>
+       <mesh castShadow><boxGeometry args={[1.05,1.05,1.05]}/><meshPhysicalMaterial color="#7d7c70" metalness={1} roughness={0.33} roughnessMap={roughness}/></mesh>
+@@ -213,33 +240,33 @@ function Assembly({ motion,onSelect,onReady,quality,wakeRef }) {
+   </group>;
+ }
+ function SceneWorld({ quality, ...props }) {
+-  const {size}=useThree();
+-  const studio=<StudioLights resolution={quality.name==='low'?64:128}/>;
++  const gl=useThree(state=>state.gl);
++  const hdrEffects=gl.extensions.has('EXT_color_buffer_float');
++  const studio=<StudioLights resolution={128}/>;
+   return <>
+     <ambientLight intensity={0.25}/>
+     <directionalLight key={quality.shadowSize} position={[3,6,4]} intensity={2.2} castShadow={quality.shadowSize>0} shadow-mapSize={[quality.shadowSize||256,quality.shadowSize||256]} shadow-bias={-0.001}/>
+     <directionalLight position={[-4,1,-2]} intensity={1.4} color="#e2d7be"/>
+-    {quality.effects ? <AssetBoundary fallback={studio}><Suspense fallback={studio}><EnvironmentMap/></Suspense></AssetBoundary> : studio}
++    <AssetBoundary fallback={studio}><EnvironmentMap/></AssetBoundary>
+     <Assembly {...props} quality={quality}/>
+     <mesh position={[0,-2.55,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[40,40]}/><meshStandardMaterial color="#0e0f0d" roughness={0.95} metalness={0.1}/></mesh>
+     <gridHelper args={[30,30,'#272822','#171914']} position={[0,-2.54,0]}/>
+-    {quality.effects&&size.width>=900&&<AssetBoundary><Suspense fallback={null}><ForgeEffects/></Suspense></AssetBoundary>}
++    {hdrEffects&&<AssetBoundary><ForgeEffects quality={quality}/></AssetBoundary>}
+   </>;
+ }
+ export default function ForgeScene({ motion,onReady,onError,onProgress,onSelect,onRecovering }) {
+-  const [initial] = useState(()=>initialQuality({width:innerWidth,coarse:matchMedia('(pointer: coarse)').matches,saveData:navigator.connection?.saveData,memory:navigator.deviceMemory,cores:navigator.hardwareConcurrency}));
++  const [initial] = useState(initialQuality);
+   const [tier,setTier]=useState(initial);
+   const [paused,setPaused]=useState(document.hidden);
+-  const [maximum]=useState(()=>matchMedia('(pointer: coarse)').matches||innerWidth<900?1:2);
+   const quality=QUALITY[tier];
+   const wakeRef=useRef(null);
+-  const [contextOptions]=useState(()=>({antialias:initial===2,alpha:true,powerPreference:'high-performance'}));
+-  const dpr=Math.min(window.devicePixelRatio||1,quality.dpr);
++  const [contextOptions]=useState(()=>({antialias:true,alpha:true,powerPreference:'high-performance'}));
++  const [dpr,setResolution]=useState(()=>renderDpr(initial,innerWidth,innerHeight,window.devicePixelRatio));
+   return <div className="webgl-stage" data-quality={quality.name} role="region" aria-label="The Forge: an interactive mechanical sculpture that transforms as you scroll">
+-    <Canvas frameloop={paused?'never':'demand'} dpr={dpr} shadows={quality.shadowSize>0} camera={{position:[0,1,8],fov:42,near:0.1,far:150}} gl={contextOptions} resize={{scroll:false,debounce:{scroll:0,resize:80}}} fallback={<span>3D requires a WebGL 2 browser. Portfolio content remains available.</span>} onCreated={({gl})=>gl.setClearColor('#0b0b0c',0)}>
+-      <QualityController initialTier={initial} maxTier={maximum} onQuality={setTier} onReady={onReady} onRecovering={onRecovering} onError={onError} onPause={setPaused} wakeRef={wakeRef}/>
++    <Canvas frameloop={paused?'never':'demand'} dpr={dpr} shadows camera={{position:[0,1,8],fov:42,near:0.1,far:150}} gl={contextOptions} resize={{scroll:false,debounce:{scroll:0,resize:0}}} fallback={<span>3D requires a WebGL 2 browser. Portfolio content remains available.</span>} onCreated={({gl})=>{gl.setClearColor('#0b0b0c',0);gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.NoToneMapping;}}>
++      <QualityController initialTier={initial} tier={tier} onResolution={setResolution} onQuality={setTier} onReady={onReady} onRecovering={onRecovering} onError={onError} onPause={setPaused} wakeRef={wakeRef}/>
+       <Progress onProgress={onProgress}/>
+-      <SceneWorld motion={motion} onReady={onReady} onSelect={onSelect} quality={quality} wakeRef={wakeRef}/>
++      <Suspense fallback={null}><SceneWorld motion={motion} onReady={onReady} onSelect={onSelect} quality={quality} wakeRef={wakeRef}/></Suspense>
+     </Canvas>
+   </div>;
+ }
+diff --git a/src/scene/dynamics.js b/src/scene/dynamics.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..8d2be9708181c938fb9efbf776d36b9323c5f344
+--- /dev/null
++++ b/src/scene/dynamics.js
+@@ -0,0 +1,34 @@
++// Fractional powers of the original 60 Hz spring update. At 60 Hz the response
++// is unchanged; at 30/90/120 Hz it follows the same damped trajectory instead of
++// changing stiffness or slowing down. Position and velocity are mutated in place.
++const step = 1 / 60;
++const damping = Math.exp(-13 * step);
++const radius = Math.sqrt(damping);
++const a = 1 - 75 * step * step * damping;
++const b = step * damping;
++const c = -75 * step * damping;
++const cosine = (a + damping) / (2 * radius);
++const angle = Math.acos(cosine);
++const sine = Math.sin(angle);
++
++export function animationDelta(delta) {
++  // Idle demand frames and tab suspension must not advance the opening reveal.
++  return delta > 0 && delta <= 0.25 ? delta : step;
++}
++
++export function advanceSpring(position, velocity, target, delta) {
++  const count = animationDelta(delta) / step;
++  const decay = Math.pow(radius, count);
++  const blend = Math.sin(angle * count) / sine;
++  const phase = Math.cos(angle * count);
++  const xx = decay * (phase + (a / radius - cosine) * blend);
++  const xv = decay * b / radius * blend;
++  const vx = decay * c / radius * blend;
++  const vv = decay * (phase + (damping / radius - cosine) * blend);
++  for (const axis of ['x', 'y', 'z']) {
++    const offset = position[axis] - target[axis];
++    const speed = velocity[axis];
++    position[axis] = target[axis] + xx * offset + xv * speed;
++    velocity[axis] = vx * offset + vv * speed;
++  }
++}
+diff --git a/src/scene/framing.js b/src/scene/framing.js
+index 7b6660eaf6aedcf36e407c4c80396e5301dfbb36..cd779266051ea3a1ced83e09a6b0560c6a7253ff 100644
+--- a/src/scene/framing.js
++++ b/src/scene/framing.js
+@@ -13,6 +13,7 @@ export function sampleCameraPose(progress) {
+   return {
+     camera: blend('camera'), target: blend('target'), object: blend('object'),
+     rotation: blend('rotation'), spread: THREE.MathUtils.lerp(a.spread, b.spread, t),
++    device: THREE.MathUtils.smoothstep(position, 2.55, 2.98) * (1 - THREE.MathUtils.smoothstep(position, 3.8, 4)),
+   };
+ }
+ 
+@@ -26,7 +27,9 @@ export function createCameraFraming() {
+   const scale = new THREE.Vector3();
+   const object = new THREE.Vector3();
+   const euler = new THREE.Euler();
+-  const corners = Array.from({ length: 8 }, () => new THREE.Vector3());
++  const local = new THREE.Vector3();
++  const corners = Array.from({ length: 136 }, () => new THREE.Vector3());
++  const aligned = corners.map(() => new THREE.Vector3());
+   const frame = { position: new THREE.Vector3(), target: new THREE.Vector3(), offsetX: 0, offsetY: 0 };
+   const verticalTangent = Math.tan(THREE.MathUtils.degToRad(42 / 2));
+ 
+@@ -37,37 +40,78 @@ export function createCameraFraming() {
+       frame.position.fromArray(pose.camera); frame.target.fromArray(pose.target);
+       frame.offsetX = 0; frame.offsetY = 0; return frame;
+     }
+-    object.set(mobile ? 0 : pose.object[0], mobile ? -0.25 : pose.object[1], 0);
++    // Keep the authored object translations/rotations on every device. Only the
++    // lens framing changes: dolly along the authored viewing ray, then lens-shift
++    // into the free area. Do not replace the timeline with a fixed mobile pose.
++    object.fromArray(pose.object);
+     rotation.setFromEuler(euler.set(...pose.rotation));
+-    scale.setScalar(mobile ? 1.12 : 1.08);
++    scale.setScalar(1.08);
+     matrix.compose(object, rotation, scale);
+-    // Conservative bounds include the plates, cables, fasteners and device stand.
+-    const halfWidth = 2.2 + pose.spread * 1.1;
+-    const halfHeight = 2.2 + pose.spread * 0.87;
+-    for (let index = 0; index < 8; index++) {
+-      corners[index].set(index & 1 ? halfWidth : -halfWidth,
+-        index & 2 ? halfHeight : -halfHeight, index & 4 ? 1.45 : -1.45).applyMatrix4(matrix);
++    let count = 0;
++    const box = (x, y, z, hx, hy, hz, turn = 0, shrink = 1) => {
++      const cos = Math.cos(turn), sin = Math.sin(turn);
++      for (let i = 0; i < 8; i++) {
++        local.set(i & 1 ? hx : -hx, i & 2 ? hy : -hy, i & 4 ? hz : -hz);
++        corners[count++].set(x + (local.x * cos + local.z * sin) * shrink,
++          y + local.y * shrink, z + (-local.x * sin + local.z * cos) * shrink).applyMatrix4(matrix);
++      }
++    };
++    const device = pose.device || 0, spread = pose.spread;
++    for (let index = 0; index < 6; index++) {
++      const side = index % 2 ? 1 : -1, row = Math.floor(index / 2);
++      const radius = [1.04, 1.04, 0.9, 0.9, 0.73, 0.73][index];
++      box(side * (0.85 + row * 0.34 + spread * (0.35 + row * 0.35)),
++        (row - 1) * spread * 0.87, side * 0.2 * spread,
++        0.2, radius + 0.12, radius, spread * side * 0.18, 1 - device * 0.7);
++      // During a quick reverse scroll, spring-driven plates are still settling.
++      // Include their actual positions as well as their new destinations.
++      const part = pose.parts?.[index];
++      if (part) box(part.position.x,part.position.y,part.position.z,
++        0.2,radius+0.12,radius,part.rotation.y,part.scale.x);
+     }
+-    frame.target.copy(object);
++    // Shaft, cables/core, fasteners, screen and stand (including pointer tilt).
++    box(0, 0, 0, 2.1 * (1 + spread * 0.4), 0.15, 0.15);
++    box(0, -0.5 * (1 - device), 0, 1.95, 1.3, 0.85, spread * 0.42, 1 - device);
++    box(0, 0, 0, 1.53 + spread * 0.8, 0.97, 0.97);
++    box(0, 0, 0.4, 2.18, 1.57, 0.5, 0, device);
++    box(0, -2.08 * device, 0.4, 1, 0.2, 0.6, 0, device);
++    frame.target.fromArray(pose.target);
+     direction.fromArray(pose.camera).sub(delta.fromArray(pose.target)).normalize();
+     right.set(0, 1, 0).cross(direction).normalize();
+     up.copy(direction).cross(right).normalize();
+     const horizontalTangent = verticalTangent * width / height;
+     const paneWidth = mobile ? 0.88 : 0.44;
+-    const paneHeight = Math.min(0.5, 320 / height);
+-    let distance = 0;
+-    for (const corner of corners) {
+-      delta.copy(corner).sub(frame.target);
+-      const depth = delta.dot(direction);
+-      distance = Math.max(distance,
+-        depth + Math.abs(delta.dot(right)) / (horizontalTangent * paneWidth),
+-        depth + Math.abs(delta.dot(up)) / (verticalTangent * paneHeight));
++    const paneHeight = Math.min(0.46, 340 / height);
++    let nearest = 0;
++    for (let index = 0; index < count; index++) {
++      delta.copy(corners[index]).sub(frame.target);
++      aligned[index].set(delta.dot(right), delta.dot(up), delta.dot(direction));
++      nearest = Math.max(nearest, aligned[index].z + 0.2);
+     }
+-    frame.position.copy(frame.target).addScaledVector(direction, distance + 0.2);
++    let minX, maxX, minY, maxY;
++    const project = distance => {
++      minX = minY = Infinity; maxX = maxY = -Infinity;
++      for (let index = 0; index < count; index++) {
++        const point = aligned[index], depth = distance - point.z;
++        const x = point.x / (depth * horizontalTangent), y = point.y / (depth * verticalTangent);
++        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
++        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
++      }
++      return maxX - minX <= paneWidth * 2 && maxY - minY <= paneHeight * 2;
++    };
++    let lower = Math.max(nearest, delta.fromArray(pose.camera).distanceTo(frame.target)), upper = lower;
++    while (!project(upper) && upper < 120) upper *= 1.25;
++    for (let iteration = 0; iteration < 16; iteration++) {
++      const middle = (lower + upper) / 2;
++      if (project(middle)) upper = middle; else lower = middle;
++    }
++    const distance = upper + 0.15;
++    project(distance);
++    frame.position.copy(frame.target).addScaledVector(direction, distance);
+     const centerX = mobile ? 0.5 : 0.27;
+-    const centerY = Math.min(0.48, 340 / height);
+-    frame.offsetX = width * (0.5 - centerX);
+-    frame.offsetY = height * (0.5 - centerY);
++    const centerY = mobile ? 0.53 : Math.min(0.48, 390 / height);
++    frame.offsetX = width * (0.5 - centerX + (minX + maxX) / 4);
++    frame.offsetY = height * (0.5 - centerY - (minY + maxY) / 4);
+     return frame;
+   };
+ }
+diff --git a/tests/dynamics.test.mjs b/tests/dynamics.test.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..186455e0a3622039ecdc6590a2fb157be2f20915
+--- /dev/null
++++ b/tests/dynamics.test.mjs
+@@ -0,0 +1,33 @@
++import assert from 'node:assert/strict';
++import test from 'node:test';
++import { advanceSpring, animationDelta } from '../src/scene/dynamics.js';
++
++const vector=(x=0,y=0,z=0)=>({x,y,z});
++const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
++test('60 Hz springs retain the approved laptop integration exactly',()=>{
++  const actual=vector(2,-1,0.2),speed=vector(0.2,-0.3,0.5),target=vector(-1,1,0.5);
++  const expected={...actual},expectedSpeed={...speed},delta=1/60;
++  for(let frame=0;frame<180;frame++) {
++    for(const axis of ['x','y','z']) {
++      expectedSpeed[axis]=(expectedSpeed[axis]+(target[axis]-expected[axis])*75*delta)*Math.exp(-13*delta);
++      expected[axis]+=expectedSpeed[axis]*delta;
++    }
++    advanceSpring(actual,speed,target,delta);
++    assert.ok(distance(actual,expected)<1e-12);
++  }
++});
++test('spring timing is equivalent at 20, 30, 60, 90 and 120 fps',()=>{
++  const results=[];
++  for(const fps of [20,30,60,90,120]) {
++    const position=vector(1,-2,3),velocity=vector(),target=vector(-2,0.8,1);
++    for(let i=0;i<fps/2;i++)advanceSpring(position,velocity,target,1/fps);
++    results.push(position);
++  }
++  for(const result of results)assert.ok(distance(result,results[0])<1e-11);
++});
++test('idle/resume gaps do not fast-forward the opening; active slow frames retain elapsed time',()=>{
++  assert.equal(animationDelta(5),1/60);
++  assert.equal(animationDelta(0),1/60);
++  assert.equal(animationDelta(1/20),1/20);
++  assert.equal(animationDelta(1/10),1/10);
++});
+diff --git a/tests/experience.test.mjs b/tests/experience.test.mjs
+index c5c5a783d60afe0c2f8f949526fb6ac7e8d8dcd4..87ede20a806bd84b0869f3682118ea103fe3a831 100644
+--- a/tests/experience.test.mjs
++++ b/tests/experience.test.mjs
+@@ -1,8 +1,8 @@
+ import assert from 'node:assert/strict';
+ import test from 'node:test';
+ import { readPreferences, savePreferences, gentleMotion, PREFERENCE_KEY } from '../src/experience/preferences.js';
+-import { initialQuality, createQualityMonitor, QUALITY } from '../src/experience/quality.js';
+-import { sampleScroll } from '../src/experience/scroll.js';
++import { initialQuality, createQualityMonitor, QUALITY, renderDpr } from '../src/experience/quality.js';
++import { sampleScroll, chapterStops } from '../src/experience/scroll.js';
+ import { attachSceneLifecycle } from '../src/experience/lifecycle.js';
+ 
+ function storage(initial = {}) {
+@@ -35,10 +35,21 @@ test('reduced motion chooses gentler animation, with an explicit full-motion ove
+   assert.equal(gentleMotion(false,'gentle'),true);
+   assert.equal(gentleMotion(false,'system'),false);
+ });
+-test('mobile/hardware/data-saver hints choose conservative render quality', () => {
+-  for(const hints of [{width:390},{width:1440,coarse:true},{width:1440,saveData:true},{width:1440,memory:2},{width:1440,cores:2}]) assert.equal(initialQuality(hints),0);
++test('phones, touch, data saver and hardware hints do not remove laptop quality', () => {
++  for(const hints of [{width:390},{width:1440,coarse:true},{width:1440,saveData:true},{width:1440,memory:2},{width:1440,cores:2}]) assert.equal(initialQuality(hints),2);
+   assert.equal(initialQuality({width:1440,memory:16,cores:12}),2);
+-  assert.ok(QUALITY.every(q=>q.segments>=16&&q.textureSize>=512&&q.dpr>0));
++  assert.ok(QUALITY.every(q=>q.segments>=32&&q.textureSize>=2048&&q.shadowSize>=512&&q.bloomScale>0&&q.dpr>=1));
++});
++test('drawing resolution uses screen density and a bounded pixel budget', () => {
++  assert.equal(renderDpr(2,390,844,3),2);
++  assert.equal(renderDpr(2,1348,900,2),1.5);
++  assert.equal(renderDpr(2,1920,1080,2),1.5);
++  for(const tier of [0,1,2])for(const [w,h,dpr] of [[320,780,3],[390,844,3],[820,1180,2],[1920,1080,2],[3840,2160,3]]) {
++    const ratio=renderDpr(tier,w,h,dpr,4096);
++    assert.ok(ratio<=dpr&&ratio>0);
++    assert.ok(w*h*ratio*ratio<=4800000.01);
++    assert.ok(Math.max(w,h)*ratio<=4096);
++  }
+ });
+ function feed(monitor, fps, seconds) {
+   const changes=[];
+@@ -55,9 +66,11 @@ test('short frame spikes and idle/resume intervals do not lower quality', () =>
+   assert.deepEqual(feed(monitor,24,1),[]); monitor.reset();
+   assert.deepEqual(feed(monitor,60,10),[]);
+ });
+-test('fast sustained frames increase mobile quality only to its cap', () => {
+-  const monitor=createQualityMonitor(0,1);
+-  assert.deepEqual(feed(monitor,60,35),[1]);
++test('every viewport can recover full quality after sustained fast rendering', () => {
++  const monitor=createQualityMonitor(0);
++  assert.deepEqual(feed(monitor,60,35),[1,2]);
++  assert.deepEqual(feed(monitor,24,25),[1,0]);
++  assert.deepEqual(feed(monitor,60,35),[1,2]);
+ });
+ test('quality cooldown prevents repeated reconfiguration after recovery', () => {
+   const monitor=createQualityMonitor(2); monitor.setTier(0);
+@@ -78,6 +91,17 @@ test('recomputed viewport/section geometry retains the current chapter', () => {
+   assert.equal(after.index,before.index);assert.ok(after.position>1&&after.position<2);
+   assert.ok(Number.isFinite(sampleScroll([0,0,0,0,0],0,0,0).position));
+ });
++test('address-bar height changes do not change the animation at a fixed scroll position', () => {
++  const stops=chapterStops([0,1300,2500,4000,6500],740);
++  const collapsed=sampleScroll(stops,1850,7500,844);
++  const expanded=sampleScroll(stops,1850,7500,740);
++  assert.equal(collapsed.position,expanded.position);
++  const tablet=chapterStops([0,1600,3000,4800,7500],1000);
++  for(let chapter=0;chapter<4;chapter++)for(const fraction of [0,0.25,0.5,0.75]) {
++    const at=anchors=>anchors[chapter]+(anchors[chapter+1]-anchors[chapter])*fraction;
++    assert.equal(sampleScroll(stops,at(stops),8500,740).position,sampleScroll(tablet,at(tablet),8500,1000).position);
++  }
++});
+ 
+ function lifecycleFixture() {
+   const canvas=new EventTarget(), page=new EventTarget(), wakeTarget=new EventTarget();page.hidden=false;
+diff --git a/tests/framing.test.mjs b/tests/framing.test.mjs
+index 07cebba73ceba2d7def48f4373861cf13a1c460f..f541cb216241cb262165f9384bfc793b51b442dd 100644
+--- a/tests/framing.test.mjs
++++ b/tests/framing.test.mjs
+@@ -7,9 +7,9 @@ import { createCameraFraming, sampleCameraPose } from '../src/scene/framing.js';
+ function sculpturePoints(pose, mobile, stage) {
+   const points = [];
+   const transform = new THREE.Matrix4().compose(
+-    new THREE.Vector3(mobile ? 0 : pose.object[0], mobile ? -0.25 : pose.object[1], 0),
++    new THREE.Vector3(...pose.object),
+     new THREE.Quaternion().setFromEuler(new THREE.Euler(...pose.rotation)),
+-    new THREE.Vector3().setScalar(mobile ? 1.12 : 1.08),
++    new THREE.Vector3().setScalar(1.08),
+   );
+   const addBox = (center, halfSize, rotation = new THREE.Euler()) => {
+     const local = new THREE.Matrix4().compose(center,
+@@ -25,18 +25,18 @@ function sculpturePoints(pose, mobile, stage) {
+     const radius = [1.04, 1.04, 0.9, 0.9, 0.73, 0.73][index];
+     addBox(new THREE.Vector3(side * (0.85 + row * 0.34 + pose.spread * (0.35 + row * 0.35)),
+       (row - 1) * pose.spread * 0.87, (index % 2 ? 0.2 : -0.2) * pose.spread),
+-    new THREE.Vector3(0.2, radius, radius), new THREE.Euler(0, pose.spread * side * 0.18, 0));
++    new THREE.Vector3(0.2, radius, radius).multiplyScalar(1-pose.device*0.7), new THREE.Euler(0, pose.spread * side * 0.18, 0));
+   }
+-  addBox(new THREE.Vector3(), new THREE.Vector3(0.6, 0.6, 0.6));
+-  addBox(new THREE.Vector3(0, -0.6, 0), new THREE.Vector3(1.85, 1.1, 0.7));
++  addBox(new THREE.Vector3(), new THREE.Vector3(0.6, 0.6, 0.6).multiplyScalar(1-pose.device), new THREE.Euler(0,pose.spread*0.42,0));
++  addBox(new THREE.Vector3(0, -0.6*(1-pose.device), 0), new THREE.Vector3(1.85, 1.1, 0.7).multiplyScalar(1-pose.device), new THREE.Euler(0,pose.spread*0.42,0));
+   if (stage >= 2.55 && stage <= 4) {
+-    addBox(new THREE.Vector3(0, 0, 0.4), new THREE.Vector3(2, 1.42, 0.1));
+-    addBox(new THREE.Vector3(0, -2.08, 0.4), new THREE.Vector3(0.9, 0.05, 0.45));
++    addBox(new THREE.Vector3(0, 0, 0.4), new THREE.Vector3(2, 1.42, 0.1).multiplyScalar(pose.device));
++    addBox(new THREE.Vector3(0, -2.08*pose.device, 0.4), new THREE.Vector3(0.9, 0.05, 0.45).multiplyScalar(pose.device));
+   }
+   return points;
+ }
+ 
+-for (const [width, height] of [[320, 780], [390, 844], [430, 932], [740, 390], [768, 1024], [820, 1180], [1024, 1366]]) {
++for (const [width, height] of [[320, 780], [375, 812], [390, 844], [430, 932], [740, 390], [768, 1024], [820, 1180], [1024, 1366]]) {
+   test(`settled sculpture remains in view throughout the timeline at ${width} × ${height}`, () => {
+     const fit = createCameraFraming();
+     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 150);
+@@ -68,6 +68,41 @@ test('camera direction and pose meet continuously at each authored chapter', ()
+   }
+ });
+ 
++test('responsive camera keeps the laptop viewing direction and fills the scene area',()=>{
++  const fit=createCameraFraming();
++  for(const [width,height] of [[320,780],[390,844],[430,932],[820,1180]])for(const stage of [0,0.5,1,1.5,2,2.5,3,3.5,4]) {
++    const pose=sampleCameraPose(stage),frame=fit(pose,width,height);
++    const authored=new THREE.Vector3(...pose.camera).sub(new THREE.Vector3(...pose.target)).normalize();
++    const actual=frame.position.clone().sub(frame.target).normalize();
++    assert.ok(actual.distanceTo(authored)<1e-10);
++    assert.deepEqual(frame.target.toArray(),pose.target);
++    const camera=new THREE.PerspectiveCamera(42,width/height,0.1,150);
++    camera.position.copy(frame.position);camera.lookAt(frame.target);
++    camera.setViewOffset(width,height,frame.offsetX,frame.offsetY,width,height);camera.updateMatrixWorld();
++    const points=sculpturePoints(pose,width<768,stage).map(p=>p.project(camera));
++    const spanX=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
++    const spanY=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
++    assert.ok(spanX>0.6||spanY>0.45,`sculpture too small at ${width}, stage ${stage}`);
++  }
++});
++
++test('fast reverse scrolling keeps still-settling plates inside the phone viewport',()=>{
++  const pose=sampleCameraPose(0),lagged={...pose,spread:1.35};
++  const parts=Array.from({length:6},(_,index)=>{
++    const part=new THREE.Object3D(),side=index%2?1:-1,row=Math.floor(index/2);
++    part.position.set(side*(0.85+row*0.34+lagged.spread*(0.35+row*0.35)),(row-1)*lagged.spread*0.87,side*0.2*lagged.spread);
++    part.rotation.y=lagged.spread*side*0.18;return part;
++  });
++  const frame=createCameraFraming()({...pose,parts},390,844);
++  const camera=new THREE.PerspectiveCamera(42,390/844,0.1,150);
++  camera.position.copy(frame.position);camera.lookAt(frame.target);
++  camera.setViewOffset(390,844,frame.offsetX,frame.offsetY,390,844);camera.updateMatrixWorld();
++  for(const point of sculpturePoints(lagged,true,0).slice(0,48)) {
++    const projected=point.project(camera);
++    assert.ok(Math.abs(projected.x)<0.96&&Math.abs(projected.y)<0.96);
++  }
++});
++
+ for (const [width,height] of [[844,390],[1024,768],[1348,900],[1920,1080]]) {
+   test(`desktop camera preserves the authored path at ${width} x ${height}`,()=>{
+     const frame=createCameraFraming();
+diff --git a/tests/mobile-layout.html b/tests/mobile-layout.html
+index c331001b4838c06ad3f8817c638ee45186fa2d73..39406b4a74a1b20330dad1949c35b5d223d00e4a 100644
+--- a/tests/mobile-layout.html
++++ b/tests/mobile-layout.html
+@@ -6,7 +6,7 @@
+ const baseline={"1024":{"#home":[44.03125,0,920.9375,900],".hero-kicker":[44.03125,128,920.9375,17],".hero-name":[44.03125,166,877.84375,169.234375],".role":[44.03125,510.703125,478.875,15.296875],"#hero-services":[44.03125,542,478.875,63.71875],".intro":[44.03125,619.71875,478.875,66.28125],".enquiry-actions":[44.03125,710,478.875,49],".hero-work a":[44.03125,767,108.25,44],".hero-footer":[44.03125,836,920.9375,64],".object-caption":[784.578125,779.8125,149.671875,31.1875]},"1348":{"#home":[57.953125,0,1217.09375,900],".hero-kicker":[57.953125,128,1217.09375,17],".hero-name":[57.953125,166,1159.078125,222.8125],".role":[57.953125,497.609375,565,15.296875],"#hero-services":[57.953125,528.90625,565,66.8125],".intro":[57.953125,609.71875,490,66.28125],".enquiry-actions":[57.953125,700,565,49],".hero-work a":[57.953125,757,108.25,44],".hero-footer":[57.953125,836,1217.09375,64],".object-caption":[1084.9375,769.8125,149.671875,31.1875]},"1920":{"#home":[152.5,0,1600,929.859375],".hero-kicker":[152.5,145,1600,17],".hero-name":[152.5,183,1373.359375,264.46875],".role":[152.5,477.46875,565,15.296875],"#hero-services":[152.5,508.765625,565,116.8125],".intro":[152.5,639.578125,490,66.28125],".enquiry-actions":[152.5,729.859375,565,49],".hero-work a":[152.5,786.859375,108.25,44],".hero-footer":[152.5,865.859375,1600,64],".object-caption":[1545.234375,799.671875,149.671875,31.1875]}};
+ const stage=document.querySelector('#stage'),out=document.querySelector('#results');let frame;
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+-async function load(w,h){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');if(frame)frame.remove();frame=document.createElement('iframe');frame.width=w;frame.height=h;frame.title='Portfolio layout';stage.append(frame);await new Promise(r=>{frame.onload=r;frame.src='/'});await frame.contentDocument.fonts.ready;for(let i=0;i<100;i++){if(frame.contentDocument.querySelector('.portfolio')?.dataset.sceneStatus!=='loading')break;await sleep(50);}await sleep(100);return frame.contentDocument;}
++async function load(w,h){localStorage.removeItem('forge-view');localStorage.removeItem('forge-experience-v2');if(frame)frame.remove();frame=document.createElement('iframe');frame.width=w;frame.height=h;frame.title='Portfolio layout';stage.append(frame);await new Promise(r=>{frame.onload=r;frame.src='/'});for(let i=0;i<100;i++){const page=frame.contentDocument.querySelector('.portfolio');if(page&&page.dataset.sceneStatus!=='loading')break;await sleep(50);}await frame.contentDocument.fonts.ready;await sleep(100);return frame.contentDocument;}
+ const assert=(v,m)=>{out.textContent+='\n'+(v?'PASS ':'FAIL ')+m;if(!v)throw Error(m)};
+ const waitFor=async test=>{for(let i=0;i<40;i++){if(test())return true;await sleep(50);}return false;};
+ const shown=doc=>{const css=doc.defaultView.getComputedStyle(doc.querySelector('.mobile-contact'));return css.display!=='none'&&css.visibility==='visible';};
+diff --git a/tests/render-parity.html b/tests/render-parity.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..6d59d24c83850f3a5115218e0487b62ab0dbc93e
+--- /dev/null
++++ b/tests/render-parity.html
+@@ -0,0 +1,69 @@
++<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
++<title>Forge rendering comparison</title>
++<style>body{margin:16px;background:#151515;color:#eee;font:14px system-ui}button,select{padding:10px;margin:4px;font:inherit}iframe{display:block;border:1px solid #555;max-width:none;background:#0b0b0c}#stage{max-width:100%;overflow:auto}pre{white-space:pre-wrap;max-height:240px;overflow:auto}.note{max-width:850px;line-height:1.6}</style>
++<h1>Compare the same animation stages</h1>
++<p class="note">Use <code>npm run dev</code> and open <code>/tests/render-parity.html</code>. Select a viewport and chapter. Capture the settled scene on your laptop and phone at the same chapter. Iframe sizes check responsive composition; they do not emulate a phone GPU, touch input or Safari. On a real phone choose “Current device”.</p>
++<label>Viewport <select id="viewport"><option value="current">Current device</option><option value="320,780">320 × 780</option><option value="375,812">375 × 812</option><option value="390,844" selected>390 × 844</option><option value="430,932">430 × 932</option><option value="820,1180">820 × 1180</option><option value="1348,900">Laptop: 1348 × 900</option></select></label>
++<label>Stage <select id="chapter"><option value="0">0 — Assembly</option><option value="1">1 — About</option><option value="2">2 — Exploded parts</option><option value="3">3 — Project screen</option><option value="4">4 — Contact</option></select></label>
++<button id="show">Show stage</button><button id="run">Run viewport checks</button><button id="rotate">Rotate viewport</button><button id="context">Test context recovery</button>
++<pre id="results">Ready. No contact messages are sent by these checks.</pre><div id="stage"></div>
++<script type="module">
++const output=document.querySelector('#results'),stage=document.querySelector('#stage'),ids=['home','about','skills','projects','contact'];let frame;
++const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
++const waitFor=async predicate=>{for(let i=0;i<160;i++){if(predicate())return true;await sleep(100);}return false;};
++const assert=(condition,message)=>{output.textContent+='\n'+(condition?'PASS ':'FAIL ')+message;if(!condition)throw Error(message);};
++function dimensions(){const value=document.querySelector('#viewport').value;return value==='current'?[Math.max(280,innerWidth-34),innerHeight]:value.split(',').map(Number);}
++async function load(width,height){
++  frame?.remove();frame=document.createElement('iframe');frame.title='Portfolio rendering under test';frame.width=width;frame.height=height;stage.append(frame);
++  await new Promise(resolve=>{frame.onload=resolve;frame.src='/';});
++  await waitFor(()=>{const page=frame.contentDocument.querySelector('.portfolio');return page&&page.dataset.sceneStatus!=='loading';});
++  await frame.contentDocument.fonts.ready;
++  return frame.contentDocument;
++}
++function stops(doc){
++  const win=doc.defaultView,probe=doc.createElement('div');probe.style.cssText='position:fixed;height:100svh;width:0;visibility:hidden;pointer-events:none';doc.body.append(probe);
++  const offset=Math.max(140,(probe.clientHeight||win.innerHeight)*.18);probe.remove();
++  return ids.map(id=>Math.max(0,doc.querySelector('#'+id).getBoundingClientRect().top+win.scrollY-offset));
++}
++async function showStage(index){const doc=frame.contentDocument;doc.defaultView.scrollTo({top:stops(doc)[index]+(index?1:0),behavior:'instant'});await sleep(2600);return doc;}
++function describe(doc){
++  const portfolio=doc.querySelector('.portfolio'),canvas=doc.querySelector('.webgl-stage canvas'),view=doc.querySelector('.webgl-stage');
++  const box=canvas?.getBoundingClientRect();
++  return {viewport:[doc.defaultView.innerWidth,doc.defaultView.innerHeight],chapter:portfolio.dataset.chapter,motion:portfolio.dataset.motion,
++    renderer:portfolio.dataset.sceneStatus,quality:view?.dataset.quality||null,nativeDpr:doc.defaultView.devicePixelRatio,
++    drawingBuffer:canvas?[canvas.width,canvas.height]:null,display:box?[box.width,box.height]:null,renderDpr:canvas?.dataset.renderDpr||null};
++}
++document.querySelector('#show').onclick=async()=>{output.textContent='Loading';const doc=await load(...dimensions());await showStage(Number(document.querySelector('#chapter').value));output.textContent=JSON.stringify(describe(doc),null,2);if(doc.querySelector('.portfolio').dataset.sceneStatus!=='ready')output.textContent+='\nLIMIT: no successful 3D drawing. Check the browser console / Retry 3D. A fallback image cannot verify lighting or animation quality.';};
++document.querySelector('#rotate').onclick=async()=>{if(!frame)return;const width=frame.width;frame.width=frame.height;frame.height=width;await sleep(500);output.textContent=JSON.stringify(describe(frame.contentDocument),null,2);};
++document.querySelector('#run').onclick=async()=>{output.textContent='Running';try{
++  for(const [width,height] of [[320,780],[375,812],[390,844],[430,932],[820,1180],[1348,900]]){
++    const doc=await load(width,height),prefix=width+'px: ';
++    const status=doc.querySelector('.portfolio').dataset.sceneStatus;
++    assert(['ready','error','user-static'].includes(status),prefix+'scene initialization completes');
++    assert(doc.documentElement.scrollWidth<=width,prefix+'no horizontal overflow');
++    if(status==='user-static')output.textContent+='\nINFO deliberate 2D preference retained; select Enable 3D to inspect rendering.';
++    else if(status==='error')output.textContent+='\nLIMIT '+prefix+'WebGL did not start; GPU visual checks skipped.';
++    else {
++      const canvas=doc.querySelector('canvas'),box=canvas.getBoundingClientRect(),ratio=Number(canvas.dataset.renderDpr);
++      assert(Math.abs(canvas.width-box.width*ratio)<=2&&Math.abs(canvas.height-box.height*ratio)<=2,prefix+'drawing buffer follows display size and selected DPR');
++      assert(ratio>0,prefix+'positive render resolution');
++    }
++    for(const index of [0,1,2,3,4]){
++      await showStage(index);
++      assert(doc.querySelector('.portfolio').dataset.chapter===ids[index],prefix+'native scroll reaches '+ids[index]);
++    }
++    frame.width=height;frame.height=width;await sleep(500);
++    assert(doc.documentElement.scrollWidth<=height,prefix+'orientation change has no horizontal overflow');
++    assert(doc.querySelector('.portfolio').dataset.sceneStatus===status,prefix+'orientation keeps the scene state');
++    output.textContent+='\nMETRICS '+JSON.stringify(describe(doc));
++  }
++  output.textContent+='\nDONE. This is not a GPU FPS benchmark. Also test real touch, address-bar collapse, background/resume, reduced motion and a fresh private-window visit on Android Chrome and iPhone Safari.';
++}catch(error){output.textContent+='\nERROR '+error.message;}};
++document.querySelector('#context').onclick=async()=>{
++  const canvas=frame?.contentDocument.querySelector('.webgl-stage canvas'),extension=canvas?.getContext('webgl2')?.getExtension('WEBGL_lose_context');
++  if(!extension){output.textContent+='\nLIMIT context-loss extension unavailable.';return;}
++  extension.loseContext();await sleep(800);const during=frame.contentDocument.querySelector('.portfolio').dataset.sceneStatus;
++  extension.restoreContext();const restored=await waitFor(()=>frame.contentDocument.querySelector('.portfolio').dataset.sceneStatus==='ready');
++  output.textContent+='\nContext recovery: '+JSON.stringify({during,restored});
++};
++</script></html>

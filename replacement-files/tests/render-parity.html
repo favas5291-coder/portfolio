@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forge rendering comparison</title>
+<style>body{margin:16px;background:#151515;color:#eee;font:14px system-ui}button,select{padding:10px;margin:4px;font:inherit}iframe{display:block;border:1px solid #555;max-width:none;background:#0b0b0c}#stage{max-width:100%;overflow:auto}pre{white-space:pre-wrap;max-height:240px;overflow:auto}.note{max-width:850px;line-height:1.6}</style>
+<h1>Compare the same animation stages</h1>
+<p class="note">Use <code>npm run dev</code> and open <code>/tests/render-parity.html</code>. Select a viewport and chapter. Capture the settled scene on your laptop and phone at the same chapter. Iframe sizes check responsive composition; they do not emulate a phone GPU, touch input or Safari. On a real phone choose “Current device”.</p>
+<label>Viewport <select id="viewport"><option value="current">Current device</option><option value="320,780">320 × 780</option><option value="375,812">375 × 812</option><option value="390,844" selected>390 × 844</option><option value="430,932">430 × 932</option><option value="820,1180">820 × 1180</option><option value="1348,900">Laptop: 1348 × 900</option></select></label>
+<label>Stage <select id="chapter"><option value="0">0 — Assembly</option><option value="1">1 — About</option><option value="2">2 — Exploded parts</option><option value="3">3 — Project screen</option><option value="4">4 — Contact</option></select></label>
+<button id="show">Show stage</button><button id="run">Run viewport checks</button><button id="rotate">Rotate viewport</button><button id="context">Test context recovery</button>
+<pre id="results">Ready. No contact messages are sent by these checks.</pre><div id="stage"></div>
+<script type="module">
+const output=document.querySelector('#results'),stage=document.querySelector('#stage'),ids=['home','about','skills','projects','contact'];let frame;
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const waitFor=async predicate=>{for(let i=0;i<160;i++){if(predicate())return true;await sleep(100);}return false;};
+const assert=(condition,message)=>{output.textContent+='\n'+(condition?'PASS ':'FAIL ')+message;if(!condition)throw Error(message);};
+function dimensions(){const value=document.querySelector('#viewport').value;return value==='current'?[Math.max(280,innerWidth-34),innerHeight]:value.split(',').map(Number);}
+async function load(width,height){
+  frame?.remove();frame=document.createElement('iframe');frame.title='Portfolio rendering under test';frame.width=width;frame.height=height;stage.append(frame);
+  await new Promise(resolve=>{frame.onload=resolve;frame.src='/';});
+  await waitFor(()=>{const page=frame.contentDocument.querySelector('.portfolio');return page&&page.dataset.sceneStatus!=='loading';});
+  await frame.contentDocument.fonts.ready;
+  return frame.contentDocument;
+}
+function stops(doc){
+  const win=doc.defaultView,probe=doc.createElement('div');probe.style.cssText='position:fixed;height:100svh;width:0;visibility:hidden;pointer-events:none';doc.body.append(probe);
+  const offset=Math.max(140,(probe.clientHeight||win.innerHeight)*.18);probe.remove();
+  return ids.map(id=>Math.max(0,doc.querySelector('#'+id).getBoundingClientRect().top+win.scrollY-offset));
+}
+async function showStage(index){const doc=frame.contentDocument;doc.defaultView.scrollTo({top:stops(doc)[index]+(index?1:0),behavior:'instant'});await sleep(2600);return doc;}
+function describe(doc){
+  const portfolio=doc.querySelector('.portfolio'),canvas=doc.querySelector('.webgl-stage canvas'),view=doc.querySelector('.webgl-stage');
+  const box=canvas?.getBoundingClientRect();
+  return {viewport:[doc.defaultView.innerWidth,doc.defaultView.innerHeight],chapter:portfolio.dataset.chapter,motion:portfolio.dataset.motion,
+    renderer:portfolio.dataset.sceneStatus,quality:view?.dataset.quality||null,nativeDpr:doc.defaultView.devicePixelRatio,
+    drawingBuffer:canvas?[canvas.width,canvas.height]:null,display:box?[box.width,box.height]:null,renderDpr:canvas?.dataset.renderDpr||null};
+}
+document.querySelector('#show').onclick=async()=>{output.textContent='Loading';const doc=await load(...dimensions());await showStage(Number(document.querySelector('#chapter').value));output.textContent=JSON.stringify(describe(doc),null,2);if(doc.querySelector('.portfolio').dataset.sceneStatus!=='ready')output.textContent+='\nLIMIT: no successful 3D drawing. Check the browser console / Retry 3D. A fallback image cannot verify lighting or animation quality.';};
+document.querySelector('#rotate').onclick=async()=>{if(!frame)return;const width=frame.width;frame.width=frame.height;frame.height=width;await sleep(500);output.textContent=JSON.stringify(describe(frame.contentDocument),null,2);};
+document.querySelector('#run').onclick=async()=>{output.textContent='Running';try{
+  for(const [width,height] of [[320,780],[375,812],[390,844],[430,932],[820,1180],[1348,900]]){
+    const doc=await load(width,height),prefix=width+'px: ';
+    const status=doc.querySelector('.portfolio').dataset.sceneStatus;
+    assert(['ready','error','user-static'].includes(status),prefix+'scene initialization completes');
+    assert(doc.documentElement.scrollWidth<=width,prefix+'no horizontal overflow');
+    if(status==='user-static')output.textContent+='\nINFO deliberate 2D preference retained; select Enable 3D to inspect rendering.';
+    else if(status==='error')output.textContent+='\nLIMIT '+prefix+'WebGL did not start; GPU visual checks skipped.';
+    else {
+      const canvas=doc.querySelector('canvas'),box=canvas.getBoundingClientRect(),ratio=Number(canvas.dataset.renderDpr);
+      assert(Math.abs(canvas.width-box.width*ratio)<=2&&Math.abs(canvas.height-box.height*ratio)<=2,prefix+'drawing buffer follows display size and selected DPR');
+      assert(ratio>0,prefix+'positive render resolution');
+    }
+    for(const index of [0,1,2,3,4]){
+      await showStage(index);
+      assert(doc.querySelector('.portfolio').dataset.chapter===ids[index],prefix+'native scroll reaches '+ids[index]);
+    }
+    frame.width=height;frame.height=width;await sleep(500);
+    assert(doc.documentElement.scrollWidth<=height,prefix+'orientation change has no horizontal overflow');
+    assert(doc.querySelector('.portfolio').dataset.sceneStatus===status,prefix+'orientation keeps the scene state');
+    output.textContent+='\nMETRICS '+JSON.stringify(describe(doc));
+  }
+  output.textContent+='\nDONE. This is not a GPU FPS benchmark. Also test real touch, address-bar collapse, background/resume, reduced motion and a fresh private-window visit on Android Chrome and iPhone Safari.';
+}catch(error){output.textContent+='\nERROR '+error.message;}};
+document.querySelector('#context').onclick=async()=>{
+  const canvas=frame?.contentDocument.querySelector('.webgl-stage canvas'),extension=canvas?.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+  if(!extension){output.textContent+='\nLIMIT context-loss extension unavailable.';return;}
+  extension.loseContext();await sleep(800);const during=frame.contentDocument.querySelector('.portfolio').dataset.sceneStatus;
+  extension.restoreContext();const restored=await waitFor(()=>frame.contentDocument.querySelector('.portfolio').dataset.sceneStatus==='ready');
+  output.textContent+='\nContext recovery: '+JSON.stringify({during,restored});
+};
+</script></html>
