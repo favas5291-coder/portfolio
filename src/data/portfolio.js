@@ -1,3 +1,6 @@
+import { projectPreviews } from './project-previews.js';
+
+const preview = projectPreviews.gymdrobe;
 // All personal and project copy lives here. Empty optional destinations stay hidden.
 export const profile = {
   name: 'Muhammed Favas K',
@@ -53,7 +56,8 @@ export const project = {
   repository: 'https://github.com/favas5291-coder/gym-store',
   commit: '74bb08e8b32957581aeef46ad400cd0b01c73858',
   reviewed: '22 October 2026',
-  screenshot: '/images/gymdrobe-storefront.webp',
+  screenshot: preview.screenshot,
+  screenshotCaptured: new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(preview.capturedAt)),
   screenshotAlt: 'The real GymDrobe homepage, with fitness product navigation and its workout clothing collection.',
   stack: ['JavaScript', 'React', 'Node.js', 'Express', 'MongoDB', 'Tailwind CSS'],
   features: ['Product variants', 'Cart', 'Wishlist', 'Authentication', 'Checkout', 'Razorpay payments', 'Orders', 'Admin management'],

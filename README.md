@@ -50,7 +50,18 @@ Scroll progress is interpolated between the actual HTML chapter positions. Mobil
 
 LinkedIn and CV are empty and hidden. Add only a valid destination. To add a CV, place the actual PDF in `public/files/` and set `profile.cv` to `/files/your-cv.pdf`.
 
-The supplied, real project image is **`public/images/gymdrobe-storefront.webp`** (1348 × 926). It is used both as a 3D screen texture and as an accessible HTML image with an enlargement dialog. No replacement screenshot is required. A new screenshot should preserve this aspect ratio, or the device plane proportions should be updated in `src/scene/ForgeScene.jsx`.
+Project previews are registered in `src/data/project-previews.js`. The 3D screen, project card, enlargement dialog, services pages and case study all use the same screenshot from this manifest. Capture dates are separate from source-code review dates.
+
+To refresh a preview, inspect the public website in a browser, dismiss optional overlays, wait for the visible content to finish loading, and capture the top of the desktop page at 1348 × 926 (or a larger image with the same aspect ratio). Verify that the capture shows the actual current design without a login page, error, loading skeleton or popup. Then run:
+
+```sh
+npm run preview:update -- gymdrobe /absolute/path/to/capture.jpg 2026-10-30T12:00:00Z
+npm run verify
+```
+
+The helper validates the image, converts it to WebP and generates a content-based filename so cached images cannot conceal an update. It preserves the previous preview if the input is invalid, skips byte-identical output and leaves project descriptions, feature claims, code links and review dates unchanged. Commit the manifest and new image together, then verify the production deployment. Keep the last good preview if the source site cannot be inspected. A linked daily ChatGPT automation checks for meaningful design changes; video-frame or price changes alone do not require a refresh.
+
+Only publish projects actually listed in the portfolio. Adding a new project requires its verified name, public URL and appropriate portfolio content; the refresh helper does not invent projects.
 
 For personal metadata changes, also edit `index.html` and the social card in `public/`. To change only the deployment origin:
 
@@ -129,5 +140,5 @@ The source ZIP contains complete replacements for all changed application files 
 - The assembly and fallback illustration are original code-based geometry.
 - Studio Small 09 HDRI by **Sergej Majboroda**, Poly Haven, CC0: https://polyhaven.com/a/studio_small_09
 - Syne and IBM Plex Mono: Google Fonts, SIL Open Font License. License files are included in `public/fonts/`.
-- GymDrobe screenshot: captured from the supplied public storefront on 22 October 2026. No account, payment or privileged admin workflow was exercised.
+- GymDrobe screenshot: capture date recorded in `src/data/project-previews.js`. The source-code review remains dated 22 October 2026. No account, payment or privileged admin workflow was exercised.
 - Dependency licenses remain with the installed packages.
