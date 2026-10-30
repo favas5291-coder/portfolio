@@ -63,6 +63,7 @@ export const project = {
   features: ['Product variants', 'Cart', 'Wishlist', 'Authentication', 'Checkout', 'Razorpay payments', 'Orders', 'Admin management'],
   problem: 'Workout essentials are spread across different stores. GymDrobe brings clothing, supplements and accessories together, with a connected path from product selection to checkout.',
   role: 'Full stack development',
+  tourNarration: 'GymDrobe brings workout essentials into one fitness store. I built its storefront, product selection and shopping flow, connecting the interface with checkout and order management. Take a closer look whenever you like.',
   contribution: 'The storefront, product selection and shopping flow: React components, cart and wishlist state, authentication integration, checkout, payment integration and order-management interfaces.',
   decisions: [
     { title: 'One variant, all the way through.', challenge: 'A colour change can affect the image, available sizes and stock.', decision: 'Connect the product gallery to the selected colour, and validate size, colour and stock together.', takeaway: 'Treat the selected variant as part of the product’s identity.', file: 'src/pages/ProductPage.jsx' },

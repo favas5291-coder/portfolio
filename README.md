@@ -1,144 +1,54 @@
-> Freelance service pages and enquiry update: see [deployment steps](docs/SEO-DEPLOY.md) and [SEO report, page metadata and 30-day plan](docs/SEO-REPORT.md). The Render site uses real static pages; remove an old SPA catch-all rewrite before verifying missing-page status codes.
+# Favas — a personal developer studio
 
-# Favas — The Forge
+React 19 + Vite portfolio for Muhammed Favas K at https://fazhere.com. The homepage presents real services and GymDrobe work through an optional guided tour. Existing service, contact, privacy and case-study routes remain prerendered with their existing SEO metadata.
 
-A scroll-driven portfolio for **Muhammed Favas K**, built with React, Vite, Tailwind CSS, Three.js, React Three Fiber, drei, React Three Postprocessing, GSAP/ScrollTrigger and Lenis.
+## Run and verify
 
-The Forge is one fixed 3D world behind semantic HTML. A mechanical assembly separates into its working parts, becomes a screen for GymDrobe, then comes back together. The complete portfolio remains usable in a lightweight 2D mode.
+Requires Node 22.12 or later.
 
-## Start locally
-
-Use Node.js **22.12 or later**. Extract the ZIP and open a terminal inside `favas-the-forge`.
-
-```bash
+```sh
 npm ci
 npm run dev
+npm run verify
 ```
 
-Open **http://localhost:4173**. Stop with `Ctrl+C`.
+`verify` runs the tests, production build, prerendering and static page/link/metadata checks. Deploy the `dist` directory using the existing Vercel configuration. The deferred character chunk does not block essential page content.
 
-```bash
-npm run build
-npm run preview
-```
+## Guided experience
 
-The final static site is in `dist/`. The build prerenders all portfolio text and links into HTML, then hydrates the React interactions. No backend, database, API key or environment variable is needed. The contact action opens an email client; no unconnected form is included.
+- Visitor-activated browser speech with readable captions. Nothing speaks automatically on arrival.
+- Welcome → services → real work → collaboration process → contact.
+- Play/pause, sound, previous/next, chapter selection, skip, project inspection and replay.
+- Session-scoped introduction dismissal; keyboard controls, reduced motion, hidden-tab pause and a static character fallback.
+- No paid speech service, voice API key, account login or additional visitor app is required. Browser voice quality and availability vary.
 
-## Scroll timeline
+The animated character is a **temporary procedural rig**. The static portrait is a reference-inspired generated concept. Neither represents a finished custom rigged likeness. No actual phoneme lip synchronization or cloned voice is claimed.
 
-Camera positions and scene poses live in `src/data/portfolio.js`.
+See [docs/GUIDED-PORTFOLIO.md](docs/GUIDED-PORTFOLIO.md) for configuration, asset integration, limitations and verification details.
 
-| Chapter | Camera x, y, z | Assembly behavior |
-| --- | --- | --- |
-| Home | 0, 1, 8 | Parts assemble on entry; code core, plates, rings and cables |
-| About | 2, 0.5, 5 | Camera moves closer; the assembly separates |
-| Skills | -2, 1, 6 | Parts spread; React, Node, Express, MongoDB, Tailwind and Git are selectable |
-| Projects | 0, 0.5, 6 | A screen appears with the real GymDrobe storefront texture |
-| Contact | 0, 1.5, 9 | Parts reassemble as the camera pulls back |
+## Update content
 
-Scroll progress is interpolated between the actual HTML chapter positions. Mobile adjusts the camera distance and centers the object. The canvas stays fixed; content is never locked behind a scroll animation or interaction.
+| Content | Source |
+| --- | --- |
+| Identity, contact destinations, skills and current project | `src/data/portfolio.js` |
+| Service descriptions, routes, WhatsApp and collaboration stages | `src/data/site.js` |
+| Tour targets, narration, optional audio references, actions, highlights and character model | `src/guide/tourConfig.js` |
+| Shared project screenshot and capture date | `src/data/project-previews.js` |
+| Main layout and styles | `src/App.jsx`, `src/studio.css` |
 
-## Edit content
+Narration is editable text. Browser speech reads the latest text without regenerating audio. Optional prerecorded clips may later be placed in `public/audio/tour/` and referenced by a narration segment's `audio` field.
 
-**`src/data/portfolio.js`** is the single content file.
+## Refresh project previews
 
-- `profile`: name, role, introduction, story, location, contact and optional LinkedIn/CV links.
-- `chapters`: navigation labels and chapter titles.
-- `skillGroups` and `skills`: grouping, application descriptions and code references.
-- `project`: all GymDrobe case-study content, features, stack, links and evidence note.
-- `cameraTimeline`: camera, object rotation, position and separation per chapter.
+Project previews are registered in `src/data/project-previews.js`. The homepage, enlargement dialog, services pages and case study share the same screenshot. Capture dates remain separate from code-review dates.
 
-LinkedIn and CV are empty and hidden. Add only a valid destination. To add a CV, place the actual PDF in `public/files/` and set `profile.cv` to `/files/your-cv.pdf`.
-
-Project previews are registered in `src/data/project-previews.js`. The 3D screen, project card, enlargement dialog, services pages and case study all use the same screenshot from this manifest. Capture dates are separate from source-code review dates.
-
-To refresh a preview, inspect the public website in a browser, dismiss optional overlays, wait for the visible content to finish loading, and capture the top of the desktop page at 1348 × 926 (or a larger image with the same aspect ratio). Verify that the capture shows the actual current design without a login page, error, loading skeleton or popup. Then run:
+Inspect the actual public homepage, dismiss optional overlays, wait for visible images/fonts, and capture a clean desktop screenshot at 1348 × 926 or larger with the same aspect ratio. Confirm that it shows the current design rather than a login, error, popup or loading state.
 
 ```sh
 npm run preview:update -- gymdrobe /absolute/path/to/capture.jpg 2026-10-30T12:00:00Z
 npm run verify
 ```
 
-The helper validates the image, converts it to WebP and generates a content-based filename so cached images cannot conceal an update. It preserves the previous preview if the input is invalid, skips byte-identical output and leaves project descriptions, feature claims, code links and review dates unchanged. Commit the manifest and new image together, then verify the production deployment. Keep the last good preview if the source site cannot be inspected. A linked daily ChatGPT automation checks for meaningful design changes; video-frame or price changes alone do not require a refresh.
+The helper validates the capture, generates optimized WebP with a content-based filename, preserves the last good preview on invalid input and skips identical output. Commit the new image and manifest together. The linked daily preview automation checks for meaningful design changes, ignoring ordinary video-frame, price and inventory changes. It preserves project copy and code-review dates.
 
-Only publish projects actually listed in the portfolio. Adding a new project requires its verified name, public URL and appropriate portfolio content; the refresh helper does not invent projects.
-
-For personal metadata changes, also edit `index.html` and the social card in `public/`. To change only the deployment origin:
-
-```bash
-node scripts/set-site-url.mjs https://your-domain.com
-npm run build
-```
-
-The command updates canonical/social URLs, robots and sitemap. The source assumes deployment at the domain root.
-
-## Vercel deployment
-
-1. Create a separate GitHub repository for this portfolio and push the extracted files, including `package-lock.json`.
-2. Import that repository into Vercel.
-3. Select **Vite**, install command **`npm ci`**, build command **`npm run build`**, and output directory **`dist`**. Use Node.js 22.12 or later.
-4. Deploy, add your domain if needed, and run the domain-update command above before the next deployment.
-5. Test the public URL while signed out before sending it to recruiters.
-
-No rewrites are required for this single page with hash navigation.
-
-Official reference: https://vercel.com/docs/frameworks/frontend/vite
-
-## Netlify deployment
-
-1. Import the same portfolio repository in Netlify.
-2. Set the build command to **`npm run build`** and publish directory to **`dist`**.
-3. Use Node.js 22.12 or later. The included `netlify.toml` supplies the build/output settings and Node 22.
-4. Deploy and update the canonical origin using the command above.
-
-Alternatively, run the build locally and upload the contents of `dist/` using Netlify's manual deployment workflow. Do not upload the source folder as the published output.
-
-Official reference: https://docs.netlify.com/build/frameworks/framework-setup-guides/vite/
-
-The ChatGPT-hosted preview remains owner-private. Public hosting and domain setup are independent of that preview. Open Graph crawlers require a publicly accessible site.
-
-## Performance and fallback
-
-- Three.js, R3F, drei and postprocessing are isolated in a lazy scene chunk. GSAP and Lenis also load separately.
-- The assembly is procedural geometry, so there is no downloaded model or Draco decoder. Repeated fasteners use an instanced mesh. If replacing this with a GLB, export with meshopt or Draco and configure the corresponding loader.
-- Pixel ratio is capped at 1.5. Geometry uses modest segment counts; shadows use a 1024px map. Bloom is limited to desktop and uses a high luminance threshold; orange emissive elements provide the intended highlight.
-- Demand rendering stops after the assembly settles. Scroll/pointer input wakes it. A hidden tab sets the canvas frame loop to `never`.
-- Reduced motion, Save-Data, devices reporting 4GB memory or less / 4 logical cores or less, failed WebGL, and a loading timeout select the 2D view. Visitors can opt into 3D on a capable low-power device. A manual 2D preference is saved locally.
-- Loading progress uses actual Three loader item counts. The loader never blocks HTML content and can be skipped. No simulated percentage is used.
-- Fonts are self-hosted, subset WOFF2 files. The project screenshot is WebP. The studio environment is a local 1K HDRI.
-- Text, chapter links, features, case-study disclosures and email links remain available without WebGL and without JavaScript. The image itself remains visible without JavaScript; its enlargement requires JavaScript.
-
-**60fps on a mid-range phone and Lighthouse 85+ are targets, not measured results.** The provided cloud browser disables WebGL and does not expose a Lighthouse runner. Responsive content and fallback behavior were checked there; the 3D lighting, shader output, camera framing and GPU frame rate still need a WebGL-capable device check. See `docs/VERIFICATION.md` for exact validation scope.
-
-## Accessibility and interaction
-
-Use the visible Home, About, Skills, Projects and Contact links for direct navigation. Tab / Shift+Tab move between links and buttons. Enter / Space activate skill buttons. Native case-study disclosures support the keyboard, and the native screenshot dialog handles focus and Escape.
-
-System reduced motion disables the 3D world and GSAP motion. There is no audio, hover-only content, tracking, progress score or contact-form service. Clipboard failures show an accurate fallback message and retain the working email link.
-
-## Source map
-
-| File | Purpose |
-| --- | --- |
-| `src/App.jsx` | Full semantic page, nav, skills, case study, contact and scene boundary |
-| `src/styles.css` | Art direction, responsive layout, focus and reduced-motion styles |
-| `src/data/portfolio.js` | Editable profile, project, skill and camera data |
-| `src/hooks/useExperience.js` | Scroll position, navigation, capability detection and view preferences |
-| `src/motion/setupMotion.js` | Lenis, GSAP reveals, custom cursor and magnetic buttons |
-| `src/scene/ForgeScene.jsx` | The single R3F world, materials, assembly and transformations |
-| `src/components/ForgeFallback.jsx` | Lightweight vector illustration for the 2D experience |
-| `src/main.jsx` / `src/entry-server.jsx` | Client hydration and build-time HTML rendering |
-| `scripts/prerender.mjs` | Emits all content into the production HTML |
-| `scripts/set-site-url.mjs` | Updates the site origin in SEO files |
-| `public/` | Real screenshot, HDRI, fonts, licenses, favicons and social image |
-| `docs/VERIFICATION.md` | Content evidence and test results / limitations |
-
-The source ZIP contains complete replacements for all changed application files plus all new files and assets. It excludes dependencies, build output, private host identity, QA harnesses and credentials. `docs/CHANGES.md` lists replaced, added and retired files compared with the previous Developer Quest edition.
-
-## Asset attribution
-
-- The assembly and fallback illustration are original code-based geometry.
-- Studio Small 09 HDRI by **Sergej Majboroda**, Poly Haven, CC0: https://polyhaven.com/a/studio_small_09
-- Syne and IBM Plex Mono: Google Fonts, SIL Open Font License. License files are included in `public/fonts/`.
-- GymDrobe screenshot: capture date recorded in `src/data/project-previews.js`. The source-code review remains dated 22 October 2026. No account, payment or privileged admin workflow was exercised.
-- Dependency licenses remain with the installed packages.
+Only add verified projects and working links. New project cards and their optional tour steps should be added together; the current site has one selected project, GymDrobe.

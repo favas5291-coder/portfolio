@@ -19,7 +19,7 @@ function staticPages() {
         const page = pageForPath(url.pathname);
         if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.end(); return; }
         if (page.noindex) {
-          if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/') || /\.(png|webp|svg|hdr|txt|xml|woff2)$/.test(url.pathname)) {
+          if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/') || /\.(png|jpe?g|webp|svg|hdr|txt|xml|woff2|glb|gltf|bin|mp3|ogg|wav)$/.test(url.pathname)) {
             const file = resolve('dist', `.${decodeURIComponent(url.pathname)}`);
             if (file.startsWith(`${resolve('dist')}/`) && (await stat(file).catch(() => null))?.isFile()) return next();
             res.statusCode = 404; res.end('Not found'); return;

@@ -1,98 +1,111 @@
-import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { profile, chapters, skillGroups, skills, project } from './data/portfolio';
-import { useExperience } from './hooks/useExperience';
-import ForgeFallback from './components/ForgeFallback';
-import { ContactActions, ContactDetails, MobileContact } from './components/ContactActions.jsx';
-import { services, whatsappHref } from './data/site.js';
+import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { profile, project, skills } from './data/portfolio.js';
+import { services, processSteps, PHONE_HREF, PHONE_DISPLAY, whatsappHref } from './data/site.js';
 import AnalyticsPreference from './components/AnalyticsPreference.jsx';
+import { characterAsset, tourSteps, tourDurationSeconds } from './guide/tourConfig.js';
+import { useGuidedTour } from './guide/useGuidedTour.js';
+import './studio.css';
 
-class SceneBoundary extends Component {
+const Character = lazy(() => import('./guide/GuideCharacter.jsx'));
+const Arrow = () => <span aria-hidden="true">↗</span>;
+function External({ children, href, ...props }) { return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}<span className="sr-only"> (opens in a new tab)</span></a>; }
+class CharacterBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch() { this.props.onError('The 3D renderer could not start. You can retry.'); }
+  componentDidCatch() { this.props.onError(); }
   render() { return this.state.failed ? null : this.props.children; }
 }
-function Arrow({ down = false }) { return <svg aria-hidden="true" viewBox="0 0 24 24" className={down ? 'arrow down' : 'arrow'}><path d="M5 19 19 5M5 5h14v14"/></svg>; }
-function External({ href, children, className = '', ...props }) { return <a href={href} target="_blank" rel="noopener noreferrer" className={className} {...props}>{children}<span className="sr-only"> (opens in a new tab)</span></a>; }
-function ChapterLabel({ id, title }) { const c = chapters.find(item => item.id === id); return <div className="chapter-label"><span>{c.number}</span><p>{title || c.title}</p></div>; }
-function Mask({ children, className = '' }) { return <span className={`line-mask ${className}`}><span className="line-inner">{children}</span></span>; }
-
-function Header({ experience: e }) {
-  return <header className="site-header">
-    <a href="#home" className="wordmark" onClick={event => e.navigate(event, 'home')} aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>{profile.shortName.toUpperCase()}<span className="wordmark-period">.</span></a>
-    <nav aria-label="Main navigation">{chapters.map(c => <a href={`/#${c.id}`} key={c.id} aria-current={e.active === c.id ? 'location' : undefined} onClick={event => e.navigate(event, c.id)}>{c.label}</a>)}<a href="/services/">Services</a></nav>
-    <a href="/contact/" className="header-contact" data-cursor="Hello">LET’S TALK <Arrow/></a>
-    <div ref={e.progressElement} className="scroll-line" aria-hidden="true"/>
-    <span className="sr-only" role="progressbar" aria-label="Page scroll progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={e.progress}/>
-  </header>;
+function CharacterStage({ tour, staticMode, onHeroVisibility }) {
+  const [load, setLoad] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [inHero, setInHero] = useState(true);
+  const [mobileTop, setMobileTop] = useState(null);
+  const fail = useCallback(() => { setFailed(true); setReady(false); }, []);
+  const mounted = useCallback(() => setReady(true), []);
+  useEffect(() => {
+    const idle = window.requestIdleCallback ? requestIdleCallback(() => setLoad(true), { timeout: 1800 }) : setTimeout(() => setLoad(true), 800);
+    const position = () => {
+      const slot = document.querySelector('.hero-character-space');
+      setMobileTop(window.innerWidth <= 767 && slot ? slot.getBoundingClientRect().top + window.scrollY : null);
+    };
+    position();
+    const layoutObserver = new ResizeObserver(position);
+    const copy = document.querySelector('.welcome-copy'); if (copy) layoutObserver.observe(copy);
+    window.addEventListener('resize', position);
+    document.fonts?.ready.then(position);
+    const observer = new IntersectionObserver(([entry]) => { setInHero(entry.isIntersecting); onHeroVisibility(entry.isIntersecting); }, { threshold: .12 });
+    const hero = document.getElementById('home'); if (hero) observer.observe(hero);
+    return () => { observer.disconnect(); layoutObserver.disconnect(); window.removeEventListener('resize', position); window.cancelIdleCallback ? cancelIdleCallback(idle) : clearTimeout(idle); };
+  }, []);
+  const compact = tour.active;
+  const stage = useRef(null);
+  const previousBounds = useRef(null);
+  useLayoutEffect(() => {
+    const next = stage.current?.getBoundingClientRect();
+    const previous = previousBounds.current;
+    if (next && previous && !tour.reducedMotion) stage.current.animate([{ transform: `translate(${previous.left - next.left}px, ${previous.top - next.top}px) scale(${previous.width / next.width}, ${previous.height / next.height})`, transformOrigin: 'top left' }, { transform: 'none', transformOrigin: 'top left' }], { duration: 650, easing: 'cubic-bezier(.2,.7,.25,1)' });
+    previousBounds.current = next;
+  }, [compact, tour.reducedMotion]);
+  const show3D = load && !staticMode && !failed;
+  return <aside ref={stage} style={!compact && mobileTop !== null ? { top: mobileTop } : undefined} className={`character-stage ${compact ? 'compact-guide' : ''} ${ready && show3D ? 'character-ready' : ''} ${!inHero && !compact ? 'character-away' : ''}`} aria-label={characterAsset.description}>
+    <div className="character-halo" aria-hidden="true"/>
+    <img className="character-portrait" src={characterAsset.portrait} alt="An illustrated character concept of Favas, wearing his dark pinstripe suit and welcoming you." width="800" height="1200" decoding="async" fetchPriority="high"/>
+    {show3D && <div className="character-canvas" aria-hidden="true"><CharacterBoundary onError={fail}><Suspense fallback={null}><Character modelUrl={characterAsset.model} clipNames={characterAsset.animations} action={tour.active ? tour.step.action : 'wave'} speaking={tour.speaking} paused={tour.hidden || (!inHero && !compact) || (tour.active && tour.state.status === 'paused')} reducedMotion={tour.reducedMotion} onReady={mounted} onError={fail}/></Suspense></CharacterBoundary></div>}
+    <div className="character-label"><span className="live-dot"/>{characterAsset.label}<span className="sr-only"> — temporary likeness</span></div>
+  </aside>;
 }
-function Hero({ experience: e }) {
-  return <div id="home" tabIndex="-1" className="chapter hero-opening">
-    <section id="hero-visual" aria-labelledby="hero-name" className="hero">
-      <div className="hero-kicker"><span className="mono">MERN / FULL STACK DEVELOPMENT</span><span className="mono">THE FORGE — PORTFOLIO</span></div>
-      <p id="hero-name" className="hero-name" aria-label={profile.name}>{profile.displayName.map(line => <Mask key={line}>{line}</Mask>)}</p>
-      <p className="role mono hero-role"><span/> {profile.role}</p>
-      <div className="hero-scene-space" aria-hidden="true"/>
-      <div className="hero-work"><a href="/#projects" onClick={event => e.navigate(event,'projects')} className="text-link" data-cursor="View">View My Work <Arrow/></a></div>
-      <div className="object-caption mono"><span>FIG. 01 / THE ASSEMBLY</span><span>IDEA → STRUCTURE → EXPERIENCE</span></div>
-      <div className="hero-footer mono"><span>{profile.location}</span><a href="#about" onClick={event => e.navigate(event,'about')}>SCROLL TO DISASSEMBLE <Arrow down/></a></div>
-    </section>
-    <section id="business-introduction" aria-labelledby="hero-services" className="business-intro text-panel">
-      <h1 id="hero-services">{profile.headline}</h1><p className="intro">{profile.intro}</p><ContactActions compact/>
-    </section>
-  </div>;
+function TourConsole({ tour, onInspect }) {
+  const { state, step, dispatch } = tour;
+  const play = () => {
+    document.getElementById(step.target)?.scrollIntoView({ behavior: tour.reducedMotion ? 'instant' : 'smooth', block: 'start' });
+    dispatch({ type: 'PLAY' });
+  };
+  if (!tour.active && state.status !== 'completed') return null;
+  if (state.status === 'completed') return <aside className="tour-console tour-complete" aria-label="Tour complete"><div><span className="eyebrow">THANKS FOR DROPPING BY</span><p>Now, let’s talk about your idea.</p></div><a href="#contact" className="studio-button" onClick={tour.skip}>Let’s talk <Arrow/></a><button onClick={() => tour.start(state.sound)} className="tour-text-button">Replay tour</button><button onClick={tour.skip} className="tour-close" aria-label="Close tour">×</button></aside>;
+  return <aside className="tour-console" aria-label="Guided portfolio tour">
+    <div className="tour-topline"><span className="eyebrow"><span className={`speech-light ${tour.speaking ? 'is-speaking' : ''}`}/>FAVAS, YOUR GUIDE</span><span className="tour-counter">0{state.index + 1} / 0{tourSteps.length}</span><button className="tour-text-button" onClick={tour.skip}>Skip tour <span aria-hidden="true">×</span></button></div>
+    <nav className="tour-chapters" aria-label="Tour chapters">{tourSteps.map((item, index) => <button key={item.id} aria-current={state.index === index ? 'step' : undefined} onClick={() => dispatch({ type: 'SELECT', index })}><span/>{item.title}</button>)}</nav>
+    <p className="tour-caption" role="status" aria-live="polite" aria-atomic="true">{step.segments[state.segment].text}</p>
+    {state.blocked && <p className="tour-audio-note">Sound couldn’t start. Try Play, or turn sound off to continue with captions.</p>}
+    {tour.capability === 'captions' && <p className="tour-audio-note">Voice isn’t available in this browser. Captions will guide you.</p>}
+    <div className="tour-controls"><button className="tour-play" onClick={() => state.status === 'playing' ? dispatch({ type: 'PAUSE' }) : play()} aria-label={state.status === 'playing' ? 'Pause tour' : 'Play tour'}>{state.status === 'playing' ? 'Ⅱ Pause' : '▶ Play'}</button><button onClick={() => dispatch({ type: 'SOUND' })} aria-pressed={state.sound} aria-label={state.sound ? 'Turn sound off' : 'Turn sound on'}>{state.sound ? 'Sound on' : 'Sound off'}</button><span className="tour-control-spacer"/>{step.inspect && <button onClick={onInspect} className="tour-inspect">Inspect project <Arrow/></button>}<button onClick={() => dispatch({ type: 'PREVIOUS' })} disabled={state.index === 0} aria-label="Previous tour section">← <span className="control-word">Previous</span></button><button onClick={() => dispatch({ type: 'NEXT' })} aria-label="Next tour section">{state.index === tourSteps.length - 1 ? 'Finish' : 'Next'} →</button></div>
+  </aside>;
 }
-
-function About() {
-  return <section id="about" tabIndex="-1" aria-labelledby="about-title" className="chapter about">
-    <ChapterLabel id="about"/><span className="chapter-numeral" aria-hidden="true">01</span>
-    <div className="about-copy text-panel" data-reveal><p className="mono overline">THE PERSON BEHIND THE PARTS</p><h2 id="about-title" className="display-heading">{profile.aboutTitle.map((line,i)=><span key={line} className={i === 1 ? 'muted' : ''}>{line}</span>)}</h2><p>{profile.about}</p><p>{profile.approach}</p><div className="home-services"><h3>Websites for your next step.</h3><ul>{services.map(service => <li key={service.slug}><a href={`/services/${service.slug}/`}>{service.name} <span aria-hidden="true">↗</span></a></li>)}</ul><a className="text-link" href="/services/">Explore website development services <Arrow/></a></div><div className="about-signoff"><span className="signature">{profile.signature}</span><span className="mono">DEVELOPER<br/>{profile.location}</span></div></div>
-  </section>;
-}
-function Skills({ experience: e }) {
-  const chosen = skills.find(skill => skill.name === e.selected) || skills[1];
-  return <section id="skills" tabIndex="-1" aria-labelledby="skills-title" className="chapter skills">
-    <ChapterLabel id="skills"/><span className="chapter-numeral" aria-hidden="true">02</span>
-    <div className="skills-copy text-panel"><p className="mono overline" data-reveal>DIFFERENT PARTS. ONE SYSTEM.</p><h2 id="skills-title" className="display-heading" data-reveal>The working<br/><span className="muted">parts.</span></h2><div className="skill-groups">{skillGroups.map((group,index) => <div key={group.name} className="skill-group"><div className="skill-group-heading"><span className="mono">0{index+1}</span><h3>{group.name}</h3></div><p>{group.description}</p><div className="skill-names" role="group" aria-label={group.name}>{skills.filter(s=>s.group===group.name).map(s=><button key={s.name} aria-pressed={e.selected===s.name} onClick={()=>e.setSelected(s.name)} data-cursor="Inspect">{s.name}<span aria-hidden="true">↗</span></button>)}</div></div>)}</div><div className="skill-detail" aria-live="polite"><span className="mono">IN PRACTICE / {chosen.name}</span><p>{chosen.detail}</p>{chosen.file ? <External href={`${project.repository}/blob/${project.commit}/${chosen.file}`} className="text-link">Inspect the code <Arrow/></External> : <a href="#projects" className="text-link" onClick={event=>e.navigate(event,'projects')}>See the project <Arrow/></a>}</div></div>
-    <p className="parts-note mono">SELECT A PART.<br/>SEE HOW IT FITS.</p>
-  </section>;
-}
-function Projects() {
-  const dialog = useRef(null);
-  const [imageFailed,setImageFailed] = useState(false);
-  return <section id="projects" tabIndex="-1" aria-labelledby="project-title" className="chapter projects">
-    <ChapterLabel id="projects"/>
-    <div className="project-intro text-panel" data-reveal><p className="mono overline">SELECTED WORK / 01</p><h2 id="project-title" className="project-title">{project.name}<span aria-hidden="true">↗</span></h2><p className="project-tagline">{project.tagline}</p><p>{project.description}</p><div className="project-links"><External href={project.website} className="button-solid" data-magnetic data-cursor="Visit">Visit Website <Arrow/></External><External href={project.repository} className="text-link" data-cursor="Code">View Code <Arrow/></External></div><a href="/projects/gymdrobe/" className="text-link case-link">Read the GymDrobe case study <Arrow/></a><p className="mono project-role">{project.role}<br/>{project.stack.join(' / ')}</p></div>
-    <div className="project-visual"><button className="project-screenshot" onClick={()=>dialog.current?.showModal()} data-cursor="View" aria-label="Enlarge real GymDrobe screenshot">{!imageFailed ? <img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async" onError={()=>setImageFailed(true)}/> : <span>GYMDROBE<br/>Storefront screenshot unavailable</span>}<span className="screenshot-action mono">ACTUAL STOREFRONT <Arrow/></span></button><span className="mono image-caption">GYMDROBE.COM — CAPTURED {project.screenshotCaptured}</span></div>
-    <div className="case-study text-panel">
-      <div className="case-meta"><span className="mono">A CLOSER LOOK</span><p>A shopping flow.<br/>A connected system.</p></div>
-      <div className="case-body"><div className="case-overview"><div><h3 className="mono">THE PROBLEM</h3><p>{project.problem}</p></div><div><h3 className="mono">MY ROLE</h3><p>{project.contribution}</p></div></div><div className="feature-row"><h3 className="mono">FEATURES</h3><ul>{project.features.map(feature=><li key={feature}>{feature}</li>)}</ul></div><div className="stack-row"><h3 className="mono">STACK</h3><p>{project.stack.join(' / ')}</p></div><div className="decisions"><h3 className="mono">CHALLENGES & DECISIONS</h3>{project.decisions.map((d,index)=><details key={d.title}><summary><span className="mono">0{index+1}</span><span>{d.title}</span><span className="detail-plus" aria-hidden="true">+</span></summary><div className="decision-content"><p><strong>The challenge.</strong> {d.challenge}</p><p><strong>The decision.</strong> {d.decision}</p><p><strong>The takeaway.</strong> {d.takeaway}</p><External href={`${project.repository}/blob/${project.commit}/${d.file}`} className="text-link">Read the implementation <Arrow/></External></div></details>)}</div><p className="evidence-note">{project.evidence}</p></div>
-    </div>
-    <dialog ref={dialog} className="image-dialog" aria-label="GymDrobe storefront screenshot" onClick={event=>{if(event.target===dialog.current)dialog.current.close();}}><div><span className="mono">GYMDROBE / REAL STOREFRONT</span><button onClick={()=>dialog.current.close()} aria-label="Close screenshot">CLOSE <span aria-hidden="true">×</span></button></div><img src={project.screenshot} width="1348" height="926" alt={project.screenshotAlt}/><p>Captured from the public storefront on {project.screenshotCaptured}.</p></dialog>
-  </section>;
-}
-function Contact() {
-  const [copyState,setCopyState] = useState('');
-  const timer = useRef(null);
-  useEffect(()=>()=>clearTimeout(timer.current),[]);
-  const copy = async()=>{try { await navigator.clipboard.writeText(profile.email);setCopyState('Email copied.');}catch{setCopyState('Select the email address to copy it, or use the email link.');}clearTimeout(timer.current);timer.current=setTimeout(()=>setCopyState(''),6000);};
-  return <section id="contact" tabIndex="-1" aria-labelledby="contact-title" className="chapter contact"><ChapterLabel id="contact"/><div className="contact-copy text-panel"><p className="mono overline" data-reveal>THE NEXT BUILD STARTS HERE</p><h2 id="contact-title" className="contact-title" data-reveal>{profile.contactTitle.map((line,i)=><span key={line} className={i===1?'accent':''}>{line}</span>)}</h2><p className="contact-intro">{profile.contactIntro}</p><ContactActions compact/><ContactDetails showEmail={false}/><a href={`mailto:${profile.email}`} className="email-link" data-contact="email" data-magnetic data-cursor="Hello">{profile.email} <Arrow/></a><div className="contact-links"><External href={whatsappHref()} data-contact="whatsapp" className="text-link">WhatsApp · +91 8156805806 <Arrow/></External><External href={profile.github} className="text-link">GitHub <Arrow/></External>{profile.linkedin && <External href={profile.linkedin} className="text-link">LinkedIn <Arrow/></External>}{profile.cv && <a href={profile.cv} className="text-link" download>Download CV <Arrow/></a>}<button className="copy-email" onClick={copy}>Copy email address</button></div><p className="copy-status" role="status">{copyState}</p></div><div className="contact-location mono">{profile.location}</div></section>;
-}
+function SectionLabel({ number, children }) { return <p className="section-index"><span>{number}</span>{children}<i aria-hidden="true"/></p>; }
 export default function App() {
-  const e = useExperience();
-  const ForgeScene = useMemo(() => lazy(() => import('./scene/ForgeScene')), [e.attempt]);
-  const percent = e.loading.total ? Math.round(e.loading.loaded/e.loading.total*100) : null;
-  return <div className={`portfolio ${e.mode === 'three' && e.sceneReady ? 'has-three' : 'has-poster'} ${e.mode === 'static' ? 'static-mode' : 'motion-mode'}`} data-chapter={e.active} data-scene-status={e.sceneStatus} data-motion={e.reduced?'gentle':'full'}>
-    <a href="#main" className="skip-link">Skip to content</a>
-    <div className="world"><ForgeFallback/>{e.initialized && e.mode==='three' && <SceneBoundary key={e.attempt} onError={e.fallback}><Suspense fallback={null}><ForgeScene motion={e.motion} onReady={e.ready} onRecovering={e.recovering} onError={e.fallback} onProgress={e.loadProgress} onSelect={e.setSelected}/></Suspense></SceneBoundary>}<div className="world-vignette"/></div>
-    <div className="film-grain" aria-hidden="true"/>
-    <Header experience={e}/>
-    <main id="main" tabIndex="-1"><Hero experience={e}/><About/><Skills experience={e}/><Projects/><Contact/></main>
-    <footer className="site-footer"><span className="mono">{profile.name} / THE FORGE</span><nav className="home-footer-links" aria-label="Footer navigation"><a href="/services/">Services</a><a href="/projects/gymdrobe/">GymDrobe case study</a><a href="/contact/">Request a Quote</a><a href="/privacy/">Privacy</a></nav><a href="#home" onClick={event=>e.navigate(event,'home')} className="text-link">Back to top <Arrow/></a><AnalyticsPreference/></footer>
-    <MobileContact/>
-    <div className="view-controls"><span className="mono scroll-counter" aria-hidden="true">{String(e.progress).padStart(2,'0')} / 100</span>{e.initialized && <div className="experience-options"><button className="view-toggle" onClick={e.toggleMotion} aria-pressed={!e.reduced}>{e.reduced?'Enable full motion':'Use gentle motion'}</button><button className="view-toggle" onClick={e.toggleMode} aria-pressed={e.mode==='static'}>{e.mode==='three'?'Switch to 2D':e.sceneStatus==='error'?'Retry 3D':'Enable 3D'}<span className="view-dot"/></button></div>}</div>
-    {e.initialized && e.mode==='three' && !e.sceneReady && <div className="scene-loader" role="status"><span className="mono">{e.sceneStatus==='recovering'?'RESTORING THE FORGE':'ASSEMBLING THE FORGE'} {percent===null?'':`${percent}%`}</span>{e.loading.total>0 && <progress value={e.loading.loaded} max={e.loading.total} aria-label="3D assets loaded"/>}<button onClick={e.toggleMode}>Use 2D view <span aria-hidden="true">↗</span></button></div>}
-    {e.sceneStatus==='error' && <div className="scene-loader" role="status"><p>{e.reason}</p><button onClick={e.retry}>Retry 3D <span aria-hidden="true">↗</span></button></div>}
-    <div ref={e.cursor} className="custom-cursor" aria-hidden="true"/>
+  const tour = useGuidedTour();
+  const [staticMode, setStaticMode] = useState(false);
+  const [heroVisible, setHeroVisible] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const dialog = useRef(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { if (dialogOpen) dialog.current?.showModal(); }, [dialogOpen]);
+  const inspect = () => { tour.dispatch({ type: 'PAUSE' }); setDialogOpen(true); };
+  const browse = () => { tour.skip(); document.getElementById('services')?.scrollIntoView({ behavior: tour.reducedMotion ? 'instant' : 'smooth' }); };
+  const navClick = () => { setMenuOpen(false); tour.dispatch({ type: 'PAUSE' }); };
+  return <div className={`studio ${tour.active ? 'tour-active' : ''}`} data-tour-status={tour.state.status}>
+    <a className="skip-link" href="#main">Skip to content</a>
+    <header className="studio-header"><a className="studio-wordmark" href="#home" onClick={navClick} aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>favas<span>.</span></a><button className="studio-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-controls="studio-nav">{menuOpen ? 'Close' : 'Menu'}</button><nav id="studio-nav" className={menuOpen ? 'menu-open' : ''} aria-label="Main navigation"><a href="#services" onClick={navClick}>What I do</a><a href="#projects" onClick={navClick}>Selected work</a><a href="#process" onClick={navClick}>The process</a></nav><button className="meet-button" onClick={() => tour.start(true)}><span className="live-dot"/>Meet Favas <span aria-hidden="true">↗</span></button></header>
+    <CharacterStage tour={tour} staticMode={staticMode} onHeroVisibility={setHeroVisible}/>
+    <main id="main" tabIndex={-1}>
+      <section id="home" className="studio-hero" aria-labelledby="welcome-title">
+        <div className="hero-orbit orbit-one" aria-hidden="true"/><div className="hero-orbit orbit-two" aria-hidden="true"/>
+        <div id="welcome-copy" className="welcome-copy"><p className="eyebrow"><span className="accent-line"/>INDEPENDENT DEVELOPER. PERSONAL APPROACH.</p><h1 id="welcome-title" tabIndex={-1}>Websites & apps.<br/>With a <em>human</em><br/>touch<span className="orange-period">.</span></h1><p className="studio-intro">I’m Favas. I turn ideas into thoughtful websites and web applications. Come in, look around. I’ll show you what we can build.</p><div className="welcome-actions"><button className="studio-button" onClick={() => tour.start(true)}><span aria-hidden="true">▶</span>{tour.dismissed ? 'Replay welcome with sound' : 'Start tour with sound'}<Arrow/></button><button className="studio-text-button" onClick={browse}>Explore myself <span aria-hidden="true">↓</span></button></div><p className="welcome-note">About {tourDurationSeconds} seconds. Captions included. You’re always in control.</p></div>
+        <div className="hero-character-space" aria-hidden="true"/>
+        <div className="hero-bottomline"><span>MUHAMMED FAVAS K<span className="hero-location">KOZHIKODE, KERALA · WORKING REMOTELY</span></span><button onClick={() => setStaticMode(!staticMode)} aria-pressed={staticMode}>{staticMode ? 'Enable 3D character' : 'Use static character'} <span aria-hidden="true">↗</span></button><a href="#services" onClick={navClick}>SCROLL TO DISCOVER <span aria-hidden="true">↓</span></a></div>
+      </section>
+      <section id="about" className="studio-about studio-section" aria-labelledby="about-title"><p className="eyebrow">A PERSON BEHIND THE PIXELS</p><h2 id="about-title" tabIndex={-1}>Good work starts<br/>with a <em>conversation.</em></h2><div><p>I’m {profile.name}, a full stack developer based in Kozhikode. I connect the details people see with the systems that make them work.</p><p>My tools are JavaScript, React, Node.js, Express and MongoDB. My starting point is your business, your customers, and what they need to do.</p><a href="#contact" className="studio-text-button" onClick={navClick}>Tell me about your idea <Arrow/></a></div></section>
+      <section id="services" className="studio-section studio-services" aria-labelledby="services-title"><SectionLabel number="01">WHAT I CAN BUILD</SectionLabel><div className="section-heading"><h2 id="services-title" tabIndex={-1}>Made for your<br/><em>next move.</em></h2><p>A useful website should feel simple.<br/>Here’s where I can help.</p></div><div id="services-list" className="studio-service-list">{services.map((service, index) => <a key={service.slug} href={`/services/${service.slug}/`} onClick={navClick} className="studio-service"><span className="service-number">0{index + 1}</span><h3>{service.name}</h3><p>{service.short}</p><span className="service-arrow" aria-hidden="true">↗</span></a>)}</div><a className="studio-text-button" href="/services/">Explore all services <Arrow/></a></section>
+      <section id="projects" className="studio-section studio-work" aria-labelledby="work-title"><SectionLabel number="02">BUILT, NOT JUST IMAGINED</SectionLabel><div className="section-heading"><h2 id="work-title" tabIndex={-1}>Ideas out<br/><em>in the world.</em></h2><p>One connected product.<br/>A closer look at how I build.</p></div><article className="studio-project"><div className="project-browser" id="project-preview"><div className="browser-bar"><span><i/><i/><i/></span><span>gymdrobe.com</span><External href={project.website} aria-label="Open GymDrobe live website">↗</External></div><button className="project-image-button" onClick={inspect} aria-label="Enlarge GymDrobe project screenshot">{imageFailed ? <span className="project-image-error">Preview unavailable. Visit the live website below.</span> : <img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async" onError={() => setImageFailed(true)}/>}<span className="image-expand">View closer <span aria-hidden="true">↗</span></span></button></div><div className="studio-project-meta"><div><p className="eyebrow">FITNESS E-COMMERCE / OWN PROJECT</p><h3>{project.name}</h3><p>{project.description}</p><p className="project-role-copy">{project.contribution}</p><ul className="project-stack">{project.stack.map(item => <li key={item}>{item}</li>)}</ul></div><div className="project-actions"><External className="studio-button" href={project.website} onClick={navClick}>Visit website <Arrow/></External><a className="studio-text-button" href="/projects/gymdrobe/">Read case study <Arrow/></a><External className="studio-text-button" href={project.repository}>View source <Arrow/></External><span className="capture-date">Preview captured {project.screenshotCaptured}</span></div></div></article></section>
+      <section id="process" className="studio-section studio-process" aria-labelledby="process-title"><SectionLabel number="03">FROM FIRST HELLO TO LAUNCH</SectionLabel><div className="section-heading"><h2 id="process-title" tabIndex={-1}>Clear steps.<br/><em>Shared progress.</em></h2><p>You know what’s happening,<br/>and what comes next.</p></div><ol id="process-list" className="studio-process-list">{processSteps.map(([title, description], index) => <li key={title}><span>0{index + 1}</span><h3>{title}</h3><p>{description}</p></li>)}</ol></section>
+      <section id="skills" className="studio-section studio-skills" aria-labelledby="skills-title"><h2 id="skills-title" tabIndex={-1}>The tools behind the work.</h2><ul>{skills.map(skill => <li key={skill.name}>{skill.name}</li>)}</ul></section>
+      <section id="contact" className="studio-section studio-contact" aria-labelledby="contact-title"><SectionLabel number="04">YOUR IDEA STARTS HERE</SectionLabel><div className="contact-composition"><h2 id="contact-title" tabIndex={-1}>Let’s build<br/>something<br/><em>useful.</em><span className="orange-period">↗</span></h2><div id="contact-options"><p>Have a project in mind? Tell me what you’re planning. We’ll talk through the idea, the scope, and the next step.</p><a className="studio-button" href="/contact/">Discuss your project <Arrow/></a><External className="contact-direct" href={whatsappHref()} data-contact="whatsapp">WhatsApp me <Arrow/></External><a className="contact-direct" href={`mailto:${profile.email}`} data-contact="email">{profile.email} <Arrow/></a><a className="contact-direct" href={PHONE_HREF} data-contact="call">{PHONE_DISPLAY} <Arrow/></a></div></div></section>
+    </main>
+    <footer className="studio-footer"><a href="#home" className="studio-wordmark">favas<span>.</span></a><p>{profile.name}<br/>{profile.location}</p><nav aria-label="Footer navigation"><a href="/services/">Services</a><External href={profile.github}>GitHub</External><External href={profile.linkedin}>LinkedIn</External><a href="/privacy/">Privacy</a></nav><AnalyticsPreference/><span>BUILT WITH INTENTION. © {new Date().getFullYear()}</span></footer>
+    {!tour.active && tour.state.status !== 'completed' && (tour.dismissed || !heroVisible) && <button className="tour-reopen" onClick={() => tour.start(true)}><span className="live-dot"/>Take a personal tour <span aria-hidden="true">▶</span></button>}
+    <TourConsole tour={tour} onInspect={inspect}/>
+    {dialogOpen && <dialog ref={dialog} className="studio-image-dialog" aria-label="GymDrobe project screenshot" onClose={() => setDialogOpen(false)} onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}><div><span>GYMDROBE / REAL STOREFRONT</span><button onClick={() => dialog.current.close()} aria-label="Close screenshot">Close ×</button></div><img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926"/><p>Captured {project.screenshotCaptured}. <External href={project.website}>Open live website ↗</External></p></dialog>}
   </div>;
 }
