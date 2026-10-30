@@ -10,11 +10,24 @@ const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
 await build({ build: { ssr: 'src/entry-server.jsx', outDir: '.sites-runtime/ssr', emptyOutDir: true }, logLevel: 'warn' });
 const { render } = await import(pathToFileURL(resolve('.sites-runtime/ssr/entry-server.js')).href);
 const template = await readFile('dist/index.html', 'utf8');
+const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
+function pageStyles(path) {
+  const styles = new Set(), visited = new Set();
+  const visit = key => {
+    if (visited.has(key)) return;
+    visited.add(key);
+    const chunk = manifest[key];
+    for (const css of chunk?.css || []) styles.add(css);
+    for (const child of chunk?.imports || []) visit(child);
+  };
+  visit(path === '/' ? 'src/App.jsx' : 'src/MarketingPages.jsx');
+  return [...styles].filter(css => !template.includes(`/${css}`)).map(css => `<link rel="stylesheet" href="/${css}"/>`).join('');
+}
 if (!template.includes('<!--app-html-->') || !template.includes('<!--page-meta-->')) throw new Error('Missing prerender placeholders');
 for (const page of [...pages, notFound]) {
   const output = page.path === '/' ? 'dist/index.html' : page.noindex ? 'dist/404.html' : `dist${page.path}index.html`;
   await mkdir(dirname(output), { recursive: true });
-  await writeFile(output, template.replace('<!--page-meta-->', renderHead(page, env)).replace('<!--app-html-->', render(page.path)));
+  await writeFile(output, template.replace('</head>', `${pageStyles(page.path)}</head>`).replace('<!--page-meta-->', renderHead(page, env)).replace('<!--app-html-->', render(page.path)));
 }
 const indexable = isPreview(env) ? [] : pages;
 await writeFile('dist/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${indexable.map(p => `<url><loc>${SITE_ORIGIN}${p.path}</loc></url>`).join('')}</urlset>\n`);

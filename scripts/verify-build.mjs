@@ -60,6 +60,8 @@ assert.ok(error.includes('noindex, follow') && !error.includes('rel="canonical"'
 const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
 const sizes = {};
 for (const [name, route] of [['home', 'src/App.jsx'], ['services', 'src/MarketingPages.jsx']]) {
+  const initialHTML = name === 'home' ? home : rendered.get('/services/');
+  for (const css of manifest[route]?.css || []) assert.ok(initialHTML.includes(`href="/${css}"`), `Page CSS must be present before JavaScript: ${name} ${css}`);
   const seen = new Set();
   const visit = key => {
     if (seen.has(key)) return;
