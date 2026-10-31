@@ -73,12 +73,25 @@ export default function App() {
   const [serviceIndex,setServiceIndex]=useState(0);
   const [processIndex,setProcessIndex]=useState(0);
   const [sceneEnabled,setSceneEnabled]=useState(true);
+  const [worldMounted,setWorldMounted]=useState(false);
   const [hidden,setHidden]=useState(false);
   const [heroVisible,setHeroVisible]=useState(true);
   const [menuOpen,setMenuOpen]=useState(false);
   const [dialogOpen,setDialogOpen]=useState(false);
   const dialog=useRef(null);
 
+  useEffect(()=>{
+    // The site is statically prerendered with renderToString. Never render a
+    // pending lazy WebGL Suspense boundary in SSR or its initial hydration tree:
+    // that causes React #419, a forced client render of the boundary.
+    const start=()=>setWorldMounted(true);
+    if('requestIdleCallback' in window){
+      const id=window.requestIdleCallback(start,{timeout:900});
+      return ()=>window.cancelIdleCallback(id);
+    }
+    const id=window.setTimeout(start,130);
+    return ()=>window.clearTimeout(id);
+  },[]);
   useEffect(()=>{
     const onVisibility=()=>setHidden(document.hidden);
     document.addEventListener('visibilitychange',onVisibility);
@@ -102,7 +115,7 @@ export default function App() {
   return <div className={'cinema '+(tour.active?'cinema-tour-active':'')} data-chapter={chapter}>
     <a className="cinema-skip" href="#main">Skip to main content</a>
     <div className="cinema-noise" aria-hidden="true"/>
-    {sceneEnabled&&<SceneBoundary><Suspense fallback={<div className="cinema-loading-scene" aria-hidden="true"/>}><StudioWorld chapter={tour.state.status==='playing'?tour.step.target:chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={tour.speaking} reducedMotion={tour.reducedMotion} hidden={hidden} onSelectService={setServiceIndex}/></Suspense></SceneBoundary>}
+    {sceneEnabled&&(worldMounted?<SceneBoundary><Suspense fallback={<div className="cinema-loading-scene" aria-hidden="true"/>}><StudioWorld chapter={tour.state.status==='playing'?tour.step.target:chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={tour.speaking} reducedMotion={tour.reducedMotion} hidden={hidden} onSelectService={setServiceIndex}/></Suspense></SceneBoundary>:<div className="cinema-loading-scene" aria-hidden="true"/>)}
     {!sceneEnabled&&<div className="cinema-poster-background" aria-hidden="true"/>}
     <header className="cinema-header">
       <a href="#home" onClick={event=>{event.preventDefault();jump('home');}} className="cinema-logo" aria-label="Favas home"><span className="cinema-logo-sign" aria-hidden="true">///</span> favas<span>.</span></a>
