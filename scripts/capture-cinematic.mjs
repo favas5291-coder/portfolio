@@ -31,6 +31,9 @@ try{
     await page.locator('#cinema-hero-title').waitFor();
     await page.waitForTimeout(2600);
     await page.screenshot({path:'visual-checks/'+size.name+'-arrival.png',fullPage:false,animations:'disabled'});
+    await page.locator('.confidence-hero-proof img').waitFor();
+    assert.ok(await page.locator('.confidence-hero-proof img').evaluate(img=>img.complete&&img.naturalWidth>0),'Real featured GymDrobe proof failed to load.');
+    assert.ok(await page.locator('.confidence-hero-proof a[href="#projects"]').count(),'Hero should link straight to real work.');
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+3);
     assert.equal(overflow,false,size.name+' has horizontal overflow.');
     for(const section of ['services','projects','process','contact']){
@@ -40,6 +43,16 @@ try{
     }
     const webgl=await page.locator('.cinema-world canvas').count();
     assert.ok(webgl===1,'Expected one deferred WebGL canvas on '+size.name);
+    await page.locator('#engineering-lab').evaluate(node=>node.scrollIntoView({block:'start',behavior:'instant'}));
+    await page.locator('.confidence-lab-selector button').nth(1).click();
+    assert.equal(await page.locator('.confidence-lab-selector button').nth(1).getAttribute('aria-pressed'),'true');
+    assert.ok((await page.locator('.confidence-lab-paper').innerText()).includes('MY APPROACH'));
+    await page.screenshot({path:'visual-checks/'+size.name+'-engineering.png',fullPage:false,animations:'disabled'});
+    await page.locator('#brief-kind').selectOption({label:'E-commerce development'});
+    await page.locator('.confidence-brief-choices button').nth(1).click();
+    const messageLink=await page.locator('.confidence-brief-main').getAttribute('href');
+    assert.ok(messageLink.includes('Project%20type%3A%20E-commerce')||decodeURIComponent(messageLink).includes('Project type: E-commerce'),'The prefilled WhatsApp link must reflect the selected service.');
+    assert.ok(await page.locator('.confidence-brief-form small').count());
     const screenshot=page.locator('#project-preview img');
     assert.ok(await screenshot.count(),'The genuine project screenshot is missing.');
     const imageReady=await screenshot.evaluate(image=>image.complete&&image.naturalWidth>0);
