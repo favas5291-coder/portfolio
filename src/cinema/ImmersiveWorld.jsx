@@ -25,10 +25,10 @@ function useStoryProgress(){
     const update=()=>{
       cancelAnimationFrame(frame);
       frame=requestAnimationFrame(()=>{
-        const middle=window.scrollY+window.innerHeight*.55;
+        const middle=Math.max(0,window.scrollY);
         const centers=CHAPTERS.map(id=>{
           const el=document.getElementById(id);
-          return el ? el.offsetTop+el.offsetHeight*.42 : 0;
+          return el ? el.offsetTop : 0;
         });
         let result=0;
         for(let i=0;i<centers.length-1;i++){
