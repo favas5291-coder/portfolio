@@ -3,49 +3,66 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { services, processSteps } from '../src/data/site.js';
 import { project, profile } from '../src/data/portfolio.js';
-import { tourSteps } from '../src/guide/tourConfig.js';
+import { tourSteps, characterAsset } from '../src/guide/tourConfig.js';
 
-const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
-const experience = readFileSync(new URL('../src/experience/StudioInteractions.jsx', import.meta.url), 'utf8');
-const style = readFileSync(new URL('../src/experience/studioInteractions.css', import.meta.url), 'utf8');
+const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
+const world=readFileSync(new URL('../src/cinema/StudioWorld.jsx',import.meta.url),'utf8');
+const style=readFileSync(new URL('../src/cinema/CinematicPortfolio.css',import.meta.url),'utf8');
 
-test('the interactive demos correspond exactly to the real advertised services', () => {
-  assert.equal(services.length, 4);
-  for (const service of services) {
-    assert.match(experience, new RegExp(`'${service.slug}':\\s*\\w+Scene`));
-    assert.ok(app.includes('services={services}'));
+test('cinematic rebuild uses one persistent 3D studio across five real chapters',()=>{
+  assert.match(app, /<StudioWorld chapter=/);
+  assert.match(world,/const STOPS = \[0, 8\.5, 17, 25\.5, 34\]/);
+  for(const chapter of ['home','services','projects','process','contact']){
+    assert.ok(app.includes('id="'+chapter+'"'),'Missing semantic chapter: '+chapter);
+    assert.ok(tourSteps.some(step=>step.target===chapter),'Missing tour target: '+chapter);
   }
-  assert.match(experience, /not client projects/i);
-  assert.match(experience, /not claims of completed client work/i);
+  assert.match(world,/function StudioArchitecture/);
+  assert.match(world,/function WelcomeStation/);
+  assert.match(world,/function ServiceStation/);
+  assert.match(world,/function ProjectStation/);
+  assert.match(world,/function WorkflowStation/);
+  assert.match(world,/function ContactStation/);
 });
 
-test('the process lab uses all actual stages without inventing a process', () => {
-  assert.equal(processSteps.length, 5);
-  assert.match(app, /<ProcessWorkshop steps=\{processSteps\}/);
-  assert.match(experience, /steps\.map/);
-  assert.match(experience, /aria-pressed=\{selected === index\}/);
+test('only actual site services and process steps populate interaction controls',()=>{
+  assert.equal(services.length,4);
+  assert.equal(processSteps.length,5);
+  assert.match(app,/services\.map/);
+  assert.match(app,/processSteps\.map/);
+  assert.match(app,/aria-pressed=\{selected===index\}/);
+  assert.match(app,/onSelect=\{setServiceIndex\}/);
+  assert.match(app,/onSelect=\{setProcessIndex\}/);
+  assert.match(world,/onSelect\?\.\(i\)/);
 });
 
-test('portfolio still exposes real project and contact routes', () => {
-  assert.ok(project.website.startsWith('https://'));
+test('authentic project and contact destinations survive the rebuild',()=>{
+  assert.equal(project.name,'GymDrobe');
   assert.ok(profile.email.includes('@'));
-  for (const route of ['/projects/gymdrobe/', '/services/', '/contact/']) assert.ok(app.includes(route));
-  assert.match(app, /project\.screenshot/);
-  assert.match(app, /project\.repository/);
-  assert.match(app, /whatsappHref\(\)/);
+  for(const link of ['/projects/gymdrobe/','/services/','/contact/'])assert.ok(app.includes(link),'Missing '+link);
+  assert.match(app,/project\.screenshot/);
+  assert.match(app,/project\.screenshotCaptured/);
+  assert.match(app,/project\.repository/);
+  assert.match(app,/whatsappHref\(\)/);
+  assert.match(app,/PHONE_HREF/);
 });
 
-test('tour and free exploration remain independently usable', () => {
-  for (const step of tourSteps) assert.ok(app.includes(`'${step.target}'`) || app.includes(`id="${step.target}"`));
-  assert.match(app, /Start tour with sound/);
-  assert.match(app, /Explore myself/);
-  assert.match(app, /aria-label=\{`Go to \$\{item\.title\}`\}/);
-  assert.match(app, /data-chapter=\{chapter\}/);
+test('tour and self-exploration remain separate and audio requires action',()=>{
+  assert.match(app,/Meet Favas — Start tour/);
+  assert.match(app,/Explore on my own/);
+  assert.match(app,/onClick=\{\(\)=>tour\.start\(true\)\}/);
+  assert.match(app,/onClick=\{explore\}/);
+  assert.match(app,/aria-label="Tour chapters"/);
+  assert.match(app,/aria-live="polite"/);
+  assert.equal(characterAsset.status,'temporary');
+  assert.equal(characterAsset.model,null);
 });
 
-test('motion safety and mobile composition are explicitly provided', () => {
-  assert.match(style, /prefers-reduced-motion:reduce/);
-  assert.match(style, /max-width:767px/);
-  assert.match(style, /max-width:1100px/);
-  assert.match(style, /\.character-stage\.explore-guide/);
+test('mobile, reduced-motion, fallback and static environment options exist',()=>{
+  assert.match(style,/@media\(max-width:800px\)/);
+  assert.match(style,/@media\(max-width:430px\)/);
+  assert.match(style,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(app,/SceneBoundary/);
+  assert.match(app,/setSceneEnabled/);
+  assert.match(world,/document\.hidden/);
+  assert.match(world,/dpr=\{\[1,1\.65\]\}/);
 });
