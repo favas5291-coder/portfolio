@@ -34,10 +34,12 @@ try{
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+3);
     assert.equal(overflow,false,size.name+' has horizontal overflow.');
     for(const section of ['services','projects','process','contact']){
-      await page.locator('#'+section).scrollIntoViewIfNeeded();
+      await page.locator('#'+section).evaluate(node => node.scrollIntoView({block:'start',behavior:'instant'}));
       await page.waitForTimeout(1500);
       await page.screenshot({path:'visual-checks/'+size.name+'-'+section+'.png',fullPage:false,animations:'disabled'});
     }
+    const webgl=await page.locator('.cinema-world canvas').count();
+    assert.ok(webgl===1,'Expected one deferred WebGL canvas on '+size.name);
     const screenshot=page.locator('#project-preview img');
     assert.ok(await screenshot.count(),'The genuine project screenshot is missing.');
     const imageReady=await screenshot.evaluate(image=>image.complete&&image.naturalWidth>0);
