@@ -6,8 +6,8 @@ import { tourSteps, tourDurationSeconds, characterAsset } from './guide/tourConf
 import { useGuidedTour } from './guide/useGuidedTour.js';
 import './cinema/CinematicPortfolio.css';
 
-const StudioWorld = lazy(() => import('./cinema/StudioWorld.jsx'));
-const chapters = [{id:'home',name:'The arrival'},{id:'services',name:'The possibilities'},{id:'projects',name:'The work'},{id:'process',name:'The making'},{id:'contact',name:'Your idea'}];
+const ImmersiveWorld = lazy(() => import('./cinema/ImmersiveWorld.jsx'));
+const chapters = [{id:'home',name:'The spark'},{id:'services',name:'The shape'},{id:'projects',name:'The proof'},{id:'process',name:'The making'},{id:'contact',name:'The next'}];
 const External = ({href,children,...props})=><a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}<span className="sr-only"> (opens in a new tab)</span></a>;
 const Arrow = ()=> <span aria-hidden="true">↗</span>;
 class SceneBoundary extends Component {
@@ -22,7 +22,7 @@ function TourPanel({tour,onInspect}) {
   const {state,step,dispatch}=tour;
   if(!tour.active && state.status!=='completed') return null;
   if(state.status==='completed')return <aside className="cinema-tour-panel cinema-tour-finished" aria-label="Tour complete">
-    <span>END OF THE TOUR — THE NEXT STORY COULD BE YOURS</span><p>Have a project in mind? Let's discuss it.</p><div><a href="#contact" onClick={tour.skip}>Let's talk <Arrow/></a><button onClick={()=>tour.start(state.sound)}>Replay the tour</button><button onClick={tour.skip} aria-label="Close tour">×</button></div>
+    <span>END OF THE TOUR — STATE 05 / THE NEXT</span><p>Have a project in mind? Let's discuss it.</p><div><a href="#contact" onClick={tour.skip}>Let's talk <Arrow/></a><button onClick={()=>tour.start(state.sound)}>Replay the tour</button><button onClick={tour.skip} aria-label="Close tour">×</button></div>
   </aside>;
   return <aside className="cinema-tour-panel" aria-label="Guided studio tour">
     <div className="cinema-tour-heading"><span><i className={tour.speaking?'is-speaking':''}/>FAVAS IS YOUR GUIDE</span><span>{state.index+1} OF {tourSteps.length}</span><button onClick={tour.skip}>Skip <span aria-hidden="true">×</span></button></div>
@@ -53,7 +53,7 @@ function ServiceSelection({selected,onSelect}) {
       <h3>{current.heading}</h3>
       <p>{current.short}</p>
       <a href={'/services/'+current.slug+'/'}>Explore this service <Arrow/></a>
-      <span className="cinema-stage-instruction">INTERACTIVE CONCEPT DEMOS — NOT CLAIMS OF COMPLETED CLIENT WORK</span>
+      <span className="cinema-stage-instruction">3D CONCEPT DEMOS — NOT COMPLETED CLIENT PROJECTS</span>
     </div>
   </div>;
 }
@@ -115,7 +115,7 @@ export default function App() {
   return <div className={'cinema '+(tour.active?'cinema-tour-active':'')} data-chapter={chapter}>
     <a className="cinema-skip" href="#main">Skip to main content</a>
     <div className="cinema-noise" aria-hidden="true"/>
-    {sceneEnabled&&(worldMounted?<SceneBoundary><Suspense fallback={<div className="cinema-loading-scene" aria-hidden="true"/>}><StudioWorld chapter={tour.state.status==='playing'?tour.step.target:chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={tour.speaking} reducedMotion={tour.reducedMotion} hidden={hidden} onSelectService={setServiceIndex}/></Suspense></SceneBoundary>:<div className="cinema-loading-scene" aria-hidden="true"/>)}
+    {sceneEnabled&&(worldMounted?<SceneBoundary><Suspense fallback={<div className="cinema-loading-scene" aria-hidden="true"/>}><ImmersiveWorld chapter={tour.state.status==='playing'?tour.step.target:chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={tour.speaking} reducedMotion={tour.reducedMotion} hidden={hidden}/></Suspense></SceneBoundary>:<div className="cinema-loading-scene" aria-hidden="true"/>)}
     {!sceneEnabled&&<div className="cinema-poster-background" aria-hidden="true"/>}
     <header className="cinema-header">
       <a href="#home" onClick={event=>{event.preventDefault();jump('home');}} className="cinema-logo" aria-label="Favas home"><span className="cinema-logo-sign" aria-hidden="true">///</span> favas<span>.</span></a>
@@ -125,17 +125,17 @@ export default function App() {
     <nav className="cinema-waypoints" aria-label="Chapters">{chapters.map((item,index)=><a key={item.id} href={'#'+item.id} aria-current={chapter===item.id?'location':undefined} onClick={event=>{event.preventDefault();jump(item.id)}}><span>{String(index+1).padStart(2,'0')}</span><span>{item.name}</span></a>)}</nav>
     <main id="main">
       <section id="home" className="cinema-chapter cinema-arrival" aria-labelledby="cinema-hero-title">
-        <div className="cinema-arrival-top"><span>THE PERSONAL STUDIO OF FAVAS</span><span>FULL STACK DEVELOPER · KERALA / WORLDWIDE</span></div>
-        <div className="cinema-arrival-center"><span className="cinema-hello-tag"><span className="cinema-hello-glow"/>WELCOME TO THE WORKSHOP</span><h1 id="cinema-hero-title" tabIndex={-1}>Hey, I'm Favas.<br/><em>I bring ideas to life.</em></h1><p>I build websites and applications that help businesses grow. This is where design, development and imagination come together.</p><div className="cinema-arrival-actions"><button className="cinema-cta" onClick={()=>tour.start(true)}><span aria-hidden="true">▶</span> Meet Favas — Start tour <Arrow/></button><button className="cinema-ghost-cta" onClick={explore}>Explore on my own <span aria-hidden="true">↓</span></button></div><small>AN INTERACTIVE STUDIO TOUR · ABOUT {tourDurationSeconds} SECONDS · SOUND IS OPTIONAL</small></div>
-        <div className="cinema-arrival-footer"><span>01 / THE ARRIVAL</span><span>DESIGNED TO BE EXPLORED, NOT JUST SCROLLED</span><a href="#services" onClick={event=>{event.preventDefault();jump('services')}}>SCROLL TO EXPLORE ↓</a></div>
+        <div className="cinema-arrival-top"><span>FAVAS / THE DIGITAL ATELIER</span><span>FULL STACK DEVELOPER · KERALA / WORLDWIDE</span></div>
+        <div className="cinema-arrival-center"><span className="cinema-hello-tag"><span className="cinema-hello-glow"/>WELCOME TO THE POSSIBILITY ENGINE</span><h1 id="cinema-hero-title" tabIndex={-1}>Think it.<br/><em>See it come alive.</em></h1><p>I'm Favas. I transform business ideas into expressive, functional websites and applications. Explore five states of a digital idea.</p><div className="cinema-arrival-actions"><button className="cinema-cta" onClick={()=>tour.start(true)}><span aria-hidden="true">▶</span> Meet Favas — Start tour <Arrow/></button><button className="cinema-ghost-cta" onClick={explore}>Explore on my own <span aria-hidden="true">↓</span></button></div><small>AN INTERACTIVE STORY TOUR · ABOUT {tourDurationSeconds} SECONDS · SOUND IS OPTIONAL</small></div>
+        <div className="cinema-arrival-footer"><span>01 / THE SPARK</span><span>FIVE STATES OF AN IDEA</span><a href="#services" onClick={event=>{event.preventDefault();jump('services')}}>SCROLL TO EXPLORE ↓</a></div>
       </section>
 
       <section id="about" className="cinema-about-intro" aria-label="Meet the developer"><span>THE PERSON BEHIND THE PIXELS</span><p>I'm {profile.name}. I turn complicated ideas into clear, usable digital experiences — from the first conversation to a working launch.</p><a href="/contact/">Tell me about your idea <Arrow/></a></section>
 
       <section id="services" className="cinema-chapter cinema-services" aria-labelledby="cinema-services-title">
         <div className="cinema-chapter-content">
-          <ChapterMarker index={1} title="THE POSSIBILITIES"/>
-          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STEP INSIDE THE IDEA LAB</span><h2 id="cinema-services-title" tabIndex={-1}>What can we<br/><em>bring to life?</em></h2><p>Choose a service. Watch the studio respond, then discover what I can actually build for you.</p></div>
+          <ChapterMarker index={1} title="THE SHAPE"/>
+          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 02 / THE SHAPE</span><h2 id="cinema-services-title" tabIndex={-1}>What can we<br/><em>bring to life?</em></h2><p>Choose a service. Watch the studio respond, then discover what I can actually build for you.</p></div>
           <ServiceSelection selected={serviceIndex} onSelect={setServiceIndex}/>
           <a href="/services/" className="cinema-secondary-link">Discover all services <Arrow/></a>
         </div>
@@ -144,8 +144,8 @@ export default function App() {
 
       <section id="projects" className="cinema-chapter cinema-projects" aria-labelledby="cinema-projects-title">
         <div className="cinema-chapter-content">
-          <ChapterMarker index={2} title="THE WORK"/>
-          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">THIS ONE IS REAL</span><h2 id="cinema-projects-title" tabIndex={-1}>Built, not<br/><em>just imagined.</em></h2><p>Actual work. A working product. A closer look at how I solve problems.</p></div>
+          <ChapterMarker index={2} title="THE PROOF"/>
+          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 03 / THE PROOF</span><h2 id="cinema-projects-title" tabIndex={-1}>Built, not<br/><em>just imagined.</em></h2><p>Actual work. A working product. A closer look at how I solve problems.</p></div>
           <article className="cinema-project-case">
             <div className="cinema-project-screen" id="project-preview">
               <div className="cinema-browser-top"><span><i/><i/><i/></span><span>GYMDROBE / LIVE PROJECT</span><External href={project.website} aria-label="Open GymDrobe in a new tab">↗</External></div>
@@ -160,7 +160,7 @@ export default function App() {
       <section id="process" className="cinema-chapter cinema-process" aria-labelledby="cinema-process-title">
         <div className="cinema-chapter-content">
           <ChapterMarker index={3} title="THE MAKING"/>
-          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">FROM THE FIRST HELLO TO LAUNCH</span><h2 id="cinema-process-title" tabIndex={-1}>An idea becomes<br/><em>something real.</em></h2><p>Every stage has a purpose. Select a step to see the workshop advance.</p></div>
+          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 04 / THE MAKE</span><h2 id="cinema-process-title" tabIndex={-1}>An idea becomes<br/><em>something real.</em></h2><p>Every stage has a purpose. Select a step to see the workshop advance.</p></div>
           <ProcessSelection selected={processIndex} onSelect={setProcessIndex}/>
           <div id="skills" className="cinema-skills"><span>THE TOOLS BEHIND THE WORK</span><ul>{skills.map(skill=><li key={skill.name}>{skill.name}</li>)}</ul></div>
         </div>
@@ -168,7 +168,7 @@ export default function App() {
 
       <section id="contact" className="cinema-chapter cinema-contact" aria-labelledby="cinema-contact-title">
         <div className="cinema-chapter-content">
-          <ChapterMarker index={4} title="YOUR IDEA"/>
+          <ChapterMarker index={4} title="THE NEXT"/>
           <div className="cinema-chapter-heading"><span className="cinema-eyebrow">THE NEXT STORY COULD BE YOURS</span><h2 id="cinema-contact-title" tabIndex={-1}>Let's make<br/><em>something matter.</em></h2><p>Have a project in mind? Tell me what you're planning, and let's discuss how I can help.</p></div>
           <div className="cinema-contact-actions" id="contact-options"><a className="cinema-cta" href="/contact/">Discuss your project <Arrow/></a><External href={whatsappHref()} data-contact="whatsapp">WhatsApp <Arrow/></External><a href={'mailto:'+profile.email} data-contact="email">{profile.email} <Arrow/></a><a href={PHONE_HREF} data-contact="call">{PHONE_DISPLAY} <Arrow/></a></div>
           <div className="cinema-ending-note"><span>THANKS FOR VISITING THE STUDIO.</span><button onClick={()=>tour.start(true)}>Experience the tour again ↗</button></div>
