@@ -5,6 +5,7 @@ import AnalyticsPreference from './components/AnalyticsPreference.jsx';
 import { tourSteps, tourDurationSeconds, characterAsset } from './guide/tourConfig.js';
 import { useGuidedTour } from './guide/useGuidedTour.js';
 import './cinema/CinematicPortfolio.css';
+import './cinema/ImmersiveChapters.css';
 
 const ImmersiveWorld = lazy(() => import('./cinema/ImmersiveWorld.jsx'));
 const chapters = [{id:'home',name:'The spark'},{id:'services',name:'The shape'},{id:'projects',name:'The proof'},{id:'process',name:'The making'},{id:'contact',name:'The next'}];
