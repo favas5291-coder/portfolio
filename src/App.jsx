@@ -8,6 +8,8 @@ import './cinema/CinematicPortfolio.css';
 import './cinema/ImmersiveChapters.css';
 import { HeroProof, CapabilityProof, EngineeringLab, ClientBrief } from './components/ClientConfidence.jsx';
 import './components/ClientConfidence.css';
+import { ServiceInteractionLab } from './components/ServiceInteractionLab.jsx';
+import './components/ServiceInteractionLab.css';
 
 const ImmersiveWorld = lazy(() => import('./cinema/ImmersiveWorld.jsx'));
 const chapters = [{id:'home',name:'Home'},{id:'services',name:'Services'},{id:'projects',name:'Real work'},{id:'process',name:'Process'},{id:'contact',name:'Contact'}];
@@ -142,6 +144,7 @@ export default function App() {
           <ChapterMarker index={1} title="THE SHAPE"/>
           <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 02 / THE SHAPE</span><h2 id="cinema-services-title" tabIndex={-1}>What can we<br/><em>bring to life?</em></h2><p>Choose a service. Watch the studio respond, then discover what I can actually build for you.</p></div>
           <ServiceSelection selected={serviceIndex} onSelect={setServiceIndex}/>
+          <ServiceInteractionLab service={services[serviceIndex]}/>
           <a href="/services/" className="cinema-secondary-link">Discover all services <Arrow/></a>
         </div>
         <span className="cinema-section-serial" aria-hidden="true">IDEA / 02</span>
