@@ -6,9 +6,13 @@ import { tourSteps, tourDurationSeconds, characterAsset } from './guide/tourConf
 import { useGuidedTour } from './guide/useGuidedTour.js';
 import './cinema/CinematicPortfolio.css';
 import './cinema/ImmersiveChapters.css';
+import { HeroProof, CapabilityProof, EngineeringLab, ClientBrief } from './components/ClientConfidence.jsx';
+import './components/ClientConfidence.css';
+import { ServiceInteractionLab } from './components/ServiceInteractionLab.jsx';
+import './components/ServiceInteractionLab.css';
 
 const ImmersiveWorld = lazy(() => import('./cinema/ImmersiveWorld.jsx'));
-const chapters = [{id:'home',name:'The spark'},{id:'services',name:'The shape'},{id:'projects',name:'The proof'},{id:'process',name:'The making'},{id:'contact',name:'The next'}];
+const chapters = [{id:'home',name:'Home'},{id:'services',name:'Services'},{id:'projects',name:'Real work'},{id:'process',name:'Process'},{id:'contact',name:'Contact'}];
 const External = ({href,children,...props})=><a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}<span className="sr-only"> (opens in a new tab)</span></a>;
 const Arrow = ()=> <span aria-hidden="true">↗</span>;
 class SceneBoundary extends Component {
@@ -121,23 +125,26 @@ export default function App() {
     <header className="cinema-header">
       <a href="#home" onClick={event=>{event.preventDefault();jump('home');}} className="cinema-logo" aria-label="Favas home"><span className="cinema-logo-sign" aria-hidden="true">///</span> favas<span>.</span></a>
       <nav className={'cinema-navigation '+(menuOpen?'is-open':'')} id="cinema-navigation" aria-label="Main navigation">{chapters.slice(1).map(c=><a key={c.id} href={'#'+c.id} onClick={event=>{event.preventDefault();jump(c.id)}}>{c.name}</a>)}</nav>
-      <div className="cinema-header-actions"><button className="cinema-tour-trigger" onClick={()=>tour.start(true)}>Meet Favas <span aria-hidden="true">↗</span></button><button className="cinema-menu-toggle" aria-expanded={menuOpen} aria-controls="cinema-navigation" onClick={()=>setMenuOpen(value=>!value)}>{menuOpen?'Close':'Menu'}</button></div>
+      <div className="cinema-header-actions"><a className="confidence-header-hire" href="/contact/">Start a project <span aria-hidden="true">↗</span></a><button className="cinema-tour-trigger" onClick={()=>tour.start(true)}>Guided tour <span aria-hidden="true">▶</span></button><button className="cinema-menu-toggle" aria-expanded={menuOpen} aria-controls="cinema-navigation" onClick={()=>setMenuOpen(value=>!value)}>{menuOpen?'Close':'Menu'}</button></div>
     </header>
     <nav className="cinema-waypoints" aria-label="Chapters">{chapters.map((item,index)=><a key={item.id} href={'#'+item.id} aria-current={chapter===item.id?'location':undefined} onClick={event=>{event.preventDefault();jump(item.id)}}><span>{String(index+1).padStart(2,'0')}</span><span>{item.name}</span></a>)}</nav>
     <main id="main">
       <section id="home" className="cinema-chapter cinema-arrival" aria-labelledby="cinema-hero-title">
         <div className="cinema-arrival-top"><span>FAVAS / THE DIGITAL ATELIER</span><span>FULL STACK DEVELOPER · KERALA / WORLDWIDE</span></div>
-        <div className="cinema-arrival-center"><span className="cinema-hello-tag"><span className="cinema-hello-glow"/>WELCOME TO THE POSSIBILITY ENGINE</span><h1 id="cinema-hero-title" tabIndex={-1}>Think it.<br/><em>See it come alive.</em></h1><p>I'm Favas. I transform business ideas into expressive, functional websites and applications. Explore five states of a digital idea.</p><div className="cinema-arrival-actions"><button className="cinema-cta" onClick={()=>tour.start(true)}><span aria-hidden="true">▶</span> Meet Favas — Start tour <Arrow/></button><button className="cinema-ghost-cta" onClick={explore}>Explore on my own <span aria-hidden="true">↓</span></button></div><small>AN INTERACTIVE STORY TOUR · ABOUT {tourDurationSeconds} SECONDS · SOUND IS OPTIONAL</small></div>
-        <div className="cinema-arrival-footer"><span>01 / THE SPARK</span><span>FIVE STATES OF AN IDEA</span><a href="#services" onClick={event=>{event.preventDefault();jump('services')}}>SCROLL TO EXPLORE ↓</a></div>
+        <div className="cinema-arrival-center confidence-arrival-content"><span className="cinema-hello-tag"><span className="cinema-hello-glow"/>INDEPENDENT FULL-STACK DEVELOPER</span><h1 id="cinema-hero-title" tabIndex={-1}>Design that moves.<br/><em>Code that works.</em></h1><p>I'm Favas. I create websites and e-commerce applications where the visual details and the working systems behind them matter equally.</p><div className="cinema-arrival-actions"><a className="cinema-cta" href="#projects">Explore my real work <Arrow/></a><a className="cinema-ghost-cta" href="/contact/">Let's build your project <Arrow/></a></div><button className="confidence-intro-tour" onClick={()=>tour.start(true)}>▶ Take the optional {tourDurationSeconds}-second narrated tour</button></div>
+        <HeroProof/>
+        <div className="cinema-arrival-footer"><span>01 / THE SPARK</span><span>REAL WORK. CLEAR THINKING. THOUGHTFUL EXECUTION.</span><a href="#services" onClick={event=>{event.preventDefault();jump('services')}}>SCROLL TO EXPLORE ↓</a></div>
       </section>
 
-      <section id="about" className="cinema-about-intro" aria-label="Meet the developer"><span>THE PERSON BEHIND THE PIXELS</span><p>I'm {profile.name}. I turn complicated ideas into clear, usable digital experiences — from the first conversation to a working launch.</p><a href="/contact/">Tell me about your idea <Arrow/></a></section>
+      <section id="about" className="cinema-about-intro" aria-label="Meet the developer"><span>THE PERSON BEHIND THE BUILD</span><p>I'm {profile.name}. I work on the interface customers use and the application logic behind it—with genuine project evidence you can inspect.</p><a href="/projects/gymdrobe/">See a real case study <Arrow/></a></section>
+      <CapabilityProof/>
 
       <section id="services" className="cinema-chapter cinema-services" aria-labelledby="cinema-services-title">
         <div className="cinema-chapter-content">
           <ChapterMarker index={1} title="THE SHAPE"/>
           <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 02 / THE SHAPE</span><h2 id="cinema-services-title" tabIndex={-1}>What can we<br/><em>bring to life?</em></h2><p>Choose a service. Watch the studio respond, then discover what I can actually build for you.</p></div>
           <ServiceSelection selected={serviceIndex} onSelect={setServiceIndex}/>
+          <ServiceInteractionLab service={services[serviceIndex]}/>
           <a href="/services/" className="cinema-secondary-link">Discover all services <Arrow/></a>
         </div>
         <span className="cinema-section-serial" aria-hidden="true">IDEA / 02</span>
@@ -146,7 +153,7 @@ export default function App() {
       <section id="projects" className="cinema-chapter cinema-projects" aria-labelledby="cinema-projects-title">
         <div className="cinema-chapter-content">
           <ChapterMarker index={2} title="THE PROOF"/>
-          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 03 / THE PROOF</span><h2 id="cinema-projects-title" tabIndex={-1}>Built, not<br/><em>just imagined.</em></h2><p>Actual work. A working product. A closer look at how I solve problems.</p></div>
+          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">STATE 03 / THE PROOF</span><h2 id="cinema-projects-title" tabIndex={-1}>Proof is in<br/><em>the work.</em></h2><p>Not a concept render: a real storefront, source code, and the engineering decisions behind it.</p></div>
           <article className="cinema-project-case">
             <div className="cinema-project-screen" id="project-preview">
               <div className="cinema-browser-top"><span><i/><i/><i/></span><span>GYMDROBE / LIVE PROJECT</span><External href={project.website} aria-label="Open GymDrobe in a new tab">↗</External></div>
@@ -154,7 +161,7 @@ export default function App() {
             </div>
             <div className="cinema-project-narrative"><span>01 — OWN PROJECT / FITNESS E-COMMERCE</span><h3>{project.name}</h3><p>{project.description}</p><p>{project.contribution}</p><ul>{project.stack.map(item=><li key={item}>{item}</li>)}</ul><div className="cinema-project-actions"><External href={project.website}>Visit website <Arrow/></External><a href="/projects/gymdrobe/">Read case study <Arrow/></a><External href={project.repository}>Explore the code <Arrow/></External></div><small>Real preview captured {project.screenshotCaptured}; no generated substitute.</small></div>
           </article>
-          {Array.isArray(project.decisions)&&project.decisions.length>0&&<details className="cinema-project-blueprints"><summary>Open the build notes <span aria-hidden="true">+</span></summary><div>{project.decisions.map((decision,index)=><article key={decision.title}><span>0{index+1}</span><h4>{decision.title}</h4><p><strong>The challenge:</strong> {decision.challenge}</p><p><strong>What I built:</strong> {decision.decision}</p></article>)}</div></details>}
+          <EngineeringLab/>
         </div>
       </section>
 
@@ -170,14 +177,15 @@ export default function App() {
       <section id="contact" className="cinema-chapter cinema-contact" aria-labelledby="cinema-contact-title">
         <div className="cinema-chapter-content">
           <ChapterMarker index={4} title="THE NEXT"/>
-          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">THE NEXT STORY COULD BE YOURS</span><h2 id="cinema-contact-title" tabIndex={-1}>Let's make<br/><em>something matter.</em></h2><p>Have a project in mind? Tell me what you're planning, and let's discuss how I can help.</p></div>
+          <div className="cinema-chapter-heading"><span className="cinema-eyebrow">THE NEXT STORY COULD BE YOURS</span><h2 id="cinema-contact-title" tabIndex={-1}>Have a project<br/><em>worth building?</em></h2><p>Tell me what you're planning. We'll discuss the requirements, scope, and a practical way forward.</p></div>
           <div className="cinema-contact-actions" id="contact-options"><a className="cinema-cta" href="/contact/">Discuss your project <Arrow/></a><External href={whatsappHref()} data-contact="whatsapp">WhatsApp <Arrow/></External><a href={'mailto:'+profile.email} data-contact="email">{profile.email} <Arrow/></a><a href={PHONE_HREF} data-contact="call">{PHONE_DISPLAY} <Arrow/></a></div>
+          <ClientBrief/>
           <div className="cinema-ending-note"><span>THANKS FOR VISITING THE STUDIO.</span><button onClick={()=>tour.start(true)}>Experience the tour again ↗</button></div>
         </div>
       </section>
     </main>
     <footer className="cinema-footer"><a href="#home" onClick={event=>{event.preventDefault();jump('home')}}>favas.</a><p>{profile.name}<span>{profile.location}</span></p><div><External href={profile.github}>GitHub</External><External href={profile.linkedin}>LinkedIn</External><a href="/privacy/">Privacy</a><AnalyticsPreference/></div><button onClick={()=>setSceneEnabled(value=>!value)} aria-pressed={!sceneEnabled}>{sceneEnabled?'Use static environment':'Enable animated environment'}</button><span>© {new Date().getFullYear()} FAVAS</span></footer>
-    {!tour.active&&tour.state.status!=='completed'&&!heroVisible&&<button className="cinema-reopen" onClick={()=>tour.start(true)}>Meet Favas <span aria-hidden="true">▶</span></button>}
+    {!tour.active&&tour.state.status!=='completed'&&!heroVisible&&<button className="cinema-reopen" onClick={()=>tour.start(true)}>Guided tour <span aria-hidden="true">▶</span></button>}
     <TourPanel tour={tour} onInspect={inspect}/>
     {dialogOpen&&<dialog className="cinema-modal" ref={dialog} onClose={()=>setDialogOpen(false)} aria-label="Real GymDrobe storefront screenshot" onClick={event=>{if(event.target===dialog.current)closeModal()}}><div><span>GYMDROBE / ACTUAL WEBSITE PREVIEW</span><button onClick={closeModal} aria-label="Close screenshot">Close ×</button></div><img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926"/><p>Captured {project.screenshotCaptured}. <External href={project.website}>Open the live site ↗</External></p></dialog>}
     <div className="cinema-asset-note sr-only">{characterAsset.description} The animated procedural character is a prototype, not a finished photo-matched likeness.</div>
