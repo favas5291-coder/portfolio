@@ -117,10 +117,11 @@ function Head({ headRef, mouthRef, eyesRef }) {
   </group>;
 }
 
-function Rig({ action, speaking, reducedMotion }) {
+export function Rig({ action, speaking, reducedMotion, walking = false }) {
   const root = useRef(), spine = useRef(), head = useRef(), mouth = useRef(), eyes = useRef();
   const left = useRef(), leftElbow = useRef(), leftWrist = useRef();
   const right = useRef(), rightElbow = useRef(), rightWrist = useRef();
+  const legs = useRef([]);
   const elapsed = useRef(0), actionAge = useRef(0), previousAction = useRef(action);
   useFrame((_, frameDelta) => {
     const dt = Math.min(frameDelta, .045); elapsed.current += dt;
@@ -128,12 +129,15 @@ function Rig({ action, speaking, reducedMotion }) {
     actionAge.current += dt;
     const t = elapsed.current, age = actionAge.current;
     const wave = action === 'wave' || action === 'welcome';
+    const isWalking = walking || action === 'walk';
+    const stride = isWalking && !reducedMotion ? Math.sin(t * 7.5) * .33 : 0;
+    for (let i = 0; i < 2; i++) if (legs.current[i]) legs.current[i].rotation.x = approach(legs.current[i].rotation.x, i === 0 ? stride : -stride, dt, 7);
     const point = action === 'point' || action === 'point-left' || action === 'point-right' || action === 'projects';
     const present = action === 'present' || action === 'services' || action === 'contact' || action === 'invite';
     const gesture = reducedMotion ? .35 : 1;
     const activeWave = wave && age < 3.5;
     root.current.rotation.y = approach(root.current.rotation.y, action === 'turn' ? -.24 : point ? -.13 : -.035, dt, 3);
-    spine.current.position.y = 1.02 + (reducedMotion ? 0 : Math.sin(t * 1.7) * .008);
+    spine.current.position.y = 1.02 + (reducedMotion ? 0 : Math.sin(t * 1.7) * .008) + (isWalking && !reducedMotion ? Math.abs(Math.sin(t*7.5))*.017 : 0);
     head.current.rotation.z = Math.sin(t * .65) * (reducedMotion ? .003 : .018);
     head.current.rotation.y = approach(head.current.rotation.y, point ? -.09 : .035 + Math.sin(t * .4) * .025, dt, 3);
     head.current.rotation.x = speaking && !reducedMotion ? Math.sin(t * 4.1) * .018 : -.015;
@@ -153,7 +157,7 @@ function Rig({ action, speaking, reducedMotion }) {
   });
   return <group ref={root} position={[0, -1.38, 0]}>
     <group position={[0, .52, 0]}>
-      {[-1, 1].map(side => <group key={side} position={[side * .18, 0, 0]}>
+      {[-1, 1].map((side,index) => <group key={side} ref={node => { legs.current[index] = node; }} position={[side * .18, 0, 0]}>
         <mesh position={[0, 0, 0]}><capsuleGeometry args={[.145, .72, 8, 20]}/><meshStandardMaterial color="#191a23" roughness={.89}/></mesh>
         <Stroke points={[[.01, .34, .147], [.01, -.36, .147]]} color="#555360" radius={.002}/>
         <Ellipsoid position={[0, -.43, .075]} scale={[.149, .09, .27]} color="#171716" roughness={.34}/>
