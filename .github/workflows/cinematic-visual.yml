@@ -1,0 +1,41 @@
+name: Cinematic visual review
+
+on:
+  pull_request:
+    paths:
+      - "src/App.jsx"
+      - "src/cinema/**"
+      - "src/guide/**"
+      - "src/data/**"
+      - "scripts/capture-cinematic.mjs"
+      - ".github/workflows/cinematic-visual.yml"
+  workflow_dispatch:
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install test-only browser tooling
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Start local website preview
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/fazhere-preview.log 2>&1 &
+      - name: Capture actual rendered chapters
+        run: node scripts/capture-cinematic.mjs
+      - name: Upload visual review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinematic-portfolio-screenshots
+          path: visual-checks/*.png
+          if-no-files-found: warn

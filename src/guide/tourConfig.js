@@ -16,7 +16,7 @@ const segment = (text, durationMs, audio = null) => ({ text, durationMs, audio }
 export const tourSteps = [
   {
     id: 'welcome', title: 'A personal hello', target: 'home', highlight: 'welcome-copy', action: 'wave',
-    segments: [segment("Hi, I'm Favas. Welcome to my studio. I build websites and web apps for businesses. Let me show you around.", 9500)],
+    segments: [segment("Hey! I'm Favas. Welcome to my creative world. I build websites and applications that help businesses grow. Come on, let me show you what I can create.", 9500)],
   },
   {
     id: 'services', title: 'What I can build', target: 'services', highlight: 'services-list', action: 'present',
@@ -33,7 +33,7 @@ export const tourSteps = [
   },
   {
     id: 'contact', title: 'Your next chapter', target: 'contact', highlight: 'contact-options', action: 'welcome',
-    segments: [segment("Have a project in mind? Tell me what you're planning, and let's discuss how I can help. You can reach me by WhatsApp, phone, or email.", 11500)],
+    segments: [segment("Now you've seen a little of what I can create. Have a project in mind? Let's build something incredible together. Reach me through WhatsApp, phone or email.", 11500)],
   },
 ];
 export const tourDurationSeconds = Math.round(tourSteps.flatMap(step => step.segments).reduce((sum, s) => sum + s.durationMs, 0) / 1000);

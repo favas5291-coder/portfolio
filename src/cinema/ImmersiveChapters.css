@@ -1,0 +1,183 @@
+/*
+ * Immersive Chapters / visual system
+ * Five original identities for the five states of an idea. The Three.js canvas,
+ * not these gradients, renders all major subjects and transition geometry.
+ */
+.cinema{
+  --paper:#fbf2e8;--ink:#081019;--orange:#ffb48b;
+  font-family:'Arial',sans-serif;background:#070d16;color:var(--paper);
+}
+.cinema-noise{background:linear-gradient(90deg,rgba(1,7,15,.66),rgba(2,7,14,.12) 58%,transparent 80%);mix-blend-mode:normal;opacity:1}
+.cinema:before{background:radial-gradient(ellipse at 65% 38%,transparent 18%,rgba(2,5,12,.25) 90%);mix-blend-mode:normal}
+.cinema-world{z-index:0;filter:saturate(1.13) contrast(1.08)}
+.cinema-header{height:80px;background:linear-gradient(180deg,rgba(4,8,20,.84),rgba(4,8,20,.35));border-bottom:1px solid rgba(255,255,255,.14);backdrop-filter:blur(13px)}
+.cinema-header .cinema-logo{font-family:var(--display),sans-serif;font-size:27px;letter-spacing:-.07em}
+.cinema-header .cinema-logo-sign{color:#faaf93}
+.cinema-navigation{gap:clamp(10px,2vw,30px)}
+.cinema-navigation a{font-size:10px;text-transform:uppercase;letter-spacing:.065em}
+.cinema-header .cinema-tour-trigger{background:rgba(6,14,19,.38)!important;border-color:rgba(250,208,178,.58)!important}
+.cinema-waypoints a{border-color:rgba(255,255,255,.22);color:rgba(255,255,255,.66)}
+.cinema-waypoints a[aria-current=location]{border-color:#ffb891;color:#fff}
+.cinema main{isolation:isolate}
+.cinema-chapter{padding:120px clamp(23px,6vw,98px) 65px;overflow:hidden}
+.cinema-arrival{
+  background:linear-gradient(90deg,rgba(6,11,24,.87) 0%,rgba(7,12,25,.62) 28%,rgba(7,12,25,.06) 69%,transparent);
+}
+.cinema-arrival-top{color:rgba(255,232,208,.85);font-size:9px}
+.cinema-arrival-center{max-width:565px;margin:0 0 11.5vh}
+.cinema-arrival h1{
+  font-family:var(--display),Arial,sans-serif;
+  font-size:clamp(49px,6vw,90px);
+  font-weight:700;
+  line-height:.98;letter-spacing:-.075em;
+  text-transform:none;max-width:690px;
+  text-shadow:0 15px 60px rgba(0,0,0,.32)
+}
+.cinema-arrival h1 em{display:block;color:#ffcfb0;font-size:.85em;font-weight:400;letter-spacing:-.07em;padding-top:.12em}
+.cinema-arrival-center>p{font-size:clamp(13px,1.2vw,16px);line-height:1.82;color:#e4e8f1;max-width:430px}
+.cinema-hello-tag{color:#ffdeb9;background:rgba(12,24,33,.42);border-color:rgba(243,173,132,.52);padding:10px 15px}
+.cinema-arrival-actions{margin-top:27px}
+.cinema-cta{background:#ffd1b2!important;color:#171b24!important;box-shadow:0 13px 42px rgba(0,0,0,.4);border-radius:1px;font-weight:700!important;letter-spacing:.01em}
+.cinema-cta:hover{background:#fff0d8!important;color:#1d1d22!important}
+.cinema-ghost-cta{color:#e9eff6}
+.cinema-arrival-footer{color:#e2d9d1;border-color:rgba(255,255,255,.24)}
+.cinema-arrival-footer a{color:#ffc8ac}
+.cinema-about-intro{background:#ded4c5;color:#19212d;min-height:280px}
+.cinema-about-intro p{font-family:var(--display),Arial,sans-serif;font-weight:600}
+.cinema-about-intro a{border-bottom-color:#b1785f}
+.cinema-chapter-marker{font-size:9px;color:#d6d8da;letter-spacing:.16em}
+.cinema-chapter-marker span:first-child{color:#ffc7a9;font-size:11px}
+.cinema-chapter-heading{max-width:640px}
+.cinema-chapter-heading h2{
+  font:700 clamp(46px,5.4vw,88px)/1.02 var(--display),Arial,sans-serif;
+  letter-spacing:-.075em;margin:13px 0 18px;
+  text-shadow:0 8px 48px rgba(0,0,0,.28)
+}
+.cinema-chapter-heading h2 em{font-family:Georgia,serif;font-weight:400;font-size:.9em;letter-spacing:-.065em}
+.cinema-chapter-heading>p{font-size:13px;line-height:1.78}
+.cinema-eyebrow{color:#ffd6b0;font-size:9px;letter-spacing:.11em}
+.cinema-services{background:linear-gradient(90deg,rgba(2,34,42,.91),rgba(3,31,39,.63) 35%,rgba(2,26,30,.03) 78%);min-height:115svh}
+.cinema-services .cinema-chapter-heading h2 em{color:#a3f1e6}
+.cinema-services .cinema-eyebrow,.cinema-services .cinema-chapter-marker span:first-child{color:#91e4d9}
+.cinema-service-board{margin-top:35px;grid-template-columns:minmax(200px,310px) minmax(230px,310px);gap:22px;max-width:670px}
+.cinema-service-rail{border-color:rgba(165,231,218,.65)}
+.cinema-service-rail button{min-height:63px;border-color:rgba(189,242,229,.27)!important}
+.cinema-service-rail button strong{font-size:clamp(17px,1.7vw,23px)}
+.cinema-service-rail button.is-active{color:#a2fff0;background:rgba(80,219,198,.13);border-left:2px solid #76f4e4}
+.cinema-service-rail button:hover{color:#a4f1e7}
+.cinema-service-details{border-color:#76e3ce;background:linear-gradient(90deg,rgba(4,29,34,.86),rgba(4,29,34,.15));padding:9px 17px;min-height:220px}
+.cinema-service-details h3{font-family:var(--display),Arial,sans-serif;font-size:clamp(24px,2.4vw,32px)}
+.cinema-service-details small{color:#9ef2e4}
+.cinema-service-details a,.cinema-services .cinema-secondary-link{color:#9cf6e8!important;border-color:#78c9be}
+.cinema-stage-instruction{opacity:.65}
+.cinema-projects{
+  min-height:170svh;
+  background:linear-gradient(90deg,rgba(13,10,40,.91),rgba(15,12,41,.57) 32%,transparent 80%);
+}
+.cinema-projects .cinema-chapter-heading h2 em{color:#d1c9ff}
+.cinema-projects .cinema-eyebrow,.cinema-projects .cinema-chapter-marker span:first-child{color:#c2b3fa}
+.cinema-project-case{
+  max-width:1150px;
+  margin-top:47vh;
+  background:rgba(244,241,251,.97);
+  color:#171629;
+  border-radius:3px;
+  padding:clamp(16px,3vw,39px);
+  box-shadow:0 30px 130px rgba(0,0,0,.4);
+}
+.cinema-project-screen{border:7px solid #d7d6e8;box-shadow:0 24px 45px rgba(33,18,72,.18)}
+.cinema-project-narrative h3{font-family:var(--display),Arial,sans-serif;letter-spacing:-.07em}
+.cinema-project-blueprints{background:rgba(231,224,250,.95)}
+.cinema-process{
+  min-height:125svh;
+  background:linear-gradient(90deg,rgba(34,17,10,.92),rgba(34,17,10,.62) 35%,transparent 78%);
+}
+.cinema-process .cinema-chapter-heading h2 em{color:#ffcaab}
+.cinema-process .cinema-eyebrow,.cinema-process .cinema-chapter-marker span:first-child{color:#ffbd90}
+.cinema-process-console{max-width:710px;grid-template-columns:minmax(240px,310px) minmax(260px,330px);margin-top:30px}
+.cinema-process-steps button{min-height:58px;border-color:rgba(249,202,168,.36)!important}
+.cinema-process-steps button.is-active{background:rgba(236,137,85,.17);color:#ffceab;border-left:2px solid #ffc090}
+.cinema-process-explain{background:rgba(44,20,14,.66);border-color:rgba(254,189,145,.48)}
+.cinema-process-explain h3{font-family:var(--display),Arial,sans-serif}
+.cinema-contact{
+  min-height:125svh;
+  background:linear-gradient(90deg,rgba(33,9,31,.93),rgba(33,9,31,.59) 34%,transparent 78%);
+}
+.cinema-contact .cinema-chapter-heading h2 em{color:#ffbddf}
+.cinema-contact .cinema-eyebrow,.cinema-contact .cinema-chapter-marker span:first-child{color:#ffb9d8}
+.cinema-contact .cinema-chapter-heading h2{font-size:clamp(46px,6vw,85px)}
+.cinema-contact-actions{max-width:470px}
+.cinema-contact-actions a:not(.cinema-cta){border-color:rgba(255,212,228,.4)}
+.cinema-contact-actions a:not(.cinema-cta):hover{color:#ffd5e7}
+.cinema-contact-actions .cinema-cta{background:#ffd4e5!important}
+.cinema-footer{background:#0c101b;color:#ddd8e2;border-top-color:rgba(225,198,215,.3)}
+.cinema-footer>a{color:#fff5e9}
+.cinema-tour-panel{border-color:rgba(255,255,255,.25);background:#fff7ef;color:#24242c}
+.cinema-reopen{background:#ffcbaf!important;color:#191822!important}
+.cinema-render-fallback,.cinema-world-fallback{background:radial-gradient(ellipse at 65% 35%,#344d61,#0c1321 72%);}
+.cinema-poster-background,.cinema-loading-scene{background:radial-gradient(ellipse at 64% 40%,#3b4866,#080e1b 68%)}
+@media (min-width:1300px){
+ .cinema-arrival-center{margin-bottom:13vh}
+ .cinema-services .cinema-chapter-content,
+ .cinema-process .cinema-chapter-content,
+ .cinema-contact .cinema-chapter-content{padding-left:min(2vw,28px)}
+}
+@media (max-width:800px){
+ .cinema-header{height:72px;background:linear-gradient(180deg,rgba(6,10,24,.9),rgba(6,10,24,.45))}
+ .cinema-navigation{top:72px;background:#0d1826}
+ .cinema-noise{background:linear-gradient(180deg,rgba(5,10,22,.06) 0%,rgba(5,10,22,.0) 34%,rgba(6,11,21,.6) 62%,rgba(5,11,19,.9) 100%)}
+ .cinema-arrival{padding-top:85px;min-height:105svh;background:linear-gradient(180deg,rgba(5,13,24,.1),transparent 35%,rgba(5,12,25,.74) 65%,rgba(5,12,25,.92))}
+ .cinema-arrival-center{max-width:100%;margin-bottom:4vh}
+ .cinema-arrival h1{font-size:clamp(39px,8.5vw,68px);line-height:1.05}
+ .cinema-arrival h1 em{font-size:.9em}
+ .cinema-arrival-center>p{max-width:380px;font-size:12px}
+ .cinema-arrival-top span:last-child{display:none}
+ .cinema-chapter{padding-top:82px;min-height:135svh}
+ .cinema-chapter-heading h2{font-size:clamp(39px,9vw,69px)}
+ .cinema-chapter-heading>p{max-width:420px}
+ .cinema-services{min-height:145svh;background:linear-gradient(180deg,rgba(3,27,34,.15),rgba(3,29,34,.3) 37%,rgba(1,25,33,.92) 64%)}
+ .cinema-service-board{margin-top:45vh;max-width:100%;gap:16px}
+ .cinema-service-rail button{min-height:48px}
+ .cinema-service-details{max-width:100%}
+ .cinema-process{min-height:156svh;background:linear-gradient(180deg,rgba(31,14,9,.1),rgba(31,14,9,.36) 37%,rgba(31,14,9,.94) 64%)}
+ .cinema-process-console{margin-top:43vh;max-width:100%}
+ .cinema-projects{min-height:175svh;background:linear-gradient(180deg,rgba(14,11,43,.16),rgba(14,11,43,.42) 32%,rgba(14,11,43,.93) 62%)}
+ .cinema-project-case{margin-top:47vh;max-width:100%}
+ .cinema-contact{min-height:133svh;background:linear-gradient(180deg,rgba(36,9,31,.1),rgba(36,9,31,.3) 33%,rgba(36,9,31,.94) 62%)}
+ .cinema-contact-actions{margin-top:40vh;max-width:100%}
+ .cinema-contact .cinema-chapter-heading h2{font-size:clamp(43px,9vw,67px)}
+ .cinema-about-intro{min-height:0}
+}
+@media(max-width:430px){
+ .cinema-arrival h1{font-size:clamp(35px,9vw,41px)}
+ .cinema-arrival-actions{flex-wrap:wrap}
+ .cinema-arrival-center{margin-bottom:2vh}
+ .cinema-chapter-heading h2{font-size:clamp(38px,9.2vw,47px)}
+ .cinema-service-board{margin-top:39vh}
+ .cinema-project-case{margin-top:38vh}
+ .cinema-process-console{margin-top:38vh}
+ .cinema-contact-actions{margin-top:38vh}
+ .cinema-cta{font-size:10px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .cinema *,.cinema *::before,.cinema *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
+}
+
+/* Browser screenshot QA: protect text from bright sculpture and remove CTA collision. */
+@media(max-width:800px){
+  .cinema-reopen{display:none!important}
+  .cinema-arrival-center{position:relative;isolation:isolate}
+  .cinema-arrival-center::before{
+    content:'';position:absolute;z-index:-1;
+    inset:-52px -6vw -25px;
+    pointer-events:none;
+    background:linear-gradient(180deg,rgba(4,11,25,0) 0%,rgba(4,11,25,.82) 27%,rgba(4,11,25,.93) 92%,rgba(4,11,25,.97) 100%);
+  }
+  .cinema-service-board,.cinema-process-console,.cinema-contact-actions{position:relative;isolation:isolate}
+  .cinema-service-board::before,.cinema-process-console::before,.cinema-contact-actions::before{
+    content:'';position:absolute;inset:-25px -6vw -20px;z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(3,15,22,.54) 20%,rgba(3,15,22,.68) 100%);
+  }
+  .cinema-process-console::before{background:linear-gradient(180deg,transparent,rgba(28,14,9,.72) 20%,rgba(28,14,9,.85))}
+  .cinema-contact-actions::before{background:linear-gradient(180deg,transparent,rgba(27,7,26,.73) 20%,rgba(27,7,26,.89))}
+}
