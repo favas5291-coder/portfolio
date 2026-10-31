@@ -231,8 +231,19 @@ function ContactStation({active}) {
 function Actor({chapter,action,speaking,reducedMotion}) {
   const wrapper=useRef();
   const [walking,setWalking]=useState(false);
+  const [arrivalBeat,setArrivalBeat]=useState('idle');
+  useEffect(()=>{
+    if(chapter!=='home'||reducedMotion){setArrivalBeat('idle');return;}
+    setArrivalBeat('idle');
+    const turn=setTimeout(()=>setArrivalBeat('turn'),900);
+    const wave=setTimeout(()=>setArrivalBeat('wave'),1700);
+    const settle=setTimeout(()=>setArrivalBeat('idle'),4900);
+    return ()=>{clearTimeout(turn);clearTimeout(wave);clearTimeout(settle);};
+  },[chapter,reducedMotion]);
   useEffect(()=>{
     if(reducedMotion){setWalking(false);return;}
+    // The arrival has its own look / turn / wave choreography.
+    if(chapter==='home'){setWalking(false);return;}
     setWalking(true);
     const id=setTimeout(()=>setWalking(false),2200);
     return ()=>clearTimeout(id);
@@ -244,7 +255,7 @@ function Actor({chapter,action,speaking,reducedMotion}) {
     wrapper.current.rotation.y=damp(wrapper.current.rotation.y,walking?-.25:(chapter==='projects'?-.3:0),delta,2.4);
   });
   return <group ref={wrapper} position={[1.45,1.4,1.7]} scale={.85}>
-    <Rig action={walking?'walk':action} speaking={speaking} walking={walking} reducedMotion={reducedMotion}/>
+    <Rig action={walking?'walk':(chapter==='home'&&!speaking?arrivalBeat:action)} speaking={speaking} walking={walking} reducedMotion={reducedMotion}/>
   </group>;
 }
 function Director({chapter,serviceIndex,processIndex,action,speaking,reducedMotion,hidden,onSelectService}) {
@@ -288,7 +299,7 @@ function Director({chapter,serviceIndex,processIndex,action,speaking,reducedMoti
 export default function StudioWorld({chapter='home',serviceIndex=0,processIndex=0,action='idle',speaking=false,reducedMotion=false,hidden=false,onSelectService}) {
   return <div className="cinema-world" aria-hidden="true">
     <Suspense fallback={<div className="cinema-world-fallback"/>}>
-      <Canvas camera={{position:[4.3,3,9.7],fov:44,near:.1,far:65}} dpr={[1,1.65]} shadows gl={{alpha:true,antialias:true,powerPreference:'high-performance'}} fallback={<div className="cinema-world-fallback"/>} onCreated={({gl})=>{
+      <Canvas camera={{position:[6.3,4.1,12],fov:44,near:.1,far:65}} dpr={[1,1.65]} shadows gl={{alpha:true,antialias:true,powerPreference:'high-performance'}} fallback={<div className="cinema-world-fallback"/>} onCreated={({gl})=>{
         gl.outputColorSpace=THREE.SRGBColorSpace;
         gl.toneMapping=THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure=1.12;
