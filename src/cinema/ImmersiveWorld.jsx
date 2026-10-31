@@ -104,7 +104,7 @@ const particles=Array.from({length:180},(_,i)=>{
   const r=3.1+Math.sqrt((i+1)/180)*3.1;
   return [Math.cos(a)*r,Math.sin(a)*r*.65,(i%11-5)*.31];
 });
-function SignalDust({color='#c9a98b',speed=.02}){
+function SignalDust({color='#c9a98b',speed=.02,reducedMotion=false}){
   const root=useRef(),mesh=useRef();
   useEffect(()=>{
     if(!mesh.current)return;
@@ -117,7 +117,7 @@ function SignalDust({color='#c9a98b',speed=.02}){
     });
     mesh.current.instanceMatrix.needsUpdate=true;
   },[]);
-  useFrame((_,delta)=>{if(root.current)root.current.rotation.z+=delta*speed;});
+  useFrame((_,delta)=>{if(root.current&&!reducedMotion)root.current.rotation.z+=delta*speed;});
   return <group ref={root}>
     <instancedMesh ref={mesh} args={[undefined,undefined,180]} frustumCulled={false}>
       <sphereGeometry args={[1,5,5]}/>
@@ -174,13 +174,13 @@ function Formation({selected=0,reducedMotion}){
   </group>;
 }
 
-function ProjectDisplay(){
+function ProjectDisplay({reducedMotion=false}){
   const texture=useLoader(TextureLoader,project.screenshot);
   useEffect(()=>{texture.colorSpace=SRGBColorSpace;texture.needsUpdate=true;},[texture]);
   const root=useRef();
   useFrame(({clock},dt)=>{
     if(!root.current)return;
-    root.current.rotation.y=MathUtils.damp(root.current.rotation.y,-.11+Math.sin(clock.getElapsedTime()*.24)*.028,2,dt);
+    root.current.rotation.y=MathUtils.damp(root.current.rotation.y,-.11+(reducedMotion?0:Math.sin(clock.getElapsedTime()*.24)*.028),2,dt);
   });
   const aspect=1348/926;
   return <group position={[2,1.4,0]}>
@@ -281,11 +281,11 @@ function Portal({reducedMotion}){
 
 function Stage({index,serviceIndex,processIndex,reducedMotion}){
   return <group position={[STOPS[index],0,0]}>
-    {index===0&&<><Spark reducedMotion={reducedMotion}/><group position={[2,1.8,-1]}><SignalDust color="#e5b79e"/></group></>}
-    {index===1&&<><Formation selected={serviceIndex} reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#80e7da" speed={-.014}/></group></>}
-    {index===2&&<><ProjectDisplay/><group position={[2,1.5,-1]}><SignalDust color="#adadff" speed={.008}/></group></>}
-    {index===3&&<><CircuitForge phase={processIndex} reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#f2ae87" speed={.018}/></group></>}
-    {index===4&&<><Portal reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#ffc9df"/></group></>}
+    {index===0&&<><Spark reducedMotion={reducedMotion}/><group position={[2,1.8,-1]}><SignalDust color="#e5b79e" reducedMotion={reducedMotion}/></group></>}
+    {index===1&&<><Formation selected={serviceIndex} reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#80e7da" speed={-.014} reducedMotion={reducedMotion}/></group></>}
+    {index===2&&<><ProjectDisplay reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#adadff" speed={.008} reducedMotion={reducedMotion}/></group></>}
+    {index===3&&<><CircuitForge phase={processIndex} reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#f2ae87" speed={.018} reducedMotion={reducedMotion}/></group></>}
+    {index===4&&<><Portal reducedMotion={reducedMotion}/><group position={[2,1.5,-1]}><SignalDust color="#ffc9df" reducedMotion={reducedMotion}/></group></>}
   </group>;
 }
 
