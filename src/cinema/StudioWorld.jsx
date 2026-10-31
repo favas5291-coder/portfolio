@@ -297,12 +297,20 @@ function Director({chapter,serviceIndex,processIndex,action,speaking,reducedMoti
   </>;
 }
 export default function StudioWorld({chapter='home',serviceIndex=0,processIndex=0,action='idle',speaking=false,reducedMotion=false,hidden=false,onSelectService}) {
+  const [lost,setLost]=useState(false);
+  if(lost) return <div className="cinema-world cinema-world-fallback" aria-hidden="true"/>;
   return <div className="cinema-world" aria-hidden="true">
     <Suspense fallback={<div className="cinema-world-fallback"/>}>
       <Canvas camera={{position:[6.3,4.1,12],fov:44,near:.1,far:65}} dpr={[1,1.65]} shadows gl={{alpha:true,antialias:true,powerPreference:'high-performance'}} fallback={<div className="cinema-world-fallback"/>} onCreated={({gl})=>{
         gl.outputColorSpace=THREE.SRGBColorSpace;
         gl.toneMapping=THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure=1.12;
+        // A lost GPU context must not leave a dark, unusable overlay.
+        // The real content and contact destinations are ordinary HTML.
+        gl.domElement.addEventListener('webglcontextlost',event=>{
+          event.preventDefault();
+          setLost(true);
+        },{once:true});
       }}>
         <Director chapter={chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={speaking} reducedMotion={reducedMotion} hidden={hidden} onSelectService={onSelectService}/>
       </Canvas>
