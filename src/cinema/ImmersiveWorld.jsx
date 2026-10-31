@@ -306,19 +306,19 @@ function Director({chapter,serviceIndex,processIndex,reducedMotion,hidden}){
   useEffect(()=>{scene.background=new Color(THEMES[0]);},[scene]);
   const targetLook=useRef(new Vector3(2,1.5,0));
   useFrame(({clock},dt)=>{
-    const target=chapter==='home'&&scrollProgress.current>.3 ? scrollProgress.current : scrollProgress.current;
+    const target=scrollProgress.current;
     const p=MathUtils.damp(smoothProgress.current,target,reducedMotion?16:2.8,dt);
     smoothProgress.current=clamp(p,0,4);
     const idx=Math.min(3,Math.floor(p)),fraction=clamp(p-idx,0,1);
     const x=lerp(STOPS[idx],STOPS[idx+1],ease(fraction));
     const mobile=size.width<720;
     const camX=x+(mobile?2:0.55);
-    const camY=mobile?2.05:1.95;
+    const camY=mobile?1.75:1.95;
     const camZ=mobile?10:10.6;
     camera.position.x=MathUtils.damp(camera.position.x,camX,reducedMotion?16:3.2,dt);
     camera.position.y=MathUtils.damp(camera.position.y,camY,reducedMotion?16:2.5,dt);
     camera.position.z=MathUtils.damp(camera.position.z,camZ,reducedMotion?16:2.5,dt);
-    const to=new Vector3(x+(mobile?2:.6),1.53,-.4);
+    const to=new Vector3(x+(mobile?2:.6),mobile?.72:1.53,-.4);
     targetLook.current.lerp(to,1-Math.exp(-3*dt));camera.lookAt(targetLook.current);
     const c1=palettes[idx],c2=palettes[Math.min(4,idx+1)];
     scene.background.copy(c1).lerp(c2,ease(fraction));
