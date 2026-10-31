@@ -42,8 +42,6 @@ function RoundedFrame({x=0,y=1.2,z=0,w=1.2,h=1.3,color=INK}) {
 }
 function StudioArchitecture() {
   return <group>
-    <color attach="background" args={['#242e2c']}/>
-    <fog attach="fog" args={['#283331',10,35]}/>
     <Box position={[17,-.22,-.5]} scale={[48,.45,18]} color="#716e61" roughness={.92}/>
     <Box position={[17,5.4,-4.8]} scale={[48,11,.24]} color="#3e4a45"/>
     <Box position={[17,7.1,0]} scale={[48,.28,11]} color="#303936"/>
@@ -272,6 +270,8 @@ function Director({chapter,serviceIndex,processIndex,action,speaking,reducedMoti
     camera.fov=damp(camera.fov,mobile?50:44,dt,2);camera.updateProjectionMatrix();
   });
   return <>
+    <color attach="background" args={["#242e2c"]}/>
+    <fog attach="fog" args={["#283331",10,35]}/>
     <StudioArchitecture/>
     <ambientLight intensity={.66} color="#e1e6d8"/>
     <hemisphereLight intensity={1.2} args={['#bfd0c4','#49392e',1]}/>
@@ -284,12 +284,6 @@ function Director({chapter,serviceIndex,processIndex,action,speaking,reducedMoti
     <ContactStation active={active===4}/>
     <Actor chapter={chapter} action={action} speaking={speaking} reducedMotion={reducedMotion}/>
   </>;
-}
-function WorldErrorBoundary({children,onError}) {
-  const [error,setError]=useState(false);
-  if(error) return <div className="cinema-world-fallback" role="status">The 3D studio is unavailable on this device. All project details and contact links remain available.</div>;
-  // Canvas' native fallback covers browsers with no WebGL at all.
-  return children;
 }
 export default function StudioWorld({chapter='home',serviceIndex=0,processIndex=0,action='idle',speaking=false,reducedMotion=false,hidden=false,onSelectService}) {
   return <div className="cinema-world" aria-hidden="true">
