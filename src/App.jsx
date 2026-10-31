@@ -102,7 +102,7 @@ export default function App() {
   return <div className={'cinema '+(tour.active?'cinema-tour-active':'')} data-chapter={chapter}>
     <a className="cinema-skip" href="#main">Skip to main content</a>
     <div className="cinema-noise" aria-hidden="true"/>
-    {sceneEnabled&&<SceneBoundary><Suspense fallback={<div className="cinema-loading-scene" aria-hidden="true"/>}><StudioWorld chapter={tour.active?tour.step.target:chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={tour.speaking} reducedMotion={tour.reducedMotion} hidden={hidden} onSelectService={setServiceIndex}/></Suspense></SceneBoundary>}
+    {sceneEnabled&&<SceneBoundary><Suspense fallback={<div className="cinema-loading-scene" aria-hidden="true"/>}><StudioWorld chapter={tour.state.status==='playing'?tour.step.target:chapter} serviceIndex={serviceIndex} processIndex={processIndex} action={action} speaking={tour.speaking} reducedMotion={tour.reducedMotion} hidden={hidden} onSelectService={setServiceIndex}/></Suspense></SceneBoundary>}
     {!sceneEnabled&&<div className="cinema-poster-background" aria-hidden="true"/>}
     <header className="cinema-header">
       <a href="#home" onClick={event=>{event.preventDefault();jump('home');}} className="cinema-logo" aria-label="Favas home"><span className="cinema-logo-sign" aria-hidden="true">///</span> favas<span>.</span></a>
