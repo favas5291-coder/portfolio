@@ -32,3 +32,13 @@ Run `npm ci && npm run verify`. The existing Playwright workflow additionally te
 Before a production merge, review actual desktop/mobile screenshots and check text wrapping, project preview accuracy, contact application behavior, WebGL on mobile, and keyboard navigation. Performance and SEO claims require measured results. A realistic animated likeness and true lip synchronization remain unimplemented.
 
 No merge or deployment is made by this PR. PR #4, an unrelated pending mobile heading-contrast improvement, is left untouched.
+
+## Working service micro-experiences (next build)
+
+`src/components/ServiceInteractionLab.jsx` and `.css` add four original React concept demonstrations tied to `services[serviceIndex]`, directly within the Services chapter:
+- **Business websites:** switch between two content views, open and close a sample contact panel.
+- **E-commerce:** choose mock training-top colours and sizes, then add to an in-memory demonstration bag (no price, real sale or checkout).
+- **Landing pages:** toggle two original sample compositions and submit a local-only name field to view a response; no data is collected or sent.
+- **Website redesign:** toggle an illustrative before/after hierarchy example, not a real client's website.
+
+None are misrepresented as case studies or completed customer commissions. The real GymDrobe case study and its source-reviewed decisions continue to establish genuine work. Controls are native buttons with selection state, visible feedback and keyboard access; the small-screen layouts adapt without heavy 3D dependencies. `scripts/capture-cinematic.mjs` exercises each interaction in Chromium at desktop, tablet and mobile widths and captures an additional screenshot for visual review.
