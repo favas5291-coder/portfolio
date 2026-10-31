@@ -41,6 +41,25 @@ try{
       await page.waitForTimeout(1500);
       await page.screenshot({path:'visual-checks/'+size.name+'-'+section+'.png',fullPage:false,animations:'disabled'});
     }
+    await page.locator('#services').evaluate(node => node.scrollIntoView({block:'start',behavior:'instant'}));
+    await page.locator('.cinema-service-rail button').nth(1).click();
+    await page.locator('.demo-lab-stage .demo-commerce').waitFor();
+    await page.locator('.demo-swatch.tone-forest').click();
+    assert.equal(await page.locator('.demo-swatch.tone-forest').getAttribute('aria-pressed'),'true','Colour selection should respond.');
+    await page.locator('.demo-commerce .demo-action').click();
+    assert.match(await page.locator('.demo-feedback').innerText(),/1 sample item added/,'Cart interaction did not update.');
+    await page.screenshot({path:'visual-checks/'+size.name+'-interactive-demo.png',fullPage:false,animations:'disabled'});
+    await page.locator('.cinema-service-rail button').nth(3).click();
+    await page.locator('.demo-redesign .demo-layout-switch button').first().click();
+    assert.match(await page.locator('.demo-redesign-note').innerText(),/Before:/);
+    await page.locator('.cinema-service-rail button').nth(0).click();
+    await page.locator('.demo-business-head nav button').nth(1).click();
+    assert.match(await page.locator('.demo-business-text h4').innerText(),/service/);
+    await page.locator('.cinema-service-rail button').nth(2).click();
+    await page.locator('.demo-landing .demo-action').click();
+    await page.locator('#demo-name').fill('Guest');
+    await page.locator('.demo-landing-form button').click();
+    assert.match(await page.locator('.demo-landing-form p').innerText(),/no information was sent/);
     const webgl=await page.locator('.cinema-world canvas').count();
     assert.ok(webgl===1,'Expected one deferred WebGL canvas on '+size.name);
     await page.locator('#engineering-lab').evaluate(node=>node.scrollIntoView({block:'start',behavior:'instant'}));
