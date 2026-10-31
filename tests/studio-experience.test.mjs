@@ -46,10 +46,10 @@ test('authentic project screenshot and direct contact actions are retained',()=>
   assert.match(app,/PHONE_HREF/);
 });
 test('opt-in tour and reduced motion remain independent from visual exploration',()=>{
-  assert.match(app,/Meet Favas — Start tour/);
-  assert.match(app,/Explore on my own/);
+  assert.match(app,/Take the optional/);
+  assert.match(app,/Explore my real work/);
   assert.match(app,/onClick=\{\(\)=>tour\.start\(true\)\}/);
-  assert.match(app,/onClick=\{explore\}/);
+  assert.match(app,/href="\/contact\/"/);
   assert.match(app,/aria-label="Tour chapters"/);
   assert.match(app,/aria-live="polite"/);
   assert.equal(characterAsset.status,'temporary');
@@ -67,4 +67,22 @@ test('scroll position, mobile layout, WebGL loss and static fallback are support
   assert.match(style,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(app,/SceneBoundary/);
   assert.match(app,/setSceneEnabled/);
+});
+
+test('client trust comes from documented evidence and an opt-in project brief',()=>{
+  const confidence=readFileSync(new URL('../src/components/ClientConfidence.jsx',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../src/components/ClientConfidence.css',import.meta.url),'utf8');
+  for(const name of ['HeroProof','CapabilityProof','EngineeringLab','ClientBrief']){
+    assert.ok(app.includes('<'+name+'/>'),'Missing '+name+' in actual homepage');
+  }
+  assert.match(confidence,/project\.screenshot/);
+  assert.match(confidence,/project\.decisions/);
+  assert.match(confidence,/project\.commit/);
+  assert.match(confidence,/project\.evidence/);
+  assert.match(confidence,/services\.map/);
+  assert.match(confidence,/whatsappHref\(message\)/);
+  assert.match(confidence,/mailto:/);
+  assert.match(confidence,/Nothing is submitted automatically/);
+  assert.match(css,/@media\(max-width:430px\)/);
+  assert.match(css, /prefers-reduced-motion:reduce/);
 });
