@@ -254,7 +254,7 @@ function Actor({chapter,action,speaking,reducedMotion}) {
     wrapper.current.position.x=damp(wrapper.current.position.x,desired,delta,1.3);
     wrapper.current.rotation.y=damp(wrapper.current.rotation.y,walking?-.25:(chapter==='projects'?-.3:0),delta,2.4);
   });
-  return <group ref={wrapper} position={[1.45,1.4,1.7]} scale={.85}>
+  return <group ref={wrapper} position={[1.45,1.17,1.7]} scale={.85}>
     <Rig action={walking?'walk':(chapter==='home'&&!speaking?arrivalBeat:action)} speaking={speaking} walking={walking} reducedMotion={reducedMotion}/>
   </group>;
 }
