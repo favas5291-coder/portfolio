@@ -53,14 +53,14 @@ const illustrations = {
   'website-redesign': RedesignScene,
 };
 
-export function StudioWorkbench({ services }) {
+export function StudioWorkbench({ services, onSelect }) {
   const [selected, setSelected] = useState(0);
   const current = services[selected] || services[0];
   const Illustration = illustrations[current.slug] || WebsiteScene;
   return <div className="workbench" id="services-list">
     <div className="workbench-menu" aria-label="Choose a service to preview">
       <div className="workbench-menu-heading"><span className="workbench-status-dot"/> THE IDEA LAB <span>CHOOSE AN OBJECT</span></div>
-      {services.map((service, index) => <button key={service.slug} type="button" className={selected === index ? 'workbench-service is-current' : 'workbench-service'} onClick={() => setSelected(index)} aria-pressed={selected === index}>
+      {services.map((service, index) => <button key={service.slug} type="button" className={selected === index ? 'workbench-service is-current' : 'workbench-service'} onClick={() => { setSelected(index); onSelect?.(service); }} aria-pressed={selected === index}>
         <span className="workbench-service-number">0{index + 1}</span><span className="workbench-service-copy"><strong>{service.name}</strong><small>{service.short}</small></span><span className="workbench-service-arrow" aria-hidden="true">{selected === index ? '●' : '↗'}</span>
       </button>)}
     </div>
@@ -68,10 +68,10 @@ export function StudioWorkbench({ services }) {
   </div>;
 }
 
-export function ProcessWorkshop({ steps }) {
+export function ProcessWorkshop({ steps, onSelect }) {
   const [selected, setSelected] = useState(0);
   const [played, setPlayed] = useState(0);
-  const advance = index => { setSelected(index); setPlayed(value => value + 1); };
+  const advance = index => { setSelected(index); setPlayed(value => value + 1); onSelect?.(index); };
   const step = steps[selected];
   return <div className="process-workshop">
     <div className="process-machine" aria-label={`Illustration of step ${selected + 1}: ${step[0]}`}>
