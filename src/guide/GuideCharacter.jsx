@@ -135,24 +135,32 @@ export function Rig({ action, speaking, reducedMotion, walking = false }) {
     const point = action === 'point' || action === 'point-left' || action === 'point-right' || action === 'projects';
     const present = action === 'present' || action === 'services' || action === 'contact' || action === 'invite';
     const gesture = reducedMotion ? .35 : 1;
+    // Animate the gaze first, then the shoulder, elbow and wrist. Delayed
+    // anticipation avoids the old simultaneous robotic arm movement.
+    const cue = reducedMotion ? 1 : THREE.MathUtils.smoothstep(age, .28, .82);
     const activeWave = wave && age < 3.5;
-    root.current.rotation.y = approach(root.current.rotation.y, action === 'turn' ? -.24 : point ? -.13 : -.035, dt, 3);
+    root.current.rotation.y = approach(root.current.rotation.y, action === 'turn' ? -.34 : point ? -.16 : -.035, dt, 2.5);
+    root.current.rotation.z = approach(root.current.rotation.z, reducedMotion ? 0 : isWalking ? Math.sin(t*3.75)*.035 : Math.sin(t*.72)*.014, dt, 1.8);
+    root.current.position.x = approach(root.current.position.x, reducedMotion ? 0 : isWalking ? Math.sin(t*7.5)*.008 : Math.sin(t*.43)*.009, dt, 1.9);
     spine.current.position.y = 1.02 + (reducedMotion ? 0 : Math.sin(t * 1.7) * .008) + (isWalking && !reducedMotion ? Math.abs(Math.sin(t*7.5))*.017 : 0);
     head.current.rotation.z = Math.sin(t * .65) * (reducedMotion ? .003 : .018);
-    head.current.rotation.y = approach(head.current.rotation.y, point ? -.09 : .035 + Math.sin(t * .4) * .025, dt, 3);
+    head.current.rotation.y = approach(head.current.rotation.y, point ? -.23 : action === 'turn' ? -.2 : .035 + Math.sin(t * .4) * .025, dt, 3.7);
+    eyes.current.rotation.y = approach(eyes.current.rotation.y, point ? -.12 : .02 + Math.sin(t*.33)*.025, dt, 5);
+    spine.current.rotation.z = approach(spine.current.rotation.z, reducedMotion ? 0 : point ? -.035 : present ? .027 : .006, dt, 2.4);
     head.current.rotation.x = speaking && !reducedMotion ? Math.sin(t * 4.1) * .018 : -.015;
     const blinkPhase = t % 5.4;
     const blink = blinkPhase > 4.85 && blinkPhase < 5.02 ? Math.max(.08, Math.abs(blinkPhase - 4.935) / .085) : 1;
     eyes.current.scale.y = blink;
     mouth.current.scale.y = speaking ? 1.15 + Math.abs(Math.sin(t * 11) * Math.sin(t * 6.3)) * 2.5 : 1;
+    mouth.current.scale.x = approach(mouth.current.scale.x, speaking ? 1 : (wave || present) ? 1.16 : 1, dt, 4);
     const waveOffset = activeWave ? Math.sin(age * 9) * .16 * gesture : 0;
-    right.current.rotation.z = approach(right.current.rotation.z, activeWave ? .65 * gesture : point ? .6 * gesture : present ? .3 * gesture : -.12, dt);
+    right.current.rotation.z = approach(right.current.rotation.z, activeWave ? .65 * gesture * cue : point ? .6 * gesture * cue : present ? .3 * gesture * cue : -.12, dt);
     right.current.rotation.x = approach(right.current.rotation.x, activeWave ? -.25 : point ? -.22 : present ? -.3 : .03, dt);
-    rightElbow.current.rotation.z = approach(rightElbow.current.rotation.z, activeWave ? 1.85 * gesture : point ? 1.85 * gesture : present ? .9 * gesture : -.07, dt);
+    rightElbow.current.rotation.z = approach(rightElbow.current.rotation.z, activeWave ? 1.85 * gesture * cue : point ? 1.85 * gesture * cue : present ? .9 * gesture * cue : -.07, dt);
     rightWrist.current.rotation.z = activeWave ? waveOffset : 0;
     left.current.rotation.z = approach(left.current.rotation.z, present ? -.22 * gesture : .12, dt);
     left.current.rotation.x = approach(left.current.rotation.x, -.04, dt);
-    leftElbow.current.rotation.z = approach(leftElbow.current.rotation.z, present ? -.8 * gesture : .1, dt);
+    leftElbow.current.rotation.z = approach(leftElbow.current.rotation.z, present ? -.8 * gesture * cue : .1, dt);
     leftWrist.current.rotation.x = 0;
   });
   return <group ref={root} position={[0, -1.38, 0]}>
