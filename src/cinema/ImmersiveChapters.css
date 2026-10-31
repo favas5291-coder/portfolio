@@ -162,3 +162,22 @@
 @media(prefers-reduced-motion:reduce){
  .cinema *,.cinema *::before,.cinema *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
 }
+
+/* Browser screenshot QA: protect text from bright sculpture and remove CTA collision. */
+@media(max-width:800px){
+  .cinema-reopen{display:none!important}
+  .cinema-arrival-center{position:relative;isolation:isolate}
+  .cinema-arrival-center::before{
+    content:'';position:absolute;z-index:-1;
+    inset:-52px -6vw -25px;
+    pointer-events:none;
+    background:linear-gradient(180deg,rgba(4,11,25,0) 0%,rgba(4,11,25,.82) 27%,rgba(4,11,25,.93) 92%,rgba(4,11,25,.97) 100%);
+  }
+  .cinema-service-board,.cinema-process-console,.cinema-contact-actions{position:relative;isolation:isolate}
+  .cinema-service-board::before,.cinema-process-console::before,.cinema-contact-actions::before{
+    content:'';position:absolute;inset:-25px -6vw -20px;z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(3,15,22,.54) 20%,rgba(3,15,22,.68) 100%);
+  }
+  .cinema-process-console::before{background:linear-gradient(180deg,transparent,rgba(28,14,9,.72) 20%,rgba(28,14,9,.85))}
+  .cinema-contact-actions::before{background:linear-gradient(180deg,transparent,rgba(27,7,26,.73) 20%,rgba(27,7,26,.89))}
+}
