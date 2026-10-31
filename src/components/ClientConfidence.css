@@ -125,3 +125,35 @@
  .confidence-brief-choices{display:grid;grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){.confidence-proof-image img{transition:none!important}}
+
+/* Final visual QA: 3D objects must never compromise mobile reading contrast.
+   Overlay is CSS-only so the project screenshot, HTML and accessibility remain real. */
+@media(max-width:800px){
+  .cinema .cinema-services .cinema-chapter-heading,
+  .cinema .cinema-projects .cinema-chapter-heading,
+  .cinema .cinema-process .cinema-chapter-heading,
+  .cinema .cinema-contact .cinema-chapter-heading{
+    position:relative;
+    isolation:isolate;
+    padding:15px 13px 17px;
+    margin-left:-13px;
+    max-width:min(100%,475px);
+  }
+  .cinema :is(.cinema-services,.cinema-projects,.cinema-process,.cinema-contact) .cinema-chapter-heading::before{
+    content:'';
+    position:absolute;
+    z-index:-1;pointer-events:none;
+    inset:0 -8px 0 0;
+    background:linear-gradient(90deg,rgba(3,27,33,.95),rgba(3,27,33,.83) 70%,rgba(3,27,33,.2));
+    backdrop-filter:blur(5px);
+  }
+  .cinema .cinema-projects .cinema-chapter-heading::before{
+    background:linear-gradient(90deg,rgba(13,11,39,.96),rgba(13,11,39,.85) 71%,rgba(13,11,39,.24));
+  }
+  .cinema .cinema-process .cinema-chapter-heading::before{
+    background:linear-gradient(90deg,rgba(33,15,9,.96),rgba(33,15,9,.86) 71%,rgba(33,15,9,.25));
+  }
+  .cinema .cinema-contact .cinema-chapter-heading::before{
+    background:linear-gradient(90deg,rgba(33,8,30,.96),rgba(33,8,30,.85) 71%,rgba(33,8,30,.23));
+  }
+}
