@@ -86,3 +86,18 @@ test('client trust comes from documented evidence and an opt-in project brief',(
   assert.match(css,/@media\(max-width:430px\)/);
   assert.match(css, /prefers-reduced-motion:reduce/);
 });
+
+test('service concepts are four distinct functional React interactions without fake checkout',()=>{
+  const demo=readFileSync(new URL('../src/components/ServiceInteractionLab.jsx',import.meta.url),'utf8');
+  const demoStyle=readFileSync(new URL('../src/components/ServiceInteractionLab.css',import.meta.url),'utf8');
+  assert.match(app, /<ServiceInteractionLab service=\{services\[serviceIndex\]\}\/>/);
+  for(const slug of services.map(service=>service.slug)) assert.ok(demo.includes("'"+slug+"'"), 'Missing interaction for '+slug);
+  for(const name of ['CommerceDemo','BusinessDemo','LandingDemo','RedesignDemo'])assert.ok(demo.includes('function '+name+'('));
+  assert.match(demo,/onClick=\{\(\)=>setCount\(value=>value\+1\)\}/);
+  assert.match(demo,/onSubmit=\{event=>\{event\.preventDefault\(\)/);
+  assert.match(demo,/aria-pressed=/);
+  assert.match(demo,/These are original, illustrative examples/);
+  assert.match(demo,/No purchase will be made/);
+  assert.match(demoStyle,/@media\(max-width:650px\)/);
+  assert.match(demoStyle,/prefers-reduced-motion:reduce/);
+});
