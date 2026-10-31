@@ -95,3 +95,26 @@ export function StudioSetDecoration() {
     <div className="set-screen"><div className="set-screen-light"/><i/><i/><i/></div><div className="set-orb"/><div className="set-star">✳</div>
   </div>;
 }
+
+/** An explorable explanation of three documented implementation decisions. */
+export function ProjectDecisions({ project }) {
+  const [selected, setSelected] = useState(0);
+  const decisions = project.decisions || [];
+  if (!decisions.length) return null;
+  const current = decisions[selected];
+  return <section className="project-decision-lab" aria-labelledby="decision-title">
+    <div className="decision-heading"><div><span className="eyebrow">OPEN THE PROJECT BLUEPRINT</span><h4 id="decision-title">What happens<br/>behind the screen?</h4></div><p>Explore real implementation decisions from the source review. These are explanations of the work, not customer outcome claims.</p></div>
+    <div className="decision-notebook">
+      <div className="decision-tabs" role="tablist" aria-label="Project implementation decisions">{decisions.map((decision, index) => <button type="button" role="tab" id={`decision-tab-${index}`} key={decision.title} aria-selected={selected === index} aria-controls="decision-panel" tabIndex={selected === index ? 0 : -1} onKeyDown={event => {
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); const next = (index + 1) % decisions.length; setSelected(next); event.currentTarget.parentElement?.querySelectorAll('[role="tab"]')[next]?.focus(); }
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { event.preventDefault(); const next = (index + decisions.length - 1) % decisions.length; setSelected(next); event.currentTarget.parentElement?.querySelectorAll('[role="tab"]')[next]?.focus(); }
+      }} onClick={() => setSelected(index)}><span>0{index + 1}</span><strong>{decision.title}</strong><span aria-hidden="true">{selected === index ? '●' : '↗'}</span></button>)}</div>
+      <div role="tabpanel" id="decision-panel" aria-labelledby={`decision-tab-${selected}`} className="decision-panel" key={selected}>
+        <div className="decision-sheet-top"><span>CASE NOTES / 0{selected + 1}</span><span>INSPECTED FRONTEND</span></div>
+        <div className="decision-flow"><div><small>THE CHALLENGE</small><p>{current.challenge}</p></div><span aria-hidden="true">➜</span><div><small>MY IMPLEMENTATION</small><p>{current.decision}</p></div></div>
+        <div className="decision-takeaway"><span aria-hidden="true">✳</span><div><small>THE TAKEAWAY</small><p>{current.takeaway}</p></div></div>
+        <a href="/projects/gymdrobe/">Read the complete case study <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>;
+}
