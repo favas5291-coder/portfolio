@@ -59,8 +59,7 @@ export function EngineeringLab() {
 }
 
 // Builds an enquiry draft locally; never claims an instant quote or sends data.
-export function ClientBrief() {
-  const [kind, setKind] = useState(services[0]?.name || 'Business website');
+export function ClientBrief({kind, onKind}) {
   const [goal, setGoal] = useState('Get my business online');
   const [stage, setStage] = useState('Planning an idea');
   const [details, setDetails] = useState('');
@@ -78,7 +77,7 @@ export function ClientBrief() {
   return <section className="confidence-brief" aria-labelledby="confidence-brief-title">
     <div className="confidence-brief-lead"><p className="confidence-eyebrow">START WITH A SIMPLE BRIEF</p><h3 id="confidence-brief-title">Tell me what you <em>have in mind.</em></h3><p>Choose the basics, add any details, and open your own WhatsApp or email app with a ready-to-send message. Nothing is submitted automatically.</p></div>
     <div className="confidence-brief-form">
-      <div className="confidence-brief-field"><label htmlFor="brief-kind">What are you looking to build?</label><select id="brief-kind" value={kind} onChange={event=>setKind(event.target.value)}>{services.map(item=><option key={item.slug} value={item.name}>{item.name}</option>)}</select></div>
+      <div className="confidence-brief-field"><label htmlFor="brief-kind">What are you looking to build?</label><select id="brief-kind" value={kind} onChange={event=>onKind(event.target.value)}>{services.map(item=><option key={item.slug} value={item.name}>{item.name}</option>)}</select></div>
       <fieldset className="confidence-brief-field"><legend>What is your main goal?</legend><div className="confidence-brief-choices">{['Get my business online','Sell products online','Improve an existing website'].map(option=><button type="button" key={option} aria-pressed={goal===option} className={goal===option?'is-selected':''} onClick={()=>setGoal(option)}>{option}</button>)}</div></fieldset>
       <div className="confidence-brief-field"><label htmlFor="brief-stage">Where are you starting?</label><select id="brief-stage" value={stage} onChange={event=>setStage(event.target.value)}><option>Planning an idea</option><option>Have an existing website</option><option>Ready to discuss requirements</option></select></div>
       <div className="confidence-brief-field"><label htmlFor="brief-business">Business or project name <span>(optional)</span></label><input id="brief-business" value={business} maxLength={100} placeholder="Your business or project" onChange={event=>setBusiness(event.target.value)}/></div>

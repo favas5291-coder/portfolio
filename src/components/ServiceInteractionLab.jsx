@@ -38,11 +38,14 @@ function CommerceDemo() {
 
 function BusinessDemo() {
   const [page,setPage]=useState('Home');
+  const [assembled,setAssembled]=useState(false);
   const [open,setOpen]=useState(false);
   return <div className="demo-site demo-business" aria-label="Interactive business website example">
     <div className="demo-business-head"><strong>NORTH / STUDIO<span>.</span></strong><nav aria-label="Sample business pages"><Tab name="Home" chosen={page} onClick={()=>{setPage('Home');setOpen(false);}}/><Tab name="Services" chosen={page} onClick={()=>{setPage('Services');setOpen(false);}}/></nav><button type="button" onClick={()=>setOpen(!open)}>{open?'Close enquiry':'Contact ↗'}</button></div>
-    <div className="demo-business-main">
+    <button type="button" className="demo-assemble" aria-pressed={assembled} onClick={()=>setAssembled(!assembled)}>{assembled?'Reset homepage layout':'Assemble the homepage'}</button>
+    <div className={'demo-business-main '+(assembled?'assembled-home':'')}>
       <div className="demo-business-text"><small>INDEPENDENT CREATIVE SPACE</small><h4>{page==='Home'?'Spaces that tell a story.':'A clear place for every service.'}</h4><p>{page==='Home'?'A concept website where the story is clear and visitors know what to do next.':'Creative direction, thoughtful design and a direct route to get in touch.'}</p><button type="button" className="demo-action" onClick={()=>setOpen(!open)}>{open?'Close enquiry':'Make an enquiry'} <span aria-hidden="true">↗</span></button></div>
+      {assembled && <div className="assembled-service"><b>Services</b><span>Studio spaces · Creative direction</span><b>Enquiries</b><span>Choose “Make an enquiry” to take the next step.</span></div>}
       <div className="demo-business-art" aria-hidden="true"><div className="demo-business-arch"/><div className="demo-business-disc"/></div>
     </div>
     {open&&<div className="demo-inline-enquiry" role="status"><strong>Enquiry journey opened.</strong> A real project would connect this interface to an agreed contact flow. <button type="button" onClick={()=>setOpen(false)}>Close</button></div>}

@@ -1,103 +1,36 @@
-import test from 'node:test';
+import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { services,processSteps } from '../src/data/site.js';
-import { project,profile } from '../src/data/portfolio.js';
-import { tourSteps,characterAsset } from '../src/guide/tourConfig.js';
+import { createServer } from 'vite';
+import { services, processSteps } from '../src/data/site.js';
+import { tourSteps } from '../src/guide/tourConfig.js';
+import { project, profile } from '../src/data/portfolio.js';
 
-const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
-const world=readFileSync(new URL('../src/cinema/ImmersiveWorld.jsx',import.meta.url),'utf8');
-const style=readFileSync(new URL('../src/cinema/ImmersiveChapters.css',import.meta.url),'utf8');
-
-test('five original physical states share one lazy-loaded R3F world',()=>{
-  assert.match(app,/lazy\(\(\) => import\('\.\/cinema\/ImmersiveWorld\.jsx'\)\)/);
-  assert.match(app,/<ImmersiveWorld chapter=/);
-  assert.match(world,/const THEMES=\[/);
-  assert.match(world,/export const STOPS=\[0,14,28,42,56\]/);
-  for(const id of ['home','services','projects','process','contact']){
-    assert.ok(app.includes('id="'+id+'"'),'Missing HTML chapter '+id);
-    assert.ok(tourSteps.some(step=>step.target===id),'Missing tour target '+id);
+let server, html, caseStudy;
+before(async () => {
+  server = await createServer({server:{middlewareMode:true,hmr:false},appType:'custom',logLevel:'error'});
+  const { render } = await server.ssrLoadModule('/src/entry-server.jsx');
+  html = render('/');
+  caseStudy = render('/projects/gymdrobe/');
+});
+after(async () => { await server?.close(); });
+test('the first HTML gives a name, offering, real work, contacts and both visitor choices', () => {
+  for(const text of [profile.name,'I build websites','Start tour with sound','Explore myself','View GymDrobe','Meet Favas',project.screenshot]) assert.ok(html.includes(text),text);
+  assert.ok(html.includes('data-tour-status="idle"'));
+  assert.ok(!html.includes('<canvas'));
+});
+test('every narration highlight has an actual HTML target and the five stations exist', () => {
+  for(const step of tourSteps){
+    for(const id of [step.target,step.highlight,'seat-'+step.target,...step.segments.map(s=>s.highlight).filter(Boolean)]) assert.ok(html.includes('id="'+id+'"'),id);
   }
-  for(const component of ['Spark','Formation','ProjectDisplay','CircuitForge','Portal','Director']){
-    assert.ok(world.includes('function '+component+'('),'Missing real 3D component '+component);
-  }
+  assert.deepEqual(tourSteps[1].segments.map(s=>s.service),services.map((_,i)=>i));
+  assert.deepEqual(tourSteps[3].segments.map(s=>s.stage),processSteps.map((_,i)=>i));
 });
-test('semantic services and collaboration controls reflect real source data',()=>{
-  assert.equal(services.length,4);
-  assert.equal(processSteps.length,5);
-  assert.match(app,/services\.map/);
-  assert.match(app,/processSteps\.map/);
-  assert.match(app,/aria-pressed=\{selected===index\}/);
-  assert.match(app,/onSelect=\{setServiceIndex\}/);
-  assert.match(app,/onSelect=\{setProcessIndex\}/);
-  assert.match(world,/selected= \{?serviceIndex|selected=\{serviceIndex\}/);
-  assert.match(world,/phase=\{processIndex\}/);
-  assert.match(app,/NOT COMPLETED CLIENT PROJECTS/);
+test('the storefront proof is inspectable without a rendered character', () => {
+  for(const text of ['2 November 2026','GymDrobe screenshot device','Shirt colour','Local demonstration','Visit live website','View code','Read case study']) assert.ok(html.includes(text),text);
+  assert.ok(caseStudy.includes('935e09add8383cfa104379f83e002ed3b0834b8f/src/components/ProductCard.jsx'));
+  assert.ok(caseStudy.includes('displayed the red shirt'));
 });
-test('authentic project screenshot and direct contact actions are retained',()=>{
-  assert.equal(project.name,'GymDrobe');
-  assert.ok(profile.email.includes('@'));
-  for(const route of ['/projects/gymdrobe/','/services/','/contact/'])assert.ok(app.includes(route));
-  assert.match(app,/project\.screenshot/);
-  assert.match(world,/useLoader\(TextureLoader,project\.screenshot\)/);
-  assert.match(app,/project\.screenshotCaptured/);
-  assert.match(app,/project\.repository/);
-  assert.match(app,/whatsappHref\(\)/);
-  assert.match(app,/PHONE_HREF/);
-});
-test('opt-in tour and reduced motion remain independent from visual exploration',()=>{
-  assert.match(app,/Take the optional/);
-  assert.match(app,/Explore my real work/);
-  assert.match(app,/onClick=\{\(\)=>tour\.start\(true\)\}/);
-  assert.match(app,/href="\/contact\/"/);
-  assert.match(app,/aria-label="Tour chapters"/);
-  assert.match(app,/aria-live="polite"/);
-  assert.equal(characterAsset.status,'temporary');
-  assert.equal(characterAsset.model,null);
-  assert.doesNotMatch(world,/Rig\s+action=/);
-});
-test('scroll position, mobile layout, WebGL loss and static fallback are supported',()=>{
-  assert.match(world,/window\.addEventListener\('scroll'/);
-  assert.match(world,/document\.hidden/);
-  assert.match(world,/webglcontextlost/);
-  assert.match(world,/dpr=\{\[1,1\.6\]\}/);
-  assert.match(world,/MathUtils\.damp/);
-  assert.match(style,/@media \(max-width:800px\)/);
-  assert.match(style,/@media\(max-width:430px\)/);
-  assert.match(style,/@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(app,/SceneBoundary/);
-  assert.match(app,/setSceneEnabled/);
-});
-
-test('client trust comes from documented evidence and an opt-in project brief',()=>{
-  const confidence=readFileSync(new URL('../src/components/ClientConfidence.jsx',import.meta.url),'utf8');
-  const css=readFileSync(new URL('../src/components/ClientConfidence.css',import.meta.url),'utf8');
-  for(const name of ['HeroProof','CapabilityProof','EngineeringLab','ClientBrief']){
-    assert.ok(app.includes('<'+name+'/>'),'Missing '+name+' in actual homepage');
-  }
-  assert.match(confidence,/project\.screenshot/);
-  assert.match(confidence,/project\.decisions/);
-  assert.match(confidence,/project\.commit/);
-  assert.match(confidence,/project\.evidence/);
-  assert.match(confidence,/services\.map/);
-  assert.match(confidence,/whatsappHref\(message\)/);
-  assert.match(confidence,/mailto:/);
-  assert.match(confidence,/Nothing is submitted automatically/);
-  assert.match(css,/@media\(max-width:430px\)/);
-  assert.match(css, /prefers-reduced-motion:reduce/);
-});
-
-test('service concepts are four distinct functional React interactions without fake checkout',()=>{
-  const demo=readFileSync(new URL('../src/components/ServiceInteractionLab.jsx',import.meta.url),'utf8');
-  const demoStyle=readFileSync(new URL('../src/components/ServiceInteractionLab.css',import.meta.url),'utf8');
-  assert.match(app, /<ServiceInteractionLab service=\{services\[serviceIndex\]\}\/>/);
-  for(const slug of services.map(service=>service.slug)) assert.ok(demo.includes("'"+slug+"'"), 'Missing interaction for '+slug);
-  for(const name of ['CommerceDemo','BusinessDemo','LandingDemo','RedesignDemo'])assert.ok(demo.includes('function '+name+'('));
-  assert.match(demo,/onClick=\{\(\)=>setCount\(value=>value\+1\)\}/);
-  assert.match(demo,/onSubmit=\{event=>\{event\.preventDefault\(\)/);
-  assert.match(demo,/aria-pressed=/);
-  assert.match(demo,/These are original, illustrative examples/);
-  assert.match(demo,/No purchase will be made/);
-  assert.match(demoStyle,/@media\(max-width:650px\)/);
-  assert.match(demoStyle,/prefers-reduced-motion:reduce/);
+test('all service choices, written collaboration stages, contact destinations and an editable brief are present', () => {
+  for(const name of [...services.map(s=>s.name),...processSteps.map(s=>s[0]),'Discuss this service',profile.email,'tel:+918156805806','https://wa.me/918156805806','id="brief-kind"']) assert.ok(html.includes(name),name);
+  assert.ok(html.includes('Nothing is submitted automatically'));
 });

@@ -1,85 +1,95 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 
-const base='http://127.0.0.1:4173/';
-async function waitForServer(){
-  for(let i=0;i<45;i++){
-    try{const r=await fetch(base);if(r.ok)return;}catch{}
-    await new Promise(resolve=>setTimeout(resolve,700));
-  }
-  throw new Error('Local Vite preview did not start.');
+const output = 'visual-checks';
+const base = 'http://127.0.0.1:4173/';
+const baseline = process.env.BASELINE_URL;
+await mkdir(output,{recursive:true});
+const browser = await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
+const sizes = [[360,800],[390,844],[430,932],[768,1024],[1024,768],[1440,900],[1920,1080]];
+const results = [];
+async function metrics(url, viewport, name) {
+  const context = await browser.newContext({viewport,deviceScaleFactor:1});
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    window.reviewPaint = {lcp:null,cls:0};
+    if(typeof PerformanceObserver === 'undefined')return;
+    new PerformanceObserver(list=>{for(const item of list.getEntries()) window.reviewPaint.lcp=item.startTime;}).observe({type:'largest-contentful-paint',buffered:true});
+    new PerformanceObserver(list=>{for(const item of list.getEntries()) if(!item.hadRecentInput) window.reviewPaint.cls+=item.value;}).observe({type:'layout-shift',buffered:true});
+  });
+  await page.goto(url,{waitUntil:'load'});
+  await page.waitForTimeout(5500);
+  const measures=await page.evaluate(()=>({domReady:Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd),fcp:Math.round(performance.getEntriesByName('first-contentful-paint')[0]?.startTime||0),lcp:Math.round(window.reviewPaint.lcp||0),cls:Number(window.reviewPaint.cls.toFixed(3))}));
+  await page.screenshot({path:output+'/'+name+'-'+viewport.width+'.png'});
+  await context.close();
+  return measures;
 }
-
-await mkdir('visual-checks',{recursive:true});
-await waitForServer();
-const browser=await chromium.launch({
-  headless:true,
-  args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--disable-dev-shm-usage']
-});
-const shots=[
-  {name:'desktop',width:1440,height:900},
-  {name:'mobile',width:390,height:844},
-  {name:'tablet',width:768,height:1024}
-];
-try{
-  for(const size of shots){
-    const page=await browser.newPage({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
-    const exceptions=[];
-    page.on('pageerror',error=>exceptions.push(error.message));
+try {
+  for(const [width,height] of sizes){
+    const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,...(width===1440?{recordVideo:{dir:output,size:{width:1080,height:676}}}:{})});
+    const page=await context.newPage();
+    const errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
     await page.goto(base,{waitUntil:'domcontentloaded'});
-    await page.locator('#cinema-hero-title').waitFor();
-    await page.waitForTimeout(2600);
-    await page.screenshot({path:'visual-checks/'+size.name+'-arrival.png',fullPage:false,animations:'disabled'});
-    await page.locator('.confidence-hero-proof img').waitFor();
-    assert.ok(await page.locator('.confidence-hero-proof img').evaluate(img=>img.complete&&img.naturalWidth>0),'Real featured GymDrobe proof failed to load.');
-    assert.ok(await page.locator('.confidence-hero-proof a[href="#projects"]').count(),'Hero should link straight to real work.');
-    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+3);
-    assert.equal(overflow,false,size.name+' has horizontal overflow.');
-    for(const section of ['services','projects','process','contact']){
-      await page.locator('#'+section).evaluate(node => node.scrollIntoView({block:'start',behavior:'instant'}));
-      await page.waitForTimeout(1500);
-      await page.screenshot({path:'visual-checks/'+size.name+'-'+section+'.png',fullPage:false,animations:'disabled'});
+    await page.getByRole('button',{name:'Start tour with sound'}).waitFor();
+    await page.locator('.wt-set[data-revealed=true][data-renderer="3d"]').waitFor({timeout:45000});
+    assert.equal(await page.locator('canvas').count(),1);
+    assert.equal(await page.locator('.worksite').getAttribute('data-tour-status'),'idle');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Overflow at '+width);
+    await page.screenshot({path:output+'/opening-'+width+'.png'});
+    await page.getByRole('link',{name:'View GymDrobe'}).click();
+    await page.locator('#seat-projects .wt-set').waitFor();
+    await page.getByRole('group',{name:'Shirt colour'}).getByRole('button',{name:'Red'}).click();
+    assert.match(await page.locator('.colour-photo img').getAttribute('src'),/red.webp$/);
+    await page.getByRole('group',{name:'GymDrobe screenshot device'}).getByRole('button',{name:'Mobile'}).click();
+    await page.getByRole('button',{name:'Enlarge'}).click();
+    assert.match(await page.getByRole('dialog').locator('img').getAttribute('src'),/mobile/);
+    await page.keyboard.press('Escape');
+    if(width===1440 || width===390){
+      await page.screenshot({path:output+'/inspection-'+width+'.png'});
+      await page.getByRole('button',{name:'Meet Favas'}).click();
+      await page.getByRole('button',{name:'Go to Services'}).click();
+      await page.getByRole('group',{name:'Select a service'}).getByRole('button',{name:/E-commerce/}).click();
+      assert.equal(await page.locator('.worksite').getAttribute('data-tour-status'),'paused');
+      await page.getByRole('button',{name:'Forest',exact:true}).click();
+      await page.getByRole('button',{name:'Add to demo bag'}).click();
+      assert.match(await page.locator('.demo-feedback').innerText(),/1 sample item/);
+      await page.getByRole('button',{name:'Skip',exact:false}).click();
+      await page.getByRole('button',{name:'Discuss this service'}).click();
+      assert.equal(await page.locator('#brief-kind').inputValue(),'E-commerce development');
+      assert.match(decodeURIComponent(await page.locator('.confidence-brief-main').getAttribute('href')),/Project type: E-commerce development/);
+      await page.getByRole('button',{name:'Meet Favas'}).click();
+      await page.getByRole('button',{name:'Next →'}).click();
+      await page.getByRole('button',{name:'Previous chapter'}).click();
+      await page.getByRole('button',{name:'Go to Contact'}).click();
+      await page.getByRole('button',{name:'Finish'}).click();
+      await page.getByRole('button',{name:'Replay the tour'}).click();
+      await page.getByRole('button',{name:'Skip',exact:false}).click();
     }
-    await page.locator('#services').evaluate(node => node.scrollIntoView({block:'start',behavior:'instant'}));
-    await page.locator('.cinema-service-rail button').nth(1).click();
-    await page.locator('.demo-lab-stage .demo-commerce').waitFor();
-    await page.locator('.demo-swatch.tone-forest').click();
-    assert.equal(await page.locator('.demo-swatch.tone-forest').getAttribute('aria-pressed'),'true','Colour selection should respond.');
-    await page.locator('.demo-commerce .demo-action').click();
-    assert.match(await page.locator('.demo-feedback').innerText(),/1 sample item added/,'Cart interaction did not update.');
-    await page.screenshot({path:'visual-checks/'+size.name+'-interactive-demo.png',fullPage:false,animations:'disabled'});
-    await page.locator('.cinema-service-rail button').nth(3).click();
-    await page.locator('.demo-redesign .demo-layout-switch button').first().click();
-    assert.match(await page.locator('.demo-redesign-note').innerText(),/Before:/);
-    await page.locator('.cinema-service-rail button').nth(0).click();
-    await page.locator('.demo-business-head nav button').nth(1).click();
-    assert.match(await page.locator('.demo-business-text h4').innerText(),/service/);
-    await page.locator('.cinema-service-rail button').nth(2).click();
-    await page.locator('.demo-landing .demo-action').click();
-    await page.locator('#demo-name').fill('Guest');
-    await page.locator('.demo-landing-form button').click();
-    assert.match(await page.locator('.demo-landing-form p').innerText(),/no information was sent/);
-    const webgl=await page.locator('.cinema-world canvas').count();
-    assert.ok(webgl===1,'Expected one deferred WebGL canvas on '+size.name);
-    await page.locator('#engineering-lab').evaluate(node=>node.scrollIntoView({block:'start',behavior:'instant'}));
-    await page.locator('.confidence-lab-selector button').nth(1).click();
-    assert.equal(await page.locator('.confidence-lab-selector button').nth(1).getAttribute('aria-pressed'),'true');
-    assert.ok((await page.locator('.confidence-lab-paper').innerText()).includes('MY APPROACH'));
-    await page.screenshot({path:'visual-checks/'+size.name+'-engineering.png',fullPage:false,animations:'disabled'});
-    await page.locator('#brief-kind').selectOption({label:'E-commerce development'});
-    await page.locator('.confidence-brief-choices button').nth(1).click();
-    const messageLink=await page.locator('.confidence-brief-main').getAttribute('href');
-    assert.ok(messageLink.includes('Project%20type%3A%20E-commerce')||decodeURIComponent(messageLink).includes('Project type: E-commerce'),'The prefilled WhatsApp link must reflect the selected service.');
-    assert.ok(await page.locator('.confidence-brief-form small').count());
-    const screenshot=page.locator('#project-preview img');
-    assert.ok(await screenshot.count(),'The genuine project screenshot is missing.');
-    const imageReady=await screenshot.evaluate(image=>image.complete&&image.naturalWidth>0);
-    assert.ok(imageReady,'The genuine project screenshot failed to load.');
-    assert.deepEqual(exceptions,[],'Unexpected runtime errors on '+size.name);
-    console.log(size.name+': arrival + 4 chapter screenshots; no horizontal overflow or uncaught browser error.');
-    await page.close();
+    assert.deepEqual(errors,[],'Uncaught errors at '+width);
+    await context.close();
+    results.push({width,height,webgl:true,overflow:false});
   }
-}finally{
-  await browser.close();
-}
+  for(const mode of ['reduced','no-webgl']){
+    const ctx=await browser.newContext({viewport:{width:390,height:844},reducedMotion:mode==='reduced'?'reduce':'no-preference'});
+    const page=await ctx.newPage();
+    if(mode==='no-webgl')await page.addInitScript(()=>{const current=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return /webgl/.test(type)?null:current.call(this,type,...args);};});
+    await page.goto(base);
+    await page.getByRole('button',{name:'Inspect GymDrobe screen'}).click();
+    await page.getByRole('dialog').waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.wt-set').getAttribute('data-renderer'),'portrait');
+    await ctx.close();
+  }
+  const perf={conditions:'Chromium, fresh browser context, local production build, 1x DPR, no throttling; median of three cold navigations, milliseconds. Synthetic results only.'};
+  if(baseline){
+    for(const [name,url] of [['before',baseline],['after',base]]){
+      const rows=[];
+      for(let i=0;i<3;i++) rows.push(await metrics(url,{width:390,height:844},name));
+      perf[name]=Object.fromEntries(Object.keys(rows[0]).map(key=>[key,rows.map(r=>r[key]).sort((a,b)=>a-b)[1]]));
+    }
+  }
+  await writeFile(output+'/review.json',JSON.stringify({results,perf},null,2));
+  console.log(JSON.stringify({results,perf}));
+} finally { await browser.close(); }

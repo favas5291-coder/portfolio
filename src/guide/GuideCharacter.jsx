@@ -18,7 +18,8 @@ const noop = () => {};
 const approach = (a, b, dt, speed = 7) => THREE.MathUtils.lerp(a, b, 1 - Math.exp(-speed * dt));
 
 function Ellipsoid({ position = [0, 0, 0], scale = [1, 1, 1], color = SKIN, roughness = .68, ...props }) {
-  return <mesh position={position} scale={scale} {...props}><sphereGeometry args={[1, 24, 20]}/><meshStandardMaterial color={color} roughness={roughness}/></mesh>;
+  const compact = useThree(state => state.size.width < 230);
+  return <mesh position={position} scale={scale} {...props}><sphereGeometry args={compact ? [1, 16, 12] : [1, 24, 20]}/><meshStandardMaterial color={color} roughness={roughness}/></mesh>;
 }
 function Stroke({ points, color = HAIR, radius = .012, opacity = 1 }) {
   const curve = useMemo(() => new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p))), [points]);
@@ -81,7 +82,7 @@ function Head({ headRef, mouthRef, eyesRef }) {
     const y = .34 + Math.sqrt(Math.max(0, 1 - ring * ring)) * .11;
     return { position: [x, y, z], rotation: [.1 + z, -.35, -.3], scale: [.11 + .025 * Math.sin(i), .08, .16] };
   }), []);
-  return <group ref={headRef} position={[0, 2.41, .015]}>
+  return <group ref={headRef} position={[0, 2.41, .015]} scale={[1.12,1.07,1.1]}>
     <mesh scale={[1, 1, .82]}><latheGeometry args={[profile, 48]}/><meshStandardMaterial color={SKIN} roughness={.69}/></mesh>
     <Ellipsoid position={[-.29, .015, .015]} scale={[.055, .1, .039]}/><Ellipsoid position={[.29, .015, .015]} scale={[.055, .1, .039]}/>
     <Ellipsoid position={[-.304, .017, .041]} scale={[.021, .056, .013]} color="#91593f"/><Ellipsoid position={[.304, .017, .041]} scale={[.021, .056, .013]} color="#91593f"/>
@@ -103,7 +104,8 @@ function Head({ headRef, mouthRef, eyesRef }) {
     <Ellipsoid position={[0, -.04, .291]} scale={[.055, .041, .038]} color="#b37a5e"/>
     {[-1, 1].map(side => <Ellipsoid key={side} position={[side * .044, -.057, .269]} scale={[.026, .018, .021]} color="#986048"/>)}
     <group ref={mouthRef} position={[0, -.151, .25]}>
-      <Ellipsoid scale={[.078, .014, .009]} color="#3b2220"/>
+      <Stroke points={[[-.076,.008,0],[-.04,-.008,.008],[0,-.014,.011],[.04,-.008,.008],[.076,.008,0]]} color="#4a2824" radius={.009}/>
+      <Ellipsoid scale={[.066, .009, .009]} color="#3b2220"/>
       <Ellipsoid position={[0, -.012, -.003]} scale={[.075, .012, .01]} color="#a06352"/>
     </group>
     <Stroke points={[[-.105, -.114, .235], [-.045, -.101, .263], [0, -.112, .269]]} radius={.017}/>
@@ -139,13 +141,13 @@ export function Rig({ action, speaking, reducedMotion, walking = false }) {
     // anticipation avoids the old simultaneous robotic arm movement.
     const cue = reducedMotion ? 1 : THREE.MathUtils.smoothstep(age, .28, .82);
     const activeWave = wave && age < 3.5;
-    root.current.rotation.y = approach(root.current.rotation.y, action === 'turn' ? -.34 : point ? -.16 : -.035, dt, 2.5);
+    root.current.rotation.y = approach(root.current.rotation.y, action === 'turn' ? .34 : point ? .14 : -.035, dt, 2.5);
     root.current.rotation.z = approach(root.current.rotation.z, reducedMotion ? 0 : isWalking ? Math.sin(t*3.75)*.035 : Math.sin(t*.72)*.014, dt, 1.8);
     root.current.position.x = approach(root.current.position.x, reducedMotion ? 0 : isWalking ? Math.sin(t*7.5)*.008 : Math.sin(t*.43)*.009, dt, 1.9);
     spine.current.position.y = 1.02 + (reducedMotion ? 0 : Math.sin(t * 1.7) * .008) + (isWalking && !reducedMotion ? Math.abs(Math.sin(t*7.5))*.017 : 0);
     head.current.rotation.z = Math.sin(t * .65) * (reducedMotion ? .003 : .018);
-    head.current.rotation.y = approach(head.current.rotation.y, point ? -.23 : action === 'turn' ? -.2 : .035 + Math.sin(t * .4) * .025, dt, 3.7);
-    eyes.current.rotation.y = approach(eyes.current.rotation.y, point ? -.12 : .02 + Math.sin(t*.33)*.025, dt, 5);
+    head.current.rotation.y = approach(head.current.rotation.y, point ? THREE.MathUtils.smoothstep(age,.15,.6)*.34 : action === 'turn' ? -.2 : .035 + Math.sin(t * .4) * .025, dt, 3.7);
+    eyes.current.rotation.y = approach(eyes.current.rotation.y, point ? .18 : .02 + Math.sin(t*.33)*.025, dt, 5);
     spine.current.rotation.z = approach(spine.current.rotation.z, reducedMotion ? 0 : point ? -.035 : present ? .027 : .006, dt, 2.4);
     head.current.rotation.x = speaking && !reducedMotion ? Math.sin(t * 4.1) * .018 : -.015;
     const blinkPhase = t % 5.4;
@@ -153,8 +155,9 @@ export function Rig({ action, speaking, reducedMotion, walking = false }) {
     eyes.current.scale.y = blink;
     mouth.current.scale.y = speaking ? 1.15 + Math.abs(Math.sin(t * 11) * Math.sin(t * 6.3)) * 2.5 : 1;
     mouth.current.scale.x = approach(mouth.current.scale.x, speaking ? 1 : (wave || present) ? 1.16 : 1, dt, 4);
+    const settle = point && !reducedMotion ? 1 - THREE.MathUtils.smoothstep(age, 1.8, 3.6) * .55 : 1;
     const waveOffset = activeWave ? Math.sin(age * 9) * .16 * gesture : 0;
-    right.current.rotation.z = approach(right.current.rotation.z, activeWave ? .65 * gesture * cue : point ? .6 * gesture * cue : present ? .3 * gesture * cue : -.12, dt);
+    right.current.rotation.z = approach(right.current.rotation.z, activeWave ? .65 * gesture * cue : point ? .88 * gesture * cue * settle : present ? .3 * gesture * cue : -.12, dt);
     right.current.rotation.x = approach(right.current.rotation.x, activeWave ? -.25 : point ? -.22 : present ? -.3 : .03, dt);
     rightElbow.current.rotation.z = approach(rightElbow.current.rotation.z, activeWave ? 1.85 * gesture * cue : point ? 1.85 * gesture * cue : present ? .9 * gesture * cue : -.07, dt);
     rightWrist.current.rotation.z = activeWave ? waveOffset : 0;

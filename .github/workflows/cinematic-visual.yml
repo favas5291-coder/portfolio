@@ -27,15 +27,27 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install --with-deps chromium
+      - name: Check out the comparison baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          path: .sites-runtime/baseline
+      - name: Build baseline with the same locked dependencies
+        working-directory: .sites-runtime/baseline
+        run: npm ci && npm run build
       - name: Start local website preview
         run: |
           npm run preview -- --host 127.0.0.1 > /tmp/fazhere-preview.log 2>&1 &
+          (cd .sites-runtime/baseline && npm run preview -- --host 127.0.0.1 --port 4174) > /tmp/fazhere-baseline.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ -o /dev/null && curl -fsS http://127.0.0.1:4174/ -o /dev/null && break; sleep 1; done
       - name: Capture actual rendered chapters
+        env:
+          BASELINE_URL: http://127.0.0.1:4174/
         run: node scripts/capture-cinematic.mjs
       - name: Upload visual review screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cinematic-portfolio-screenshots
-          path: visual-checks/*.png
+          path: visual-checks/
           if-no-files-found: warn
