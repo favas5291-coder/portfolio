@@ -131,7 +131,7 @@ export default function App() {
       <section id="home" className="wt-arrival" aria-labelledby="cinema-hero-title">
         <div id="welcome-copy">
           <p className="wt-kicker"><i/> MUHAMMED FAVAS K <span>/ FULL-STACK DEVELOPER</span></p>
-          <h1 id="cinema-hero-title" tabIndex={-1}>I build websites<br/>and apps that help<br/>businesses <em>grow.</em></h1>
+          <h1 id="cinema-hero-title" tabIndex={-1}>I build websites and apps that help businesses <em>grow.</em></h1>
           <p className="wt-intro">Welcome to my studio in Kozhikode. That’s GymDrobe on my desk. I built the store, and I’ll show you how it works.</p>
           <div className="wt-actions"><button className="wt-primary" onClick={()=>tour.start(true)}><span aria-hidden="true">▶</span> Start tour with sound</button><button className="wt-ghost" onClick={dismiss}>Explore myself ↓</button></div>
           <div className="wt-quick"><a href="#projects" onClick={e=>nav(e,'projects')}>View GymDrobe ↗</a><a href="#contact" onClick={e=>nav(e,'contact')}>Contact ↗</a><span>{tourDurationSeconds}s tour · Captions included</span></div>

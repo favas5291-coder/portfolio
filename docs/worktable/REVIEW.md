@@ -11,3 +11,11 @@ Flux Theory opens with one full-frame visual subject and a quiet action at the e
 | Projects | The presentation becomes a flat, inspectable desktop or phone capture. | Points to GymDrobe and settles. | Switch devices, enlarge, and try the verified shopping detail. |
 | Process | A paper brief becomes a scoped plan, preview, review and handover. | Introduces each deliverable. | Select a stage to see what a client receives. |
 | Contact | The screen displays the visitor’s selected project type. | Opens his hand to invite a conversation. | Edit a private draft and open the existing WhatsApp or email destination. |
+
+## Editing the studio
+
+Edit the project narrative, destinations and contribution in src/data/portfolio.js. The desktop screenshot still reads src/data/project-previews.js and uses the existing preview:update command. For the phone view, capture the real store at phone width and replace the mobileCapture reference in src/components/Worktable.jsx with the new dated image. Update the capture date in src/App.jsx. The two local shirt photos come from the actual COITONIC black and red card images observed on 2 November 2026.
+
+Edit scripts, caption durations, highlight IDs, service/stage cues and optional local audio URLs in src/guide/tourConfig.js. The 63-second figure is the caption timeline. A device voice or recorded clip sets its own playback duration. The temporary character uses separate joints, eye movement, breathing, a wave, presentation gestures and approximate mouth movement. A final photo-matched head sculpt, facial blendshapes, timed visemes and recorded voice remain to be supplied.
+
+To reproduce the downloadable homepage, run npm run build followed by node scripts/build-worktable-review.mjs. Open .sites-runtime/Fazhere-Worktable-Preview.html in a browser. It bundles the visuals, fonts and code in one file. Other pages and external links use their live destinations. Use the full branch preview to review the revised case-study route.

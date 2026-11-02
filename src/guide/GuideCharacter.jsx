@@ -88,8 +88,8 @@ function Head({ headRef, mouthRef, eyesRef }) {
     <Ellipsoid position={[-.304, .017, .041]} scale={[.021, .056, .013]} color="#91593f"/><Ellipsoid position={[.304, .017, .041]} scale={[.021, .056, .013]} color="#91593f"/>
     <Ellipsoid position={[0, -.233, .132]} scale={[.185, .075, .1]} color="#342b27"/>
     <Ellipsoid position={[0, -.178, .215]} scale={[.16, .069, .033]} color="#815541"/>
-    <Ellipsoid position={[-.222, -.116, .148]} scale={[.043, .13, .054]} color="#302724" rotation={[0, 0, -.23]}/>
-    <Ellipsoid position={[.222, -.116, .148]} scale={[.043, .13, .054]} color="#302724" rotation={[0, 0, .23]}/>
+    <Stroke points={[[-.259,-.065,.108],[-.224,-.145,.14],[-.173,-.206,.162],[-.085,-.254,.169]]} color="#48352d" radius={.022}/>
+    <Stroke points={[[.259,-.065,.108],[.224,-.145,.14],[.173,-.206,.162],[.085,-.254,.169]]} color="#48352d" radius={.022}/>
     <group ref={eyesRef} position={[0, .105, 0]}>
       {[-1, 1].map(side => <group key={side} position={[side * .118, 0, .225]} rotation={[0, side * .05, side * -.045]}>
         <Ellipsoid position={[0, -.004, 0]} scale={[.076, .037, .026]} color="#e1d4c3"/>
@@ -167,6 +167,7 @@ export function Rig({ action, speaking, reducedMotion, walking = false }) {
     leftWrist.current.rotation.x = 0;
   });
   return <group ref={root} position={[0, -1.38, 0]}>
+    <Ellipsoid position={[0, 1.005, -.012]} scale={[.332,.22,.18]} color="#191a23"/>
     <group position={[0, .52, 0]}>
       {[-1, 1].map((side,index) => <group key={side} ref={node => { legs.current[index] = node; }} position={[side * .18, 0, 0]}>
         <mesh position={[0, 0, 0]}><capsuleGeometry args={[.145, .72, 8, 20]}/><meshStandardMaterial color="#191a23" roughness={.89}/></mesh>

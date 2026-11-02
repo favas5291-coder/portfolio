@@ -169,3 +169,5 @@
 .wt-wire-product{overflow:hidden}.wt-wire-product img{width:100%;height:100%;object-fit:cover;animation:ink-photo 2.8s both}
 @keyframes ink-photo{0%,28%{opacity:0;filter:grayscale(1)}68%{opacity:1;filter:grayscale(1)}100%{opacity:1;filter:none}}
 @media(max-width:700px){.worksite-header.cinema-header{gap:6px}.worksite-header .cinema-tour-trigger{min-height:33px;padding:6px 9px;font-size:9px!important;gap:3px}.worksite .wt-primary,.worksite .wt-ghost{font-size:12px}.worksite .wt-arrival h1{font-size:clamp(28px,7.45vw,46px)!important}}
+.worksite .wt-arrival h1{max-width:12.8em;text-wrap:balance;font-weight:650}
+@media(max-width:700px){.worksite .wt-arrival h1{max-width:99%;font-weight:650}}

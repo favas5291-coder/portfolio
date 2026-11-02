@@ -37,6 +37,7 @@ try {
     assert.equal(await page.locator('canvas').count(),1);
     assert.equal(await page.locator('.worksite').getAttribute('data-tour-status'),'idle');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Overflow at '+width);
+    await page.locator('.wt-monitor').evaluate(async monitor=>{await Promise.all(monitor.getAnimations({subtree:true}).map(a=>a.finished.catch(()=>{})));});
     await page.screenshot({path:output+'/opening-'+width+'.png'});
     await page.getByRole('link',{name:'View GymDrobe'}).click();
     await page.locator('#seat-projects .wt-set').waitFor();
@@ -60,7 +61,7 @@ try {
       assert.equal(await page.locator('#brief-kind').inputValue(),'E-commerce development');
       assert.match(decodeURIComponent(await page.locator('.confidence-brief-main').getAttribute('href')),/Project type: E-commerce development/);
       await page.getByRole('button',{name:'Meet Favas'}).click();
-      await page.getByRole('button',{name:'Next →'}).click();
+      await page.getByRole('button',{name:'Next →',exact:true}).click();
       await page.getByRole('button',{name:'Previous chapter'}).click();
       await page.getByRole('button',{name:'Go to Contact'}).click();
       await page.getByRole('button',{name:'Finish'}).click();
