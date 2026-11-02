@@ -5,11 +5,11 @@
   min-height:100vh;background:#273330;color:var(--paper);font-family:var(--display);overflow:clip;isolation:isolate;
 }
 .cinema *{box-sizing:border-box}
-.cinema a{color:inherit;text-decoration:none}
-.cinema button{font:inherit;cursor:pointer;color:inherit;background:none;border:0}
+:where(.cinema) a{color:inherit;text-decoration:none}
+:where(.cinema) button{font:inherit;cursor:pointer;color:inherit;background:none;border:0}
 .cinema button:disabled{cursor:default;opacity:.36}
 .cinema :is(button,a,summary):focus-visible{outline:3px solid #f3b789;outline-offset:5px}
-.cinema :is(h1,h2,h3,h4,p){margin:0}
+:where(.cinema) :where(h1,h2,h3,h4,p){margin:0}
 .cinema :is(h1,h2,h3){font-weight:520;letter-spacing:-.06em}
 .cinema em{font-family:Georgia,"Times New Roman",serif;font-weight:400}
 .cinema .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

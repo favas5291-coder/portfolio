@@ -58,13 +58,21 @@ export function useGuidedTour() {
   useEffect(() => {
     if (!active) return;
     const section = document.getElementById(step.target);
-    const highlighted = document.getElementById(step.highlight);
-    highlighted?.classList.add('tour-highlight');
+
+
     section?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
     const heading = section?.querySelector('h1, h2');
     heading?.focus({ preventScroll: true });
-    return () => highlighted?.classList.remove('tour-highlight');
+
   }, [active, state.index, state.run, step, reducedMotion]);
+
+  useEffect(() => {
+    if (!active) return;
+    const cue = step.segments[state.segment];
+    const highlighted = document.getElementById(cue.highlight || step.highlight);
+    highlighted?.classList.add('tour-highlight');
+    return () => highlighted?.classList.remove('tour-highlight');
+  }, [active, step, state.segment]);
 
   useEffect(() => {
     if (!active) return;

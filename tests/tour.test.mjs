@@ -21,9 +21,9 @@ test('tour journeys from opt-in through each section to completion and can resta
 test('pause, sound, blocked playback, skip, previous and next retain visitor control', () => {
   let state = tourReducer(initialTour, { type: 'START' });
   state = tourReducer(state, { type: 'BLOCKED' });
-  assert.equal(state.status, 'paused'); assert.equal(state.blocked, true);
-  state = tourReducer(state, { type: 'SOUND' });
-  assert.equal(state.sound, false); assert.equal(state.blocked, false);
+  assert.equal(state.status, 'playing'); assert.equal(state.sound, false); assert.equal(state.blocked, true);
+  state = tourReducer(state, { type: 'RETRY_SOUND' });
+  assert.equal(state.sound, true); assert.equal(state.blocked, false);
   state = tourReducer(state, { type: 'PLAY' });
   state = tourReducer(state, { type: 'PAUSE' });
   state = tourReducer(state, { type: 'NEXT' });
