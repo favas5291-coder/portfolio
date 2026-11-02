@@ -27,7 +27,7 @@ const processLines = [
   'After approval, I launch and hand over the site.',
 ];
 export const tourSteps = [
-  {id:'welcome',title:'Welcome',target:'home',highlight:'welcome-copy',action:'wave',
+  {id:'welcome',title:'Welcome',target:'home',highlight:'welcome-copy',action:'wave',settledAction:'point',
     segments:[segment("Hi, I’m Favas. Come in. This is GymDrobe, an online store I built. Let me show you how it works.",8800)]},
   {id:'services',title:'Services',target:'services',highlight:'services-list',action:'present',
     segments:services.map((service,index)=>({...segment(serviceLines[index] ?? service.short,3700),service:index,highlight:'service-choice-'+index}))},

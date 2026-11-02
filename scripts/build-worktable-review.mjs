@@ -11,18 +11,35 @@ const bundle = await build({
   absWorkingDir:root,bundle:true,minify:true,write:false,format:'iife',jsx:'automatic',
   define:{'process.env.NODE_ENV':'"production"','import.meta.env':'{}'},
   stdin:{resolveDir:root,loader:'jsx',contents:`
+    import React, {useEffect,useState} from 'react';
     import {createRoot} from 'react-dom/client';
     import App from './src/App.jsx';
-    createRoot(document.getElementById('root')).render(<App/>);
-    document.addEventListener('click', e => {
-      const link=e.target.closest('a');
-      if(link?.getAttribute('href')?.startsWith('/')){
-        link.href=new URL(link.getAttribute('href'),'https://fazhere.com').href;
-      }
-    },true);`},
+    import MarketingPages from './src/MarketingPages.jsx';
+    import {pageForPath} from './src/seo/pages.js';
+    const pathname=()=>location.hash.startsWith('#/')?location.hash.slice(1).split('#')[0]:'/';
+    function Review(){
+      const [route,setRoute]=useState(pathname);
+      useEffect(()=>{
+        const navigate=()=>{const next=pathname();setRoute(next);if(location.hash.startsWith('#/'))window.scrollTo(0,0);};
+        const localLink=e=>{
+          const anchor=e.target.closest('a');
+          const href=anchor?.getAttribute('href');
+          if(!href?.startsWith('/') || href.startsWith('//'))return;
+          e.preventDefault();
+          const target=new URL(href,'https://fazhere.com');
+          location.hash=target.pathname==='/'?(target.hash || '#home'):'#'+target.pathname+target.hash;
+        };
+        document.addEventListener('click',localLink,true);
+        window.addEventListener('hashchange',navigate);
+        return ()=>{document.removeEventListener('click',localLink,true);window.removeEventListener('hashchange',navigate);};
+      },[]);
+      return route==='/'?<App/>:<MarketingPages key={route} page={pageForPath(route)}/>;
+    }
+    createRoot(document.getElementById('root')).render(<Review/>);`},
   plugins:[{name:'use-built-styles',setup(b){b.onLoad({filter:/\.css$/},()=>({contents:'',loader:'js'}));}}],
 });
-const styles = [...new Set([...built.matchAll(/<link\b[^>]*href="([^"]+\.css)"[^>]*>/g)].map(m=>m[1]))];
+const marketing = await readFile(path.join(root,'dist/projects/gymdrobe/index.html'),'utf8');
+const styles = [...new Set([...(built+marketing).matchAll(/<link\b[^>]*href="([^"]+\.css)"[^>]*>/g)].map(m=>m[1]))];
 let css = (await Promise.all(styles.map(p=>readFile(path.join(root,'dist',p),'utf8')))).join('\n');
 css = css.replace(/@import[^;]+;/g,'');
 const fonts=await readFile(path.join(root,'public/fonts/fonts.css'),'utf8');

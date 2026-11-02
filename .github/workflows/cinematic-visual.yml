@@ -44,6 +44,10 @@ jobs:
         env:
           BASELINE_URL: http://127.0.0.1:4174/
         run: node scripts/capture-cinematic.mjs
+      - name: Package the downloadable interactive preview
+        run: |
+          node scripts/build-worktable-review.mjs
+          cp .sites-runtime/Fazhere-Worktable-Preview.html visual-checks/
       - name: Upload visual review screenshots
         if: always()
         uses: actions/upload-artifact@v4

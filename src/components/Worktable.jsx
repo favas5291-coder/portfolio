@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, use
 import { createPortal } from 'react-dom';
 import { project } from '../data/portfolio.js';
 import { services, processSteps } from '../data/site.js';
-import { characterAsset } from '../guide/tourConfig.js';
+import { characterAsset, tourSteps } from '../guide/tourConfig.js';
 
 const Character = lazy(() => import('../guide/GuideCharacter.jsx'));
 export const mobileCapture = '/images/projects/gymdrobe-mobile-20261102.webp';
@@ -76,7 +76,9 @@ export function Worktable({chapter, selection, kind, device, tour, enabled, onSc
     const timer=setTimeout(()=>setWaveDone(true),2350);
     return ()=>clearTimeout(timer);
   },[chapter,ready,tour.state.run]);
-  const action=chapter==='home' ? (waveDone?'point':'wave') : chapter==='projects'?'point':chapter==='contact'?'invite':'present';
+  const step=tourSteps.find(item=>item.target===chapter);
+  const cue=tour.active && tour.step.target===chapter ? step.segments[tour.state.segment] : null;
+  const action=waveDone && chapter==='home' ? step.settledAction : (cue?.action || step.action);
   const use3D=load && enabled && !failed && !tour.reducedMotion;
   const freeze=tour.hidden || !visible || tour.state.status==='paused';
   const studio=<div ref={box} className={'wt-set wt-'+chapter} data-revealed={revealed} data-motion={enabled&&!tour.reducedMotion&&!tour.hidden}

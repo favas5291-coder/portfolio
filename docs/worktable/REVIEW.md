@@ -18,4 +18,21 @@ Edit the project narrative, destinations and contribution in src/data/portfolio.
 
 Edit scripts, caption durations, highlight IDs, service/stage cues and optional local audio URLs in src/guide/tourConfig.js. The 63-second figure is the caption timeline. A device voice or recorded clip sets its own playback duration. The temporary character uses separate joints, eye movement, breathing, a wave, presentation gestures and approximate mouth movement. A final photo-matched head sculpt, facial blendshapes, timed visemes and recorded voice remain to be supplied.
 
-To reproduce the downloadable homepage, run npm run build followed by node scripts/build-worktable-review.mjs. Open .sites-runtime/Fazhere-Worktable-Preview.html in a browser. It bundles the visuals, fonts and code in one file. Other pages and external links use their live destinations. Use the full branch preview to review the revised case-study route.
+To reproduce the downloadable homepage, run npm run build followed by node scripts/build-worktable-review.mjs. Open .sites-runtime/Fazhere-Worktable-Preview.html in a browser. It bundles the visuals, fonts and code in one file. The case study, services and contact pages open inside the same file. External websites, email and WhatsApp use their normal destinations.
+
+## Verification
+
+The production build prerendered all nine routes and the 404 page. All 54 tests passed. Chromium rendered WebGL at 360, 390, 430, 768, 1024, 1440 and 1920 CSS pixels with no horizontal overflow. The browser checks exercised desktop/mobile selection, enlargement, Escape, colour selection, the service handoff, tour navigation, dismissal, replay, reduced motion and a deliberately unavailable WebGL context. The Windows/Android/iPhone system voice, physical-device frame pacing and final likeness still need human review.
+
+The matched run on commit 0e30e02 used a fresh Chromium context at 390 × 844, 1× DPR, local production builds and no throttling. Median of three cold navigations:
+
+| Measure | Main | Worktable |
+|---|---:|---:|
+| Initial home JavaScript, gzip | 83.0 KiB | 87.9 KiB |
+| First contentful paint | 88 ms | 120 ms |
+| Largest contentful paint | 88 ms | 176 ms |
+| Cumulative layout shift | 0 | 0.088 |
+
+These are synthetic, local-server measurements. They do not establish real network or handset performance. The desktop imagery continues through the existing preview manifest. The real mobile screenshot and two demonstration photos are dated manual captures. The public product detail page failed to load during the live check, so the new observed-result claim covers only the featured collection card.
+
+The PR’s Cinematic visual review artifact includes the seven opening screenshots, the two inspection views, a screen recording and the measurement JSON.
