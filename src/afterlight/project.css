@@ -94,3 +94,5 @@
 }
 /* On arrival from the harbour, put the actual store within the first phone screen. */
 @media(max-width:800px){.quay-project>.quay-viewer{grid-row:1}}
+
+.quay-capture > img[hidden] { display: none; }

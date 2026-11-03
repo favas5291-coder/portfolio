@@ -60,7 +60,8 @@ export default function ProjectViewer() {
         </div>}
       </div>
       <div className={'quay-capture' + (mobile ? ' quay-capture-mobile' : '')}>
-        <img loading="lazy" decoding="async" src={capture.screenshot} width={capture.width} height={capture.height} alt={alt}/>
+        <img hidden={mobile} decoding="sync" src={preview.screenshot} width={preview.width} height={preview.height} alt={project.screenshotAlt}/>
+        {mobileAvailable && <img hidden={!mobile} decoding="sync" src={preview.mobile.screenshot} width={preview.mobile.width} height={preview.mobile.height} alt="GymDrobe mobile homepage with search and its featured collection."/>}
       </div>
       <figcaption><small>Captured <time dateTime={capture.capturedAt}>{date}</time></small>
         <button type="button" ref={enlarge} onClick={() => dialog.current?.showModal()}>Enlarge screenshot <span aria-hidden="true">⤢</span></button>

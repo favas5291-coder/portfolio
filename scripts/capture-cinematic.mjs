@@ -106,6 +106,13 @@ async function inspectView(width, height) {
       await page.waitForURL(url => url.hash === '#projects');
       await inspectWork(page);
       await page.locator('#projects').evaluate(el => el.scrollIntoView({behavior:'instant'}));
+      const capture=page.locator('.quay-capture > img:visible');
+      await capture.scrollIntoViewIfNeeded();
+      await capture.evaluate(async img => {
+        await img.decode();
+        if(!img.naturalWidth || img.getBoundingClientRect().width < 100) throw new Error('Storefront capture missing');
+        await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+      });
       await shot(page, 'quay-' + width);
       await page.goBack();
       await page.waitForURL(url => !url.hash || url.hash === '#home');
