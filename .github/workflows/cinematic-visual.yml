@@ -1,41 +1,62 @@
-name: Cinematic visual review
+name: Afterlight visual review
 
 on:
   pull_request:
     paths:
-      - "src/App.jsx"
-      - "src/cinema/**"
-      - "src/guide/**"
-      - "src/data/**"
-      - "scripts/capture-cinematic.mjs"
-      - ".github/workflows/cinematic-visual.yml"
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+      - 'scripts/capture-cinematic.mjs'
+      - 'scripts/build-afterlight-preview.mjs'
+      - '.github/workflows/cinematic-visual.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 24
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - name: Install test-only browser tooling
+      - run: npm ci && npm run verify
+      - name: Check out comparison baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          path: .sites-runtime/baseline
+          persist-credentials: false
+      - name: Build baseline from its own lockfile
+        working-directory: .sites-runtime/baseline
+        run: npm ci && npm run build
+      - name: Install browser and recording tooling on the runner
         run: |
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install --with-deps chromium
-      - name: Start local website preview
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
+      - name: Package review preview for offline use
+        run: node scripts/build-afterlight-preview.mjs
+      - name: Run browser checks and compare head with base
+        env:
+          BASELINE_URL: http://127.0.0.1:4174/
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          npm run preview -- --host 127.0.0.1 > /tmp/fazhere-preview.log 2>&1 &
-      - name: Capture actual rendered chapters
-        run: node scripts/capture-cinematic.mjs
-      - name: Upload visual review screenshots
+          npm run preview -- --host 127.0.0.1 --strictPort > /tmp/fazhere-afterlight.log 2>&1 &
+          (cd .sites-runtime/baseline && npm run preview -- --host 127.0.0.1 --port 4174 --strictPort) > /tmp/fazhere-before.log 2>&1 &
+          node scripts/capture-cinematic.mjs
+      - name: Upload review bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-portfolio-screenshots
-          path: visual-checks/*.png
-          if-no-files-found: warn
+          name: fazhere-afterlight-review
+          path: visual-checks/
+          if-no-files-found: error
