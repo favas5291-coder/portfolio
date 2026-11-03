@@ -4,6 +4,7 @@ import { services, processSteps, PHONE_DISPLAY, PHONE_HREF, whatsappHref } from 
 import { projectPreviews } from './data/project-previews.js';
 import AnalyticsPreference from './components/AnalyticsPreference.jsx';
 import Chart from './afterlight/Chart.jsx';
+import HarbourSound from './afterlight/HarbourSound.jsx';
 import SceneDirector from './afterlight/SceneDirector.jsx';
 import ProjectViewer from './afterlight/ProjectViewer.jsx';
 import { bearing, berths, litBerth, nextSignal } from './afterlight/bearings.js';
@@ -18,9 +19,9 @@ const needLabels = {
 function LighthouseMark() {
   return <svg width="33" height="35" viewBox="0 0 36 40" fill="none" aria-hidden="true"><path d="M4 34h26M8 31h17M10 30l3-16h7l3 16M11 13h12M13 11V7h7v4M10 7l7-5 7 5" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="m12 21 9-3m-10 7 11-4M24 10l10-3m-10 6 10 1" stroke="currentColor" strokeWidth="1.4"/></svg>;
 }
-function Slot({id,children}) {
+function Slot({id,children,dial=50,signal}) {
   return <div className={'al-slot al-slot-'+id} data-scene-slot={id} data-renderer="map">
-    <Chart place={id}/>{children}
+    <Chart place={id} dial={dial} signal={signal}/>{children}
   </div>;
 }
 function Dial({value,onChange,onEnter}) {
@@ -63,7 +64,7 @@ export default function App() {
   };
   const jump=(event,id)=>{
     if(event&&(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return;
-    if(id!=='projects'||!opening.current?.getBoundingClientRect||!opening.current.querySelector('[data-renderer="webgl"]')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    if(id!=='projects'||!opening.current||!opening.current.querySelector('[data-renderer="webgl"]')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     event?.preventDefault();clearTimeout(timer.current);setInspect(true);
     timer.current=setTimeout(()=>{location.hash=id;setInspect(false);document.getElementById(id)?.focus({preventScroll:true});},520);
   };
@@ -87,10 +88,10 @@ export default function App() {
         </div>
         <div className="al-instrument">
           <div className="al-map-title"><span><b>Fig. 01</b> / Kozhikode harbour</span><span>11°15′ N &nbsp; 75°47′ E</span></div>
-          <Slot id="home"><div className="al-corners" aria-hidden="true"/><div className="al-slot-index">Malabar coast <i/> Night watch</div>
+          <Slot id="home" dial={dial} signal={signal}><div className="al-corners" aria-hidden="true"/><div className="al-slot-index">Malabar coast <i/> Night watch</div>
             {lit&&<a key={lit.id} className="al-enamel" href={'#'+lit.id} onClick={e=>jump(e,lit.id)}>{lit.number} · {lit.name} <span>↗</span></a>}
           </Slot>
-          <div className="al-console"><Dial value={dial} onChange={changeDial} onEnter={openLit}/><span className="al-console-state"><i/> {lit?'Signal acquired':'Searching the inlet'}</span></div>
+          <div className="al-console"><Dial value={dial} onChange={changeDial} onEnter={openLit}/><span className="al-console-state"><i/> {lit?'Signal acquired':'Searching the inlet'}</span><HarbourSound dial={dial}/></div>
         </div>
       </section>
       <nav className="al-berths" aria-label="Choose a destination">

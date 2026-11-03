@@ -93,6 +93,9 @@ async function inspectView(width, height) {
     await shot(page,'opening-' + width);
     await changeDial(page);
     if (width === 390 || width === 1440) {
+      const sound = page.getByRole('button',{name:'Enable harbour sound'});
+      await sound.click();
+      await page.getByRole('button',{name:'Mute harbour sound'}).click();
       const lamp = dial(page);
       await lamp.press('End');
       await page.waitForFunction(()=>document.querySelector('[data-renderer="webgl"]')?.dataset.signal==='answered');
@@ -127,7 +130,12 @@ async function inspectFallback(mode) {
     await page.goto(base);
     const name = page.getByText(/Muhammed Favas K · Full-stack developer/i).first();
     await name.waitFor();
-    if (mode !== 'no-javascript') await page.locator('[data-renderer="map"]:visible').first().waitFor({timeout:20000});
+    if (mode !== 'no-javascript') {
+      const homeSlot = page.locator('[data-scene-slot="home"]');
+      await homeSlot.locator('.al-chart').waitFor();
+      await changeDial(page);
+      assert.equal(await homeSlot.getAttribute('data-renderer'),'map');
+    }
     await page.getByRole('link',{name:/^View GymDrobe\b/}).first().click();
     await page.waitForURL(url => url.hash === '#projects');
     assert.ok(await page.getByRole('link',{name:/Visit live website/i}).count());

@@ -16,7 +16,7 @@ npm run verify
 
 ## The harbour
 
-Drag the brass dial or use the arrow keys to direct the beam. Enter visits the illuminated berth. Three direct links and normal scrolling also work. A fishing boat signals back when the buoy catches the beam. The scene loads after the initial HTML, moves a single renderer between views and rests offscreen or in a hidden tab. Reduced motion and unavailable WebGL use an illustrated chart. Sound is off; the experience is silent.
+Drag the brass dial or use the arrow keys to direct the beam. Enter visits the illuminated berth. Three direct links and normal scrolling also work. A fishing boat signals back when the buoy catches the beam. The scene loads after the initial HTML, moves a single renderer between views and rests offscreen or in a hidden tab. Reduced motion and unavailable WebGL use an illustrated chart. Harbour sound is opt-in. Water and dial clicks are synthesized locally and pause when the tab is hidden.
 
 The homepage lives in `src/App.jsx`. The models, camera, shaders, chart and styles are in `src/afterlight/`. Destination dial positions are in `bearings.js`. Identity and verified work live in `src/data/portfolio.js`, services, process and WhatsApp in `src/data/site.js`. Service choices use a validated slug to prefill the existing enquiry.
 
