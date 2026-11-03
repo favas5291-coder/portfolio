@@ -29,13 +29,13 @@ export default function ContactPage() {
           <div className="contact-introduction">
             <p className="eyeline">Muhammed Favas K · Let’s work together</p>
             <h1 id="contact-title">What are you planning to <em>build?</em></h1>
-            <p className="contact-lead">Tell me about your business and what you need. We can discuss the scope and a quote.</p>
+            <p className="contact-lead">Message me on WhatsApp about your business and what you need. We can discuss the scope and a quote.</p>
             <div className="action-row">
-              <a className="pill" href="#project-enquiry">Send a brief <Arrow down /></a>
-              <a className="linkline" href={whatsappHref()} data-contact="whatsapp" target="_blank" rel="noopener noreferrer">
-                WhatsApp Favas <Arrow />
+              <a className="pill" href={whatsappHref()} data-contact="whatsapp" target="_blank" rel="noopener noreferrer">
+                Chat on WhatsApp <Arrow />
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
+              <a className="linkline" href="#project-enquiry">Send a brief <Arrow down /></a>
             </div>
             <div className="contact-direct">
               <a href={`mailto:${profile.email}`} data-contact="email">

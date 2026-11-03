@@ -2,6 +2,7 @@ import ProductBench from './fit/ProductBench.jsx';
 import { Work, Services, Process, Contact } from './fit/Chapters.jsx';
 import { Header, Footer } from './fit/Layout.jsx';
 import { profile } from './data/portfolio.js';
+import { whatsappHref } from './data/site.js';
 import './fit/fit.css';
 
 export default function App() {
@@ -22,11 +23,12 @@ export default function App() {
               I’m Favas, a developer from Kozhikode. Try a product from the fitness store I founded.
             </p>
             <div className="action-row">
-              <a className="pill" href="#projects">
-                View GymDrobe <span aria-hidden="true">↓</span>
+              <a className="pill" href={whatsappHref()} data-contact="whatsapp" target="_blank" rel="noopener noreferrer">
+                Chat on WhatsApp <span aria-hidden="true">↗︎</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
-              <a className="linkline" href="/contact/">
-                Discuss a project ↗
+              <a className="linkline" href="#projects">
+                View GymDrobe <span aria-hidden="true">↓</span>
               </a>
             </div>
             <span className="folio">Independent practice · Kozhikode, India</span>

@@ -245,11 +245,14 @@ try {
       p.on('pageerror', (e) => errors.push(e.message));
       await p.goto(home);
       await render(p);
+      const whatsapp = p.getByRole('link', { name: /^Chat on WhatsApp/ }).first();
+      assert.equal(new URL(await whatsapp.getAttribute('href')).pathname, '/918156805806');
+      assert.match(await whatsapp.getAttribute('class'), /pill/);
       assert.ok(
         await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
         'Overflow at ' + w,
       );
-      for (const link of ['View GymDrobe', 'Discuss a project'])
+      for (const link of ['View GymDrobe', 'Chat on WhatsApp'])
         assert.ok(
           (
             await p
@@ -266,6 +269,7 @@ try {
       }
       await p.goto(home + 'contact/');
       await p.locator('.fit-contact').waitFor();
+      assert.match(await p.getByRole('link', { name: /^Chat on WhatsApp/ }).getAttribute('class'), /pill/);
       assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Contact overflow at ' + w);
       assert.equal(await p.getByRole('link', { name: 'Contact', exact: true }).getAttribute('aria-current'), 'page');
       for (const href of ['tel:+918156805806', 'mailto:favas5291@gmail.com'])
@@ -305,7 +309,7 @@ try {
         await persisted(p);
       }
       assert.equal(await p.locator('.mount').getAttribute('data-renderer'), 'illustration');
-      await p.getByRole('link', { name: /^Discuss a project/ }).click();
+      await p.getByRole('link', { name: /^Send a brief/ }).click();
       assert.ok(new URL(p.url()).pathname === '/contact/');
       await p.locator('.fit-contact').waitFor();
       assert.equal(await p.getByRole('heading', { level: 1 }).innerText(), 'What are you planning to build?');

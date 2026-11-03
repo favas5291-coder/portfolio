@@ -119,7 +119,7 @@ export function Work() {
               </a>
               <a href="/projects/gymdrobe/">Read case study</a>
               <a href={project.repository}>View code ↗</a>
-              <a href="/contact/">Contact Favas ↗</a>
+              <a href={whatsappHref()} data-contact="whatsapp">Discuss on WhatsApp ↗︎</a>
             </div>
           </div>
           <Capture />
@@ -260,11 +260,11 @@ export function Contact() {
               Tell me about your business, the people you want to reach and what you need the site to do.
             </p>
             <div className="action-row">
-              <a className="pill" href="/contact/">
-                Start an enquiry ↗
+              <a className="pill" data-contact="whatsapp" href={whatsappHref()}>
+                Chat on WhatsApp ↗︎
               </a>
-              <a className="linkline" data-contact="whatsapp" href={whatsappHref()}>
-                WhatsApp ↗
+              <a className="linkline" href="/contact/">
+                Send a brief ↗︎
               </a>
             </div>
             <div className="contact-alt">
