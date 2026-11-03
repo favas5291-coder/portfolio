@@ -54,7 +54,7 @@ export function mountHarbour(slots,read,screenshot) {
   shaft.position.copy(lampPos);scene.add(shaft,shaft.target);
   const aim=vec(), goalPos=vec(), goalAim=vec(), down=vec(0,-1,0), direction=vec();
   let slot=null,raf=0,time=0,last=0,sailing=0,quality=1,slow=0,disposed=false,locked=false,activeService=-1,liftStart=-5;
-  let berth='', pictured=false;
+  let berth='', pictured=false, sizeDirty=true;
   const setSize=()=>{
     if(!slot) return;
     const w=slot.clientWidth,h=slot.clientHeight;
@@ -64,7 +64,7 @@ export function mountHarbour(slots,read,screenshot) {
     renderer.setSize(w,h,false);
     camera.aspect=w/h;camera.updateProjectionMatrix();
   };
-  const resize=new ResizeObserver(setSize);
+  const resize=new ResizeObserver(()=>{sizeDirty=true;});
   function chooseSlot() {
     let best=null,score=0;
     for(const s of slots){
@@ -79,7 +79,7 @@ export function mountHarbour(slots,read,screenshot) {
       if(slot){
         berth=slot.dataset.sceneSlot;
         slot.appendChild(canvas);slot.dataset.intro=time>=4.3?'complete':'playing';
-        resize.observe(slot);setSize();pictured=false;
+        resize.observe(slot);sizeDirty=true;pictured=false;
       }
     }
     if(!slot||document.hidden){cancelAnimationFrame(raf);raf=0;last=0;}
@@ -88,7 +88,7 @@ export function mountHarbour(slots,read,screenshot) {
   function draw(now){
     if(disposed||document.hidden||!slot){raf=0;return;}
     const elapsed=last?Math.max(0,(now-last)/1000):0;
-    last=now;time+=Math.min(elapsed,.35);
+    last=now;time+=elapsed;
     const dt=Math.min(elapsed,.2);
     const c=read();
     const hero=berth==='home';
@@ -147,12 +147,15 @@ export function mountHarbour(slots,read,screenshot) {
     model.cradle.position.y=ease(model.cradle.position.y,.86+raise,4,dt);
     model.windowLight.material.emissiveIntensity=ease(model.windowLight.material.emissiveIntensity,berth==='contact'||Math.abs(dial-74)<7?2.7:.35,5,dt);
     sea.update(time,angle,model.boat,model.secretBoat,sailing);
+    // Resizing clears the backbuffer. Resize and redraw in the same frame so the
+    // chart cannot flash through during a quality adjustment or camera change.
+    if(elapsed>.052&&elapsed<.55)slow++;else slow=Math.max(0,slow-1);
+    if(slow>=18&&quality>.70){quality=Math.max(.70,quality*.86);slow=0;sizeDirty=true;}
+    if(sizeDirty){setSize();sizeDirty=false;}
     renderer.render(scene,camera);
     slot.dataset.renderer='webgl';
     slot.dataset.intro=locked||time>=4.3?'complete':'playing';
     slot.dataset.signal=c.signal;
-    if(elapsed>.052&&elapsed<.55)slow++;else slow=Math.max(0,slow-1);
-    if(slow>=18&&quality>.70){quality=Math.max(.70,quality*.86);slow=0;setSize();}
     raf=requestAnimationFrame(draw);
   }
   function cleanup(){
