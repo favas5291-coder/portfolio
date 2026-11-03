@@ -20,7 +20,7 @@ function pageStyles(path) {
     for (const css of chunk?.css || []) styles.add(css);
     for (const child of chunk?.imports || []) visit(child);
   };
-  visit(path === '/' ? 'src/App.jsx' : 'src/MarketingPages.jsx');
+  visit(path === '/' ? 'src/App.jsx' : path === '/contact/' ? 'src/fit/ContactPage.jsx' : 'src/MarketingPages.jsx');
   return [...styles].filter(css => !template.includes(`/${css}`)).map(css => `<link rel="stylesheet" href="/${css}"/>`).join('');
 }
 if (!template.includes('<!--app-html-->') || !template.includes('<!--page-meta-->')) throw new Error('Missing prerender placeholders');

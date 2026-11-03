@@ -1,26 +1,9 @@
 import ProductBench from './fit/ProductBench.jsx';
 import { Work, Services, Process, Contact } from './fit/Chapters.jsx';
-import AnalyticsPreference from './components/AnalyticsPreference.jsx';
+import { Header, Footer } from './fit/Layout.jsx';
 import { profile } from './data/portfolio.js';
 import './fit/fit.css';
 
-function Header() {
-  return (
-    <header className="fit-head wrap">
-      <a className="brand" href="#home" aria-label="Fazhere home">
-        <i aria-hidden="true" />
-        Fazhere.
-      </a>
-      <nav aria-label="Portfolio navigation">
-        <a href="#projects">Work</a>
-        <a href="#services">Services</a>
-        <a className="nav-contact" href="#contact">
-          Contact ↗
-        </a>
-      </nav>
-    </header>
-  );
-}
 export default function App() {
   return (
     <div className="fit">
@@ -55,17 +38,7 @@ export default function App() {
         <Process />
         <Contact />
       </main>
-      <footer className="fit-foot wrap">
-        <a className="brand" href="#home">
-          Fazhere.
-        </a>
-        <nav aria-label="Footer">
-          <a href={profile.github}>GitHub ↗</a>
-          <a href={profile.linkedin}>LinkedIn ↗</a>
-          <a href="/privacy/">Privacy</a>
-        </nav>
-        <AnalyticsPreference />
-      </footer>
+      <Footer />
     </div>
   );
 }

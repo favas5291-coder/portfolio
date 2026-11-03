@@ -11,6 +11,7 @@ const bundle = await build({
     import { createRoot } from 'react-dom/client';
     import App from './src/App.jsx';
     import MarketingPages from './src/MarketingPages.jsx';
+    import ContactPage from './src/fit/ContactPage.jsx';
     import { pageForPath } from './src/seo/pages.js';
 
     // Ordinary navigations retain Back, reload, fragments and the enquiry selection.
@@ -27,7 +28,7 @@ const bundle = await build({
     }, true);
     const route = new URLSearchParams(location.search).get('reviewPath') || '/';
     const page = pageForPath(route);
-    createRoot(document.getElementById('root')).render(route === '/' ? <App/> : <MarketingPages page={page}/>);
+    createRoot(document.getElementById('root')).render(route === '/' ? <App/> : page.path === '/contact/' ? <ContactPage/> : <MarketingPages page={page}/>);
   ` },
   plugins: [{name: 'use-production-styles', setup(builder) {
     builder.onLoad({filter: /\.css$/}, () => ({contents: '', loader: 'js'}));
@@ -35,7 +36,8 @@ const bundle = await build({
 });
 const home = await readFile('dist/index.html', 'utf8');
 const marketing = await readFile('dist/projects/gymdrobe/index.html', 'utf8');
-const stylePaths = new Set([...(home + marketing).matchAll(/<link\b[^>]*href="(\/[^"]+\.css)"[^>]*>/g)].map(match => match[1]));
+const contact = await readFile('dist/contact/index.html', 'utf8');
+const stylePaths = new Set([...(home + marketing + contact).matchAll(/<link\b[^>]*href="(\/[^"]+\.css)"[^>]*>/g)].map(match => match[1]));
 const styles = await Promise.all([...stylePaths].map(file => readFile(join(root, 'dist', file), 'utf8')));
 const types = {'.webp':'image/webp', '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.woff2':'font/woff2', '.mp3':'audio/mpeg', '.ogg':'audio/ogg'};
 const dataURIs = new Map();

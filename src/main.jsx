@@ -6,7 +6,11 @@ import './styles.css';
 
 async function start() {
   const page = pageForPath(location.pathname);
-  const { default: Page } = page.path === '/' ? await import('./App.jsx') : await import('./MarketingPages.jsx');
+  const { default: Page } = page.path === '/'
+    ? await import('./App.jsx')
+    : page.path === '/contact/'
+      ? await import('./fit/ContactPage.jsx')
+      : await import('./MarketingPages.jsx');
   const root = document.getElementById('root');
   const app = <React.StrictMode><Page page={page}/></React.StrictMode>;
   // All public pages have build-time HTML; navigation uses ordinary links.

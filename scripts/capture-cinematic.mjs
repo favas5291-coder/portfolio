@@ -56,6 +56,7 @@ const report = {
   widths: [],
   fallbacks: [],
   performance: {},
+  contactWidths: [],
 };
 const shot = (p, name) => p.screenshot({ path: out + '/' + name + '.png', timeout: 35000 });
 async function render(p) {
@@ -147,6 +148,33 @@ async function journey(p, w) {
   await bench(p).waitFor();
   assert.ok(await p.locator('#contact a[href^="https://wa.me/"]').count());
 }
+async function contactJourney(p) {
+  await p.goto(home + 'contact/?service=ecommerce-development');
+  const select = p.getByLabel('Service needed', { exact: true });
+  await p.waitForFunction(() => document.querySelector('#enquiry-service')?.value === 'E-commerce development');
+  await p.getByRole('link', { name: 'Send a brief', exact: true }).click();
+  assert.ok(p.url().endsWith('#project-enquiry'));
+  await p.getByRole('button', { name: 'Prepare WhatsApp Enquiry' }).click();
+  assert.ok(await p.getByLabel('Your name', { exact: true }).evaluate(el => el === document.activeElement));
+  await p.getByLabel('Your name', { exact: true }).fill('QA Example');
+  await p.getByLabel('Email (or add a phone number)', { exact: true }).fill('example@example.com');
+  await p.getByLabel('What would you like to build or improve?', { exact: true }).fill('An online store with product variants and a clear enquiry flow.');
+  await p.getByRole('button', { name: 'Prepare WhatsApp Enquiry' }).click();
+  const handoff = p.getByRole('link', { name: /Open WhatsApp and review/ });
+  const destination = new URL(await handoff.getAttribute('href'));
+  assert.equal(destination.hostname, 'wa.me');
+  assert.equal(destination.pathname, '/918156805806');
+  assert.match(destination.searchParams.get('text'), /E-commerce development/);
+  assert.match(destination.searchParams.get('text'), /QA Example/);
+  assert.match(await p.getByRole('status').innerText(), /Nothing has been sent/);
+  assert.equal(await select.inputValue(), 'E-commerce development');
+  await shot(p, 'contact-enquiry-ready');
+  await p.getByRole('link', { name: 'Home', exact: true }).click();
+  await bench(p).waitFor();
+  await p.goBack();
+  await p.locator('.fit-contact').waitFor();
+  report.contactJourney = 'Prefill, validation, anchor, local WhatsApp preparation and Back passed. No message sent.';
+}
 async function perf(url, old) {
   const c = await ctx(390, 844),
     p = await c.newPage();
@@ -236,6 +264,20 @@ try {
         await p.locator('#projects').scrollIntoViewIfNeeded();
         await shot(p, 'work-' + w);
       }
+      await p.goto(home + 'contact/');
+      await p.locator('.fit-contact').waitFor();
+      assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Contact overflow at ' + w);
+      assert.equal(await p.getByRole('link', { name: 'Contact', exact: true }).getAttribute('aria-current'), 'page');
+      for (const href of ['tel:+918156805806', 'mailto:favas5291@gmail.com'])
+        assert.equal(await p.locator('a[href="' + href + '"]').count(), 1);
+      for (const field of await p.locator('.form-field input, .form-field select, .form-field textarea').all()) {
+        const box = await field.boundingBox();
+        assert.ok(box.width > 0 && box.height >= 44, 'Contact touch target at ' + w);
+        assert.ok(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize) >= 16), 'Contact field font at ' + w);
+      }
+      await shot(p, 'contact-' + w);
+      report.contactWidths.push(w);
+      if (w === 390) await contactJourney(p);
       assert.deepEqual(errors, []);
       report.widths.push(w);
     } finally {
@@ -265,6 +307,8 @@ try {
       assert.equal(await p.locator('.mount').getAttribute('data-renderer'), 'illustration');
       await p.getByRole('link', { name: /^Discuss a project/ }).click();
       assert.ok(new URL(p.url()).pathname === '/contact/');
+      await p.locator('.fit-contact').waitFor();
+      assert.equal(await p.getByRole('heading', { level: 1 }).innerText(), 'What are you planning to build?');
       report.fallbacks.push(mode);
     } finally {
       await c.close();
