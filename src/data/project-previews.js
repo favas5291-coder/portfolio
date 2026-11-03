@@ -2,16 +2,16 @@
 export const projectPreviews = {
   "gymdrobe": {
     "website": "https://www.gymdrobe.com/",
-    "screenshot": "/images/projects/gymdrobe-8c9caa0414232d29.webp",
-    "capturedAt": "2026-10-30T12:46:54.000Z",
+    "screenshot": "/images/projects/gymdrobe-ed3aa74b2c75d090.webp",
+    "capturedAt": "2026-11-03T18:56:42.827Z",
     "width": 1348,
     "height": 926,
     "mobile": {
-      "screenshot": "/images/projects/gymdrobe-mobile-20261102.webp",
-      "capturedAt": "2026-11-02",
+      "screenshot": "/images/projects/gymdrobe-mobile-a5480842998365bc.webp",
+      "capturedAt": "2026-11-03T18:56:51.658Z",
       "width": 390,
       "height": 844,
-      "matchesDesktop": "/images/projects/gymdrobe-8c9caa0414232d29.webp"
+      "matchesDesktop": "/images/projects/gymdrobe-ed3aa74b2c75d090.webp"
     }
   }
 };

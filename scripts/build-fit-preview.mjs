@@ -48,11 +48,11 @@ async function embed(text) {
   }
   return text;
 }
-const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere Afterlight · Interactive review</title><style>' +
+const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere · Built to Fit review</title><style>' +
   (await embed(styles.join('\n'))).replace(/@import\s+[^;]*;/g,'') +
   '</style></head><body><div id="root"></div><script>' +
   (await embed(bundle.outputFiles[0].text)).replace(/<\/script/gi,'<\\/script') + '</script></body></html>';
-const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Afterlight-Preview.html');
+const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Built-to-Fit-Preview.html');
 await mkdir(dirname(output), {recursive: true});
 await writeFile(output, html);
 console.log('Standalone review:', output, '(' + Buffer.byteLength(html) + ' bytes)');
