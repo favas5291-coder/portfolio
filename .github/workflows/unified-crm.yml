@@ -1,0 +1,28 @@
+name: Unified CRM verification
+on:
+  pull_request:
+    paths:
+      - "apps/unified-crm/**"
+      - ".github/workflows/unified-crm.yml"
+  workflow_dispatch:
+jobs:
+  crm:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/unified-crm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install standalone CRM dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run lead model tests
+        run: npm test
+      - name: Validate backend JavaScript syntax
+        run: |
+          node --check server/index.cjs
+          node --check server/models/Lead.cjs
+      - name: Build React CRM
+        run: npm run build
