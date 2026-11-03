@@ -19,11 +19,26 @@ export function mountHarbour(slots,read,screenshot) {
   const model=buildHarbour(T,texture);
   scene.add(model.group);
   const sea=buildSea(T,scene);
-  scene.add(new T.HemisphereLight(0xd7ece4,0x8c745e,1.65));
-  const key=new T.DirectionalLight(0xffcf94,2.1);
+  scene.fog=new T.FogExp2(0x293e43,.021);
+  scene.add(new T.HemisphereLight(0xa4c7d0,0x4d5a51,1.05));
+  const key=new T.DirectionalLight(0xd7dbc9,1.5);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=T.PCFShadowMap;
+  renderer.shadowMap.autoUpdate=false;
+  renderer.shadowMap.needsUpdate=true;
+  key.castShadow=true;key.shadow.mapSize.set(768,768);
+  Object.assign(key.shadow.camera,{left:-10,right:10,top:8,bottom:-8,near:.2,far:36});
+  key.shadow.camera.updateProjectionMatrix();
+  key.shadow.bias=-.0006;key.shadow.normalBias=.02;
+  model.group.traverse(o=>{if(o.isMesh)o.receiveShadow=true;});
+  model.group.children[0].traverse(o=>{if(o.isMesh && o.material.isMeshStandardMaterial)o.castShadow=true;});
   key.position.set(-8,10,7);scene.add(key);
-  const rim=new T.DirectionalLight(0x82bfc8,1.35);
+  const rim=new T.DirectionalLight(0x88c8d9,1.15);
   rim.position.set(4,6,-7);scene.add(rim);
+  const wharfLight=new T.PointLight(0xffaf6f,12,6,2);
+  wharfLight.position.set(.95,3.15,.2);scene.add(wharfLight);
+  const cottageLight=new T.PointLight(0xffb860,6.5,4,2);
+  cottageLight.position.set(5,1.8,-.65);scene.add(cottageLight);
   const lampPos=vec(-4.8,4.8,1.6);
   const beamLength=11;
   const beamGeo=new T.ConeGeometry(1,beamLength,32,1,true);
@@ -86,9 +101,9 @@ export function mountHarbour(slots,read,screenshot) {
     }else if(berth==='contact'){
       goalPos.set(6.8,2.7,3.9);goalAim.set(5,1.7,-1.9);
     }else{
-      const distance=narrow?11.5:10.4;
-      goalPos.set(narrow?.3:1.3,4.4,distance);
-      goalAim.set(narrow?-.45:-.28,2.05,-.35);
+      const distance=narrow?14.8:15.3;
+      goalPos.set(narrow?1.35:2.45,narrow?4.3:4.85,distance);
+      goalAim.set(-.08,narrow?2.35:2.45,-.4);
       if(intro){
         goalPos.lerpVectors(vec(-2.1,.54,5.8),goalPos,lift);
         goalAim.lerpVectors(vec(-4.0,.28,2.3),goalAim,lift);
@@ -136,8 +151,8 @@ export function mountHarbour(slots,read,screenshot) {
     slot.dataset.renderer='webgl';
     slot.dataset.intro=locked||time>=4.3?'complete':'playing';
     slot.dataset.signal=c.signal;
-    if(elapsed>.039&&elapsed<.5)slow++;else slow=Math.max(0,slow-1);
-    if(slow>=12&&quality>.55){quality=Math.max(.55,quality*.82);slow=0;setSize();}
+    if(elapsed>.052&&elapsed<.55)slow++;else slow=Math.max(0,slow-1);
+    if(slow>=18&&quality>.70){quality=Math.max(.70,quality*.86);slow=0;setSize();}
     raf=requestAnimationFrame(draw);
   }
   function cleanup(){

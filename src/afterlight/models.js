@@ -321,6 +321,27 @@ export function buildHarbour(T, previewTexture) {
     if(i<3) rod(fixed,iron,[x,.92,-1.25],[x+.89,.92,-1.25],.015);
   }
 
+  // Mooring lines, enamel hull stripes and brass dock lamps give the quay scale.
+  for(const x of [-2.7,2.98,6.7]) {
+    cylinder(fixed,iron,x,.73,-.84,.055,.069,.66,8);
+    cylinder(fixed,brass,x,1.11,-.84,.092,.078,.14,8);
+    ball(fixed,litGlass,x,1.21,-.84,.073,.09,.073);
+    cylinder(fixed,deep,x,1.31,-.84,.035,.11,.075,8);
+  }
+  for(const [a,b] of [[-6.25,-5.5],[-2.7,-1.8],[2.99,3.6]]) {
+    for(let i=0;i<6;i++){
+      const p=i/6,q=(i+1)/6;
+      rod(fixed,aged,[a+(b-a)*p,.62-Math.sin(p*Math.PI)*.12,-.91],
+        [a+(b-a)*q,.62-Math.sin(q*Math.PI)*.12,-.91],.014);
+    }
+  }
+  for(const craft of [boat,secretBoat]){
+    for(const side of [-1,1]){
+      rod(craft,white,[-.76,.28,side*.35],[.52,.28,side*.349],.018);
+      rod(craft,brass,[-.74,.49,side*.31],[-.74,.67,side*.31],.018);
+    }
+    for(let i=0;i<3;i++)cylinder(craft,aged,.12+i*.14,.38,0,.064,.07,.10,8);
+  }
   // Merge rigid parts in each object's own coordinate space. Keep textures
   // on separate materials and preserve the secret boat's switchable lamp.
   const geometrySources=new Set();

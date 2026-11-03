@@ -30,12 +30,12 @@ const skyFragment = `
     vec3 ray = normalize(vRay);
     vec2 p = vec2(atan(ray.x, -ray.z), asin(clamp(ray.y, -1.0, 1.0)));
     float h = clamp(ray.y, 0.0, 1.0);
-    vec3 colour = mix(vec3(0.147, 0.205, 0.198), vec3(0.020,0.057,0.080),
+    vec3 colour = mix(vec3(0.046, 0.085, 0.101), vec3(0.010,0.031,0.060),
                       smoothstep(-0.03, 0.45, h));
     colour = mix(colour,vec3(0.007,0.022,0.040),smoothstep(0.24,0.90,h));
     // A residual strip of monsoon light at the horizon.
     float west = exp(-abs(p.x + 0.48)*1.6);
-    colour += vec3(.14,.072,.030)*west*exp(-13.0*h);
+    colour += vec3(.086,.038,.019)*west*exp(-13.0*h);
     float cloud = grain(p*vec2(2.8,23.0))*.65 + grain(p*vec2(7.0,51.0))*.35;
     float veil = smoothstep(.36,.83,cloud)*smoothstep(.02,.18,h)*(1.-smoothstep(.4,.75,h));
     colour = mix(colour, vec3(.070,.109,.118), veil*.32);
@@ -48,7 +48,7 @@ const skyFragment = `
     star *= step(.965,hash(seed+11.0))*smoothstep(.13,.6,h)*(1.0-veil*.90);
     colour += vec3(.55,.60,.52)*star;
 
-    float moon = length(ray-normalize(vec3(.26,.32,-1.0)));
+    float moon = length(ray-normalize(vec3(.12,.13,-1.0)));
     float edge = max(.0007, fwidth(moon));
     colour += vec3(.17,.148,.092)*exp(-moon*37.0);
     colour = mix(colour,vec3(.98,.85,.61),1.0-smoothstep(.012-edge,.012+edge,moon));
