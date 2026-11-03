@@ -1,271 +1,350 @@
-// Run against the two local production builds. CI installs Playwright only on the runner.
+// Production build and base are started by the review workflow. Playwright is CI-only.
 import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { chromium } from 'playwright';
 
-const base = 'http://127.0.0.1:4173/';
-const baseline = process.env.BASELINE_URL;
-const out = 'visual-checks';
-const standalone = pathToFileURL(resolve(out, 'Fazhere-Afterlight-Preview.html')).href;
-const sizes = [[360,800],[390,844],[430,932],[768,1024],[1024,768],[1440,900],[1920,1080]];
-const delay = ms => new Promise(done => setTimeout(done, ms));
-await mkdir(out, {recursive:true});
-for (const url of [base, baseline].filter(Boolean)) {
+const home = 'http://127.0.0.1:4173/',
+  before = process.env.BASELINE_URL,
+  out = 'visual-checks';
+const sizes = [
+  [360, 800],
+  [390, 844],
+  [430, 932],
+  [768, 1024],
+  [1024, 768],
+  [1440, 900],
+  [1920, 1080],
+];
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+await mkdir(out, { recursive: true });
+for (const url of [home, before].filter(Boolean)) {
   let ready = false;
-  for (let i = 0; i < 40 && !ready; i++) {
-    try { ready = (await fetch(url)).ok; } catch { /* Wait for the preview server. */ }
-    if (!ready) await delay(500);
+  for (let i = 0; i < 50 && !ready; i++) {
+    try {
+      ready = (await fetch(url)).ok;
+    } catch {}
+    if (!ready) await sleep(250);
   }
-  assert.ok(ready, 'Preview server unavailable: ' + url);
+  assert.ok(ready, 'Preview unavailable: ' + url);
 }
-
-const browser = await chromium.launch({args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
-const report = {head:process.env.HEAD_SHA, base:process.env.BASE_SHA, chromium:browser.version(), viewportChecks:[], fallbacks:[], performance:{}};
-const desktop = {width:1440,height:900};
-const phone = {width:390,height:844};
-const contextFor = (viewport, extra = {}) => browser.newContext({
-  viewport, deviceScaleFactor:1, hasTouch:viewport.width < 700, isMobile:viewport.width < 700,
-  ...extra,
+const browser = await chromium.launch({
+  args: [
+    '--enable-webgl',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--disable-dev-shm-usage',
+  ],
 });
-const shot = (page, name) => page.screenshot({path:out + '/' + name + '.png', timeout:45000});
-const one = locator => locator.first();
-const dial = page => one(page.getByRole('slider',{name:'Turn the light'}));
-const visibleWorld = page => page.locator('[data-renderer="webgl"]:visible').first();
-
-async function ready(page) {
-  await visibleWorld(page).waitFor({timeout:60000});
-  await page.locator('[data-renderer="webgl"][data-intro="complete"]:visible').first().waitFor({timeout:45000});
-  await page.evaluate(() => document.fonts.ready);
+const ctx = (w, h, extra = {}) =>
+  browser.newContext({
+    viewport: { width: w, height: h },
+    deviceScaleFactor: 1,
+    isMobile: w < 600,
+    hasTouch: w < 600,
+    ...extra,
+  });
+const slider = (p) => p.getByRole('slider', { name: 'Resize product layout' });
+const bench = (p) => p.getByRole('region', { name: 'GymDrobe product demonstration' });
+const report = {
+  head: process.env.HEAD_SHA,
+  base: process.env.BASE_SHA,
+  chromium: browser.version(),
+  widths: [],
+  fallbacks: [],
+  performance: {},
+};
+const shot = (p, name) => p.screenshot({ path: out + '/' + name + '.png', timeout: 35000 });
+async function render(p) {
+  await p.locator('.mount[data-renderer=webgl]').waitFor({ timeout: 35000 });
+  await p.evaluate(async () => {
+    await document.fonts.ready;
+    await document.querySelector('.sample-photo img').decode();
+  });
 }
-function watchErrors(page) {
-  const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
-  return errors;
+async function choose(p) {
+  await bench(p).getByRole('button', { name: 'Choose Red', exact: true }).click();
+  await bench(p).getByRole('button', { name: 'Size M', exact: true }).click();
 }
-async function noOverflow(page, width) {
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),'Horizontal overflow at ' + width);
+async function persisted(p) {
+  assert.equal(
+    await bench(p).getByRole('button', { name: 'Choose Red' }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.equal(
+    await bench(p).getByRole('button', { name: 'Size M' }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.match(
+    await bench(p).getByRole('img', { name: 'Red COITONIC compression shirt' }).getAttribute('src'),
+    /shirt-red|data:image/,
+  );
 }
-async function changeDial(page) {
-  const slider = dial(page);
-  await slider.focus();
-  const start = await slider.inputValue();
-  await slider.press('ArrowRight');
-  assert.notEqual(await slider.inputValue(), start, 'Arrow keys must steer the beam');
+async function drag(p) {
+  const rail = slider(p);
+  await rail.scrollIntoViewIfNeeded();
+  const { x, y, width, height } = await rail.boundingBox();
+  const initial = Number(await rail.getAttribute('aria-valuenow'));
+  await p.mouse.move(x + width / 2, y + height / 2);
+  await p.mouse.down();
+  await p.mouse.move(x + width / 2 - 180, y + height / 2, { steps: 24 });
+  await p.mouse.up();
+  assert.ok(
+    Number(await rail.getAttribute('aria-valuenow')) < initial,
+    'Rail drag narrowed the actual layout',
+  );
 }
-async function inspectWork(page) {
-  const mobile=page.getByRole('button',{name:'Mobile',exact:true});
-  const hasMobile=await mobile.count();
-  if(hasMobile) await mobile.click();
-  await page.getByRole('button',{name:'Enlarge screenshot',exact:true}).click();
-  const dialog = page.getByRole('dialog',{name:'GymDrobe screenshot'});
-  await dialog.waitFor();
-  const image = dialog.locator('img');
-  await image.evaluate(img => img.decode());
-  if (hasMobile) assert.ok(await image.evaluate(img => img.naturalHeight > img.naturalWidth),'Expected a genuine portrait capture');
-  await page.keyboard.press('Escape');
-  await dialog.waitFor({state:'hidden'});
-  await page.getByRole('button',{name:'Red',exact:true}).click();
-  assert.match(await page.locator('.quay-demo [role="status"]').innerText(),/Red shirt selected/i);
-  if(hasMobile) await page.getByRole('button',{name:'Desktop',exact:true}).click();
-}
-async function servicePrefill(page) {
-  await page.locator('a[href="#services"]').first().click();
-  await page.getByRole('button',{name:/I want to sell online/i}).click();
-  await page.getByRole('link',{name:/Discuss this service/i}).click();
-  const select = page.locator('#enquiry-service');
-  await select.waitFor();
-  await page.waitForFunction(() => document.querySelector('#enquiry-service')?.selectedOptions[0]?.textContent.includes('E-commerce'));
-  assert.match(await select.inputValue(),/e-commerce|ecommerce/i,'Selected service reached the existing enquiry');
-}
-async function inspectView(width, height) {
-  const ctx = await contextFor({width,height});
-  try {
-    const page = await ctx.newPage();
-    const errors = watchErrors(page);
-    await page.goto(base);
-    await ready(page);
-    const world = visibleWorld(page);
-    assert.ok(await world.evaluate(el => !!(el.matches('canvas') ? el : el.querySelector('canvas'))?.getContext('webgl2')),'Usable WebGL2 context');
-    await noOverflow(page,width);
-    await shot(page,'opening-' + width);
-    await changeDial(page);
-    if (width === 390 || width === 1440) {
-      const sound = page.getByRole('button',{name:'Enable harbour sound'});
-      await sound.click();
-      await page.getByRole('button',{name:'Mute harbour sound'}).click();
-      const lamp = dial(page);
-      await lamp.press('End');
-      await page.waitForFunction(()=>document.querySelector('[data-renderer="webgl"]')?.dataset.signal==='answered');
-      for(let i=0;i<12;i++) await lamp.press('ArrowLeft');
-      await page.waitForFunction(()=>document.querySelector('[data-renderer="webgl"]')?.dataset.signal==='sailing');
-      const work = page.getByRole('link',{name:/^View GymDrobe\b/}).first();
-      if (width < 500) await work.tap(); else await work.click();
-      await page.waitForURL(url => url.hash === '#projects');
-      await inspectWork(page);
-      await page.locator('#projects').evaluate(el => el.scrollIntoView({behavior:'instant'}));
-      const capture=page.locator('.quay-capture > img:visible');
-      await capture.scrollIntoViewIfNeeded();
-      await capture.evaluate(async img => {
-        await img.decode();
-        if(!img.naturalWidth || img.getBoundingClientRect().width < 100) throw new Error('Storefront capture missing');
-        await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
-      });
-      await shot(page, 'quay-' + width);
-      await page.goBack();
-      await page.waitForURL(url => !url.hash || url.hash === '#home');
-      await servicePrefill(page);
-    }
-    assert.deepEqual(errors,[],'Uncaught exceptions at ' + width);
-    report.viewportChecks.push({width,height,webgl:true,keyboardDial:true,overflow:false,inspected:width===390 || width===1440});
-  } finally { await ctx.close(); }
-}
-
-async function inspectFallback(mode) {
-  const ctx = await contextFor(phone,{reducedMotion:mode==='reduced-motion'?'reduce':'no-preference',javaScriptEnabled:mode!=='no-javascript'});
-  try {
-    const page = await ctx.newPage();
-    if (mode === 'no-webgl') await page.addInitScript(() => {
-      const getContext = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(type,...args) {
-        return /webgl/.test(type) ? null : getContext.call(this,type,...args);
-      };
-    });
-    const errors = watchErrors(page);
-    await page.goto(base);
-    const name = page.getByText(/Muhammed Favas K · Full-stack developer/i).first();
-    await name.waitFor();
-    if (mode !== 'no-javascript') {
-      const homeSlot = page.locator('[data-scene-slot="home"]');
-      await homeSlot.locator('.al-chart').waitFor();
-      await changeDial(page);
-      assert.equal(await homeSlot.getAttribute('data-renderer'),'map');
-    }
-    await page.getByRole('link',{name:/^View GymDrobe\b/}).first().click();
-    await page.waitForURL(url => url.hash === '#projects');
-    assert.ok(await page.getByRole('link',{name:/Visit live website/i}).count());
-    assert.ok(await page.locator('a[href^="mailto:"]').count());
-    assert.deepEqual(errors,[], 'Uncaught errors in ' + mode);
-    report.fallbacks.push(mode);
-  } finally { await ctx.close(); }
-}
-
-async function recordOpening() {
-  const ctx = await contextFor(desktop,{recordVideo:{dir:out+'/.recording',size:{width:1152,height:720}}});
-  const page = await ctx.newPage();
-  const video = page.video();
-  try {
-    await page.goto(base,{waitUntil:'domcontentloaded'});
-    await ready(page);
-    const slider = dial(page);
-    const bounds = await slider.boundingBox();
-    assert.ok(bounds,'Dial missing from recording');
-    const y = bounds.y + bounds.height/2;
-    await page.mouse.move(bounds.x + bounds.width/2,y);
-    await page.mouse.down();
-    await page.mouse.move(bounds.x + bounds.width*0.86,y,{steps:18});
-    await page.mouse.up();
-    // Keyboard input is also visible for a dial that uses polar drag coordinates.
-    await slider.focus();
-    for (let i=0;i<18;i++) { await slider.press('ArrowLeft'); await delay(40); }
-    await page.waitForTimeout(550);
-  } finally { await ctx.close(); }
-  const input = await video.path();
-  execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-an','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-movflags','+faststart',out+'/Afterlight-Opening-and-Dial.mp4']);
-  await rm(out+'/.recording',{recursive:true,force:true});
-}
-
-async function compare(url, name, run) {
-  const ctx = await contextFor(phone);
-  try {
-    const page = await ctx.newPage();
-    await page.addInitScript(() => {
-      const state = window.reviewPerf = {lcp:null,cls:0,drew:false,record:false};
-      new PerformanceObserver(list => { for (const item of list.getEntries()) state.lcp=item.startTime; }).observe({type:'largest-contentful-paint',buffered:true});
-      new PerformanceObserver(list => { for (const item of list.getEntries()) if (!item.hadRecentInput) state.cls+=item.value; }).observe({type:'layout-shift',buffered:true});
-      for (const kind of [window.WebGLRenderingContext,window.WebGL2RenderingContext].filter(Boolean)) {
-        for (const op of ['drawElements','drawArrays','drawElementsInstanced','drawArraysInstanced']) {
-          const original = kind.prototype[op];
-          if (!original) continue;
-          kind.prototype[op] = function(...args) {
-            if (state.record) state.drew = true;
-            return original.apply(this,args);
-          };
-        }
-      }
-    });
-    await page.goto(url,{waitUntil:'load'});
-    await page.waitForTimeout(5500);
-    const results = await page.evaluate(async () => {
-      const state=window.reviewPerf;
-      const start = performance.now();
-      const frames=[];
-      state.record=true;
-      await new Promise(done => {
-        function tick(now) {
-          if (state.drew) {frames.push(now); state.drew=false;}
-          if (now-start<3000) requestAnimationFrame(tick); else done();
-        }
-        requestAnimationFrame(tick);
-      });
-      state.record=false;
-      const elapsed = performance.now()-start;
-      const intervals = frames.slice(1).map((f,i) => f-frames[i]).sort((a,b) => a-b);
-      const nav=performance.getEntriesByType('navigation')[0];
-      const precision = value => value == null ? null : Math.round(value*10)/10;
-      return {
-        domReadyMs:Math.round(nav.domContentLoadedEventEnd), loadMs:Math.round(nav.loadEventEnd),
-        fcpMs:precision(performance.getEntriesByName('first-contentful-paint')[0]?.startTime),
-        lcpMs:precision(state.lcp), cls:Number(state.cls.toFixed(3)), renderFps:precision(frames.length*1000/elapsed),
-        medianFrameMs:precision(intervals[Math.floor(intervals.length/2)]),
-        p95FrameMs:precision(intervals[Math.floor(intervals.length*0.95)]),
-      };
-    });
-    if (run === 0) await shot(page,name+'-assessment-390');
-    return results;
-  } finally { await ctx.close(); }
-}
-
-async function testPortable() {
-  const ctx = await contextFor(phone);
-  try {
-    await ctx.setOffline(true);
-    const page = await ctx.newPage();
-    const errors = watchErrors(page);
-    await page.goto(standalone);
-    await ready(page);
-    await changeDial(page);
-    await servicePrefill(page);
-    assert.deepEqual(errors,[], 'Portable review errors');
-    report.portableOffline = true;
-  } finally { await ctx.close(); }
-}
-
-try {
-  for (const [width,height] of sizes) await inspectView(width,height);
-  for (const mode of ['reduced-motion','no-webgl','no-javascript']) await inspectFallback(mode);
-  await recordOpening();
-  await testPortable();
-  if (baseline) {
-    const samples = {before:[],after:[]};
-    for (let run=0;run<3;run++) {
-      samples.before.push(await compare(baseline,'before',run));
-      samples.after.push(await compare(base,'after',run));
-    }
-    const median = rows => Object.fromEntries(Object.keys(rows[0]).map(key => {
-      const values=rows.map(row=>row[key]).filter(x=>x!=null).sort((a,b)=>a-b);
-      return [key,values.length?values[Math.floor(values.length/2)]:null];
-    }));
-    report.performance={conditions:'GitHub-hosted Ubuntu, headless Chromium with SwiftShader (software GPU), local production builds, fresh 390×844 touch contexts, DPR 1, no network/CPU throttling. Median of 3 alternating cold navigations per revision. WebGL draw submissions sampled across RAF ticks for 3 seconds beginning 5.5 seconds after load. Synthetic, not a device frame-rate estimate.',
-      before:median(samples.before),after:median(samples.after),samples};
+async function journey(p, w) {
+  const product = bench(p);
+  if (w < 600) await product.getByRole('button', { name: 'Choose Red', exact: true }).tap();
+  await choose(p);
+  await product.getByRole('button', { name: 'Desktop', exact: true }).click();
+  await drag(p);
+  await persisted(p);
+  await slider(p).focus();
+  await slider(p).press('Home');
+  let a = Number(await slider(p).getAttribute('aria-valuenow'));
+  await slider(p).press('ArrowRight');
+  assert.ok(Number(await slider(p).getAttribute('aria-valuenow')) > a);
+  await product.getByRole('button', { name: 'Mobile', exact: true }).click();
+  await persisted(p);
+  const logical = await product.locator('.sample-window .sample').evaluate((el) => el.offsetWidth);
+  assert.equal(logical, Number(await slider(p).getAttribute('aria-valuenow')));
+  await product.getByRole('button', { name: 'Enlarge product demo' }).click();
+  await p.getByRole('dialog', { name: 'Enlarged product demo' }).waitFor();
+  await p.keyboard.press('Escape');
+  assert.equal(
+    await product
+      .getByRole('button', { name: 'Enlarge product demo' })
+      .evaluate((el) => el === document.activeElement),
+    true,
+  );
+  await p.getByRole('link', { name: 'View GymDrobe', exact: true }).click();
+  for (const d of ['Mobile', 'Desktop']) {
+    const group = p.getByRole('group', { name: 'Compare desktop and mobile' });
+    if (await group.count()) await group.getByRole('button', { name: d }).click();
+    const enlarge = p.getByRole('button', { name: 'Enlarge screenshot' });
+    await enlarge.click();
+    const image = p.getByRole('dialog', { name: 'GymDrobe storefront capture' }).locator('img');
+    await image.evaluate((el) => el.decode());
+    if (await group.count())
+      assert.equal(await image.evaluate((el) => el.naturalHeight > el.naturalWidth), d === 'Mobile');
+    await p.keyboard.press('Escape');
+    assert.ok(await enlarge.evaluate((el) => el === document.activeElement));
   }
-  console.log(JSON.stringify(report,null,2));
-} catch (error) {
-  report.failure = String(error);
-  throw error;
+  const ecom = p.getByRole('button', { name: /E-commerce development/i });
+  await ecom.click();
+  await p.getByRole('link', { name: /Discuss this service/ }).click();
+  const select = p.locator('#enquiry-service');
+  await select.waitFor();
+  await p.waitForFunction(() =>
+    document.querySelector('#enquiry-service')?.selectedOptions[0]?.textContent.includes('E-commerce'),
+  );
+  await p.goBack();
+  await bench(p).waitFor();
+  assert.ok(await p.locator('#contact a[href^="https://wa.me/"]').count());
+}
+async function perf(url, old) {
+  const c = await ctx(390, 844),
+    p = await c.newPage();
+  try {
+    await p.addInitScript(() => {
+      window.metrics = { lcp: null, cls: 0 };
+      new PerformanceObserver((l) => {
+        for (const e of l.getEntries()) window.metrics.lcp = e.startTime;
+      }).observe({ type: 'largest-contentful-paint', buffered: true });
+      new PerformanceObserver((l) => {
+        for (const e of l.getEntries()) if (!e.hadRecentInput) window.metrics.cls += e.value;
+      }).observe({ type: 'layout-shift', buffered: true });
+    });
+    await p.goto(url);
+    await p
+      .locator(old ? '[data-renderer=webgl]' : '.mount[data-renderer=webgl]')
+      .first()
+      .waitFor();
+    await p.waitForTimeout(5200);
+    const rail = p.getByRole('slider').first();
+    await rail.focus();
+    await rail.press('Home');
+    const sampling = p.evaluate(
+      () =>
+        new Promise((resolve) => {
+          let last;
+          const values = [];
+          function tick(t) {
+            if (last !== undefined) values.push(t - last);
+            last = t;
+            if (values.reduce((a, b) => a + b, 0) < 2200) {
+              requestAnimationFrame(tick);
+              return;
+            }
+            values.sort((a, b) => a - b);
+            resolve({
+              p50FrameMs: values[Math.floor(values.length / 2)],
+              p95FrameMs: values[Math.floor(values.length * 0.95)],
+            });
+          }
+          requestAnimationFrame(tick);
+        }),
+    );
+    for (let i = 0; i < 18; i++) {
+      await rail.press(i % 8 < 4 ? 'ArrowRight' : 'ArrowLeft');
+      await sleep(65);
+    }
+    const frames = await sampling;
+    return {
+      ...(await p.evaluate(() => ({
+        loadMs: performance.getEntriesByType('navigation')[0].loadEventEnd,
+        fcpMs: performance.getEntriesByName('first-contentful-paint')[0]?.startTime,
+        lcpMs: window.metrics.lcp,
+        cls: window.metrics.cls,
+      }))),
+      ...frames,
+    };
+  } finally {
+    await c.close();
+  }
+}
+try {
+  for (const [w, h] of sizes) {
+    const c = await ctx(w, h);
+    try {
+      const p = await c.newPage();
+      const errors = [];
+      p.on('pageerror', (e) => errors.push(e.message));
+      await p.goto(home);
+      await render(p);
+      assert.ok(
+        await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+        'Overflow at ' + w,
+      );
+      for (const link of ['View GymDrobe', 'Discuss a project'])
+        assert.ok(
+          (
+            await p
+              .getByRole('link', { name: new RegExp('^' + link) })
+              .first()
+              .boundingBox()
+          ).y < h,
+        );
+      await shot(p, 'opening-' + w);
+      if ([390, 1440].includes(w)) {
+        await journey(p, w);
+        await p.locator('#projects').scrollIntoViewIfNeeded();
+        await shot(p, 'work-' + w);
+      }
+      assert.deepEqual(errors, []);
+      report.widths.push(w);
+    } finally {
+      await c.close();
+    }
+  }
+  for (const mode of ['reduced-motion', 'no-webgl', 'no-javascript']) {
+    const c = await ctx(390, 844, {
+      reducedMotion: mode === 'reduced-motion' ? 'reduce' : 'no-preference',
+      javaScriptEnabled: mode !== 'no-javascript',
+    });
+    try {
+      const p = await c.newPage();
+      if (mode === 'no-webgl')
+        await p.addInitScript(() => {
+          const get = HTMLCanvasElement.prototype.getContext;
+          HTMLCanvasElement.prototype.getContext = function (t, ...args) {
+            return /webgl/.test(t) ? null : get.call(this, t, ...args);
+          };
+        });
+      await p.goto(home);
+      await p.getByRole('heading', { level: 1 }).waitFor();
+      if (mode !== 'no-javascript') {
+        await choose(p);
+        await persisted(p);
+      }
+      assert.equal(await p.locator('.mount').getAttribute('data-renderer'), 'illustration');
+      await p.getByRole('link', { name: /^Discuss a project/ }).click();
+      assert.ok(new URL(p.url()).pathname === '/contact/');
+      report.fallbacks.push(mode);
+    } finally {
+      await c.close();
+    }
+  }
+  const recording = await ctx(1440, 900, {
+    recordVideo: { dir: out + '/.recording', size: { width: 1152, height: 720 } },
+  });
+  const page = await recording.newPage(),
+    video = page.video();
+  await page.goto(home);
+  await render(page);
+  await sleep(1300);
+  await choose(page);
+  await sleep(600);
+  await drag(page);
+  await bench(page).getByRole('button', { name: 'Mobile', exact: true }).click();
+  await sleep(900);
+  await persisted(page);
+  await recording.close();
+  execFileSync('ffmpeg', [
+    '-y',
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-i',
+    await video.path(),
+    '-an',
+    '-c:v',
+    'libx264',
+    '-crf',
+    '20',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    out + '/Built-to-Fit-opening.mp4',
+  ]);
+  await rm(out + '/.recording', { recursive: true, force: true });
+  const offline = await ctx(390, 844);
+  try {
+    await offline.setOffline(true);
+    const p = await offline.newPage();
+    await p.goto(pathToFileURL(resolve(out, 'Fazhere-Built-to-Fit-Preview.html')).href);
+    await render(p);
+    await journey(p, 390);
+    report.offline = true;
+  } finally {
+    await offline.close();
+  }
+  if (before) {
+    const samples = { before: [], after: [] };
+    for (let i = 0; i < 3; i++) {
+      samples.before.push(await perf(before, true));
+      samples.after.push(await perf(home, false));
+    }
+    const median = (rows) =>
+      Object.fromEntries(
+        Object.keys(rows[0]).map((k) => [
+          k,
+          Number(
+            rows
+              .map((x) => x[k])
+              .sort((a, b) => a - b)[1]
+              .toFixed(3),
+          ),
+        ]),
+      );
+    report.performance = {
+      conditions:
+        'Three alternating cold 390 × 844 Chromium contexts, DPR 1, software GPU, local production builds, unthrottled network and CPU. Animation-frame intervals sampled for 2.2 seconds during keyboard input to the primary control.',
+      before: median(samples.before),
+      after: median(samples.after),
+      samples,
+    };
+  }
+} catch (e) {
+  report.failure = String(e);
+  throw e;
 } finally {
-  await writeFile(out+'/review.json',JSON.stringify(report,null,2));
+  await writeFile(out + '/review.json', JSON.stringify(report, null, 2));
   await browser.close();
 }

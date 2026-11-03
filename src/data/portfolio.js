@@ -58,7 +58,7 @@ export const project = {
   reviewed: '22 October 2026',
   screenshot: preview.screenshot,
   screenshotCaptured: new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(preview.capturedAt)),
-  screenshotAlt: 'The real GymDrobe homepage, with fitness product navigation and its workout clothing collection.',
+  screenshotAlt: 'GymDrobe storefront with its featured workout collection and shopping navigation.',
   stack: ['JavaScript', 'React', 'Node.js', 'Express', 'MongoDB', 'Tailwind CSS'],
   features: ['Product variants', 'Cart', 'Wishlist', 'Authentication', 'Checkout', 'Razorpay payments', 'Orders', 'Admin management'],
   problem: 'Workout essentials are spread across different stores. GymDrobe brings clothing, supplements and accessories together, with a connected path from product selection to checkout.',
