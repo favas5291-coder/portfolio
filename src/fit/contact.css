@@ -7,6 +7,7 @@ body:has(.fit-contact) {
   padding-bottom: 0;
 }
 .fit-contact {
+  --orange: #b44820;
   min-height: 100svh;
 }
 .fit-contact .fit-head .nav-contact {
@@ -133,7 +134,7 @@ body:has(.fit-contact) {
 .fit-contact .form-field textarea {
   color: var(--fg);
   background: #fffefa;
-  border: 1px solid #93988b;
+  border: 1px solid #858b7e;
   border-radius: 3px;
   font: 1rem/1.5 Arial, Helvetica, sans-serif;
   padding: 12px;
