@@ -8,6 +8,16 @@ on:
 jobs:
   crm:
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: apps/unified-crm
@@ -20,6 +30,10 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run lead model tests
         run: npm test
+      - name: Run authenticated MongoDB API integration
+        env:
+          CRM_TEST_MONGODB_URI: mongodb://127.0.0.1:27017/unified_crm_ci
+        run: npm run test:integration
       - name: Validate backend JavaScript syntax
         run: |
           node --check server/index.cjs

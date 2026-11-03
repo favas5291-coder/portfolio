@@ -22,7 +22,7 @@ From this directory:
 4. Generate a session secret:
    \`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"\`
 5. Run \`npm start\` (API on localhost:4100).
-6. In another terminal run \`npx vite --host 127.0.0.1\` (UI on localhost:5175).
+6. In another terminal run \`npx vite --host localhost\` (UI on localhost:5175).
 7. Run \`npm test\` and \`npm run build\` before deployment.
 
 For production, set \`NODE_ENV=production\` and \`CRM_ORIGIN\` to your dedicated HTTPS CRM origin. Install and build the standalone application independently of the portfolio root, then serve \`dist/\` with \`npm start\`. Use a private MongoDB database dedicated to CRM data, TLS, backups, WAF-based login rate limiting, alerting, and a protected deployment account.
