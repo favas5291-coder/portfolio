@@ -1,6 +1,6 @@
-# Favas — a personal developer studio
+# Fazhere Afterlight
 
-React 19 + Vite portfolio for Muhammed Favas K at https://fazhere.com. The homepage presents real services and GymDrobe work through an optional guided tour. Existing service, contact, privacy and case-study routes remain prerendered with their existing SEO metadata.
+A playable Kozhikode night harbour for Muhammed Favas K at https://fazhere.com. Built in React 19, Vite and Three.js. Normal links, contact actions and routes are prerendered.
 
 ## Run and verify
 
@@ -12,31 +12,13 @@ npm run dev
 npm run verify
 ```
 
-`verify` runs the tests, production build, prerendering and static page/link/metadata checks. Deploy the `dist` directory using the existing Vercel configuration. The deferred character chunk does not block essential page content.
+`verify` runs the tests, production build, prerendering and static page/link/metadata checks. Deploy the `dist` directory using the existing Vercel configuration. The deferred harbour renderer does not block essential page content.
 
-## Guided experience
+## The harbour
 
-- Visitor-activated browser speech with readable captions. Nothing speaks automatically on arrival.
-- Welcome → services → real work → collaboration process → contact.
-- Play/pause, sound, previous/next, chapter selection, skip, project inspection and replay.
-- Session-scoped introduction dismissal; keyboard controls, reduced motion, hidden-tab pause and a static character fallback.
-- No paid speech service, voice API key, account login or additional visitor app is required. Browser voice quality and availability vary.
+Drag the brass dial or use the arrow keys to direct the beam. Enter visits the illuminated berth. Three direct links and normal scrolling also work. A fishing boat signals back when the buoy catches the beam. The scene loads after the initial HTML, moves a single renderer between views and rests offscreen or in a hidden tab. Reduced motion and unavailable WebGL use an illustrated chart. Sound is off; the experience is silent.
 
-The animated character is a **temporary procedural rig**. The static portrait is a reference-inspired generated concept. Neither represents a finished custom rigged likeness. No actual phoneme lip synchronization or cloned voice is claimed.
-
-See [docs/GUIDED-PORTFOLIO.md](docs/GUIDED-PORTFOLIO.md) for configuration, asset integration, limitations and verification details.
-
-## Update content
-
-| Content | Source |
-| --- | --- |
-| Identity, contact destinations, skills and current project | `src/data/portfolio.js` |
-| Service descriptions, routes, WhatsApp and collaboration stages | `src/data/site.js` |
-| Tour targets, narration, optional audio references, actions, highlights and character model | `src/guide/tourConfig.js` |
-| Shared project screenshot and capture date | `src/data/project-previews.js` |
-| Main layout and styles | `src/App.jsx`, `src/studio.css` |
-
-Narration is editable text. Browser speech reads the latest text without regenerating audio. Optional prerecorded clips may later be placed in `public/audio/tour/` and referenced by a narration segment's `audio` field.
+The homepage lives in `src/App.jsx`. The models, camera, shaders, chart and styles are in `src/afterlight/`. Destination dial positions are in `bearings.js`. Identity and verified work live in `src/data/portfolio.js`, services, process and WhatsApp in `src/data/site.js`. Service choices use a validated slug to prefill the existing enquiry.
 
 ## Refresh project previews
 
@@ -51,4 +33,4 @@ npm run verify
 
 The helper validates the capture, generates optimized WebP with a content-based filename, preserves the last good preview on invalid input and skips identical output. Commit the new image and manifest together. The linked daily preview automation checks for meaningful design changes, ignoring ordinary video-frame, price and inventory changes. It preserves project copy and code-review dates.
 
-Only add verified projects and working links. New project cards and their optional tour steps should be added together; the current site has one selected project, GymDrobe.
+Only add verified projects and working links. The current selected project is GymDrobe. A separately verified portrait capture can be published with the same command and a trailing `mobile` argument. A desktop update automatically hides the previous portrait until its matching version has been verified. The local swatch demo uses the store’s actual COITONIC shirt photos and links to the verified product-card implementation.

@@ -11,6 +11,12 @@ export default function EnquiryForm() {
   const [handoff, setHandoff] = useState('');
   const controller = useRef(null), busy = useRef(false), statusNode = useRef(null);
   useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get('service');
+    const selected = services.find(item => item.slug === slug);
+    const field = document.getElementById('enquiry-service');
+    if (selected && field && !field.value) field.value = selected.name;
+  }, []);
   const submit = async event => {
     event.preventDefault();
     if (busy.current) return;
