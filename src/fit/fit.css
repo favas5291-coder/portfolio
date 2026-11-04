@@ -924,3 +924,17 @@
     max-height: 400px;
   }
 }
+
+.concept-project {
+  margin-top: clamp(65px, 8vw, 115px);
+  padding-top: clamp(45px, 6vw, 80px);
+  border-top: 1px solid #666b62;
+}
+.concept-disclosure {
+  color: #d3d6cd;
+  font-size: .83rem;
+  line-height: 1.65;
+  padding: 17px 0;
+  margin: 18px 0 10px;
+  border-block: 1px solid #666b62;
+}

@@ -28,7 +28,7 @@ export default function App() {
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
               <a className="linkline" href="#projects">
-                View GymDrobe <span aria-hidden="true">↓</span>
+                View selected work <span aria-hidden="true">↓</span>
               </a>
             </div>
             <span className="folio">Independent practice · Kozhikode, India</span>

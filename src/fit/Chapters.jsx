@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react';
-import { profile, project, skills } from '../data/portfolio.js';
+import { profile, project, luxvibe, skills } from '../data/portfolio.js';
 import { projectPreviews } from '../data/project-previews.js';
 import { PHONE_DISPLAY, PHONE_HREF, processSteps, services, whatsappHref } from '../data/site.js';
 import { evidenceRoot } from './ProductBench.jsx';
 
-const proof = projectPreviews.gymdrobe;
 const date = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: 'short',
@@ -20,7 +19,8 @@ function Chapter({ n, children }) {
     </p>
   );
 }
-function Capture() {
+function Capture({ projectId = 'gymdrobe', name = 'GymDrobe' }) {
+  const proof = projectPreviews[projectId];
   const [device, setDevice] = useState('Desktop');
   const dialog = useRef(null),
     button = useRef(null);
@@ -47,7 +47,7 @@ function Capture() {
           src={capture.screenshot}
           width={capture.width}
           height={capture.height}
-          alt={'GymDrobe ' + device.toLowerCase() + ' homepage'}
+          alt={name + ' ' + device.toLowerCase() + ' homepage'}
         />
       </div>
       <figcaption>
@@ -59,12 +59,12 @@ function Capture() {
       <dialog
         className="fit-dialog capture-dialog"
         ref={dialog}
-        aria-label="GymDrobe storefront capture"
+        aria-label={`${name} storefront capture`}
         onClose={() => button.current.focus()}
       >
         <div>
           <header>
-            <strong>GymDrobe · {device}</strong>
+            <strong>{name} · {device}</strong>
             <button onClick={() => dialog.current.close()}>Close ×</button>
           </header>
           <img
@@ -124,6 +124,25 @@ export function Work() {
           </div>
           <Capture />
         </div>
+        <article className="work-grid concept-project" aria-labelledby="luxvibe-work-title">
+          <div>
+            <p className="eyeline">{luxvibe.category} / {luxvibe.status}</p>
+            <h2 className="display" id="luxvibe-work-title">Everyday <em>Luxvibe.</em></h2>
+            <p className="chapter-intro">A boutique concept for a simpler, more personal shopping conversation.</p>
+            <dl className="story">
+              <dt>The shopping journey</dt><dd>{luxvibe.problem}</dd>
+              <dt>What I built</dt><dd>{luxvibe.contribution}</dd>
+              <dt>A flow you can try</dt><dd>Choose the Classic Dial in M/L, add a wallet, and inspect how both pieces and their subtotal appear in the enquiry preview.</dd>
+            </dl>
+            <p className="concept-disclosure">Independent, uncommissioned concept. Sample catalog and AI-generated imagery. The demo does not send orders or collect payments.</p>
+            <div className="work-links">
+              <a className="pill" href={luxvibe.demo} target="_blank" rel="noopener noreferrer">Try the boutique demo ↗<span className="sr-only"> (opens in a new tab)</span></a>
+              <a href={luxvibe.caseStudy}>Read concept case study</a>
+              <a href={whatsappHref()} data-contact="whatsapp">Discuss a similar store ↗</a>
+            </div>
+          </div>
+          <Capture projectId="luxvibe" name="Luxvibe concept" />
+        </article>
       </div>
     </section>
   );

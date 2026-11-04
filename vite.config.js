@@ -5,6 +5,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pageForPath } from './src/seo/pages.js';
 import { renderHead } from './scripts/seo.mjs';
+import { serveLuxvibe } from './scripts/serve-demo.mjs';
 
 // Production preview uses real static routes rather than an SPA catch-all.
 function staticPages() {
@@ -13,7 +14,9 @@ function staticPages() {
     transformIndexHtml: { order: 'pre', handler(html, context) {
       return context.server ? html.replace('<!--page-meta-->', renderHead(pageForPath(context.path), { SITE_ENV: 'preview' })) : html;
     } },
+    configureServer(server) { server.middlewares.use(serveLuxvibe('public')); },
     configurePreviewServer(server) {
+      server.middlewares.use(serveLuxvibe('dist'));
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url, 'http://localhost');
         const page = pageForPath(url.pathname);

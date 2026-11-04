@@ -31,6 +31,6 @@ for (const page of [...pages, notFound]) {
 }
 const indexable = isPreview(env) ? [] : pages;
 await writeFile('dist/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${indexable.map(p => `<url><loc>${SITE_ORIGIN}${p.path}</loc></url>`).join('')}</urlset>\n`);
-await writeFile('dist/robots.txt', `User-agent: *\nAllow: /\n${isPreview(env) ? '' : `Sitemap: ${SITE_ORIGIN}/sitemap.xml\n`}`);
-await writeFile('dist/_headers', `/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/*\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Content-Type-Options: nosniff\n${isPreview(env) ? '  X-Robots-Tag: noindex, follow\n' : ''}`);
+await writeFile('dist/robots.txt', `User-agent: *\nAllow: /\nDisallow: /demos/luxvibe/\n${isPreview(env) ? '' : `Sitemap: ${SITE_ORIGIN}/sitemap.xml\n`}`);
+await writeFile('dist/_headers', `/demos/luxvibe/*\n  X-Robots-Tag: noindex, nofollow\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/*\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Content-Type-Options: nosniff\n${isPreview(env) ? '  X-Robots-Tag: noindex, follow\n' : ''}`);
 console.log(`Prerendered ${pages.length} pages and a 404 document. Environment: ${isPreview(env) ? 'preview (noindex)' : 'production'}.`);

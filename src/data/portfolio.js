@@ -73,6 +73,28 @@ export const project = {
   evidence: 'Source and public storefront reviewed on 22 October 2026. Frontend flows and API clients were inspected. Live payments, admin permissions and the complete commerce backend were not tested end to end. Backend stack and feature scope are supplied project information; the decisions above reflect the inspected frontend code.',
 };
 
+export const luxvibe = {
+  name: 'Luxvibe',
+  category: 'Boutique commerce concept',
+  status: 'Independent concept',
+  demo: '/demos/luxvibe/',
+  caseStudy: '/projects/luxvibe/',
+  description: 'An independent boutique concept for an Instagram-to-WhatsApp shopping journey. A calm product catalog, saved favourites and a shopping bag lead to an accurate enquiry preview.',
+  problem: 'A shopper needs an easy way to compare pieces, keep favourites and carry the right options into a conversation. This concept explores that journey without requiring an account.',
+  role: 'Design direction and frontend implementation',
+  contribution: 'Responsive storefront, product browsing and filtering, a persistent wishlist and cart, variant and stock handling, enquiry-message generation, and an explicitly simulated owner dashboard.',
+  screenshot: projectPreviews.luxvibe.screenshot,
+  screenshotAlt: 'Actual desktop capture of the Luxvibe concept with an ivory editorial layout and burgundy sample handbag.',
+  stack: ['HTML', 'CSS', 'JavaScript ES modules', 'Local storage', 'Lucide icons'],
+  features: ['Product browsing & search', 'Collection filters', 'Product variants', 'Wishlist', 'Persistent shopping bag', 'Enquiry-message preview', 'Browser-local owner demo'],
+  decisions: [
+    { title: 'A boutique, with room to breathe.', challenge: 'Make the product easy to explore without adding visual noise.', decision: 'Pair ivory and burgundy with editorial typography, consistent product photography and a compact mobile opening.' },
+    { title: 'Keep the chosen option attached.', challenge: 'A product name alone does not capture a shopper’s choice.', decision: 'Store each selected option as a distinct cart line, validate sample stock and retain selections across ordinary reloads.' },
+    { title: 'An enquiry is not a confirmed order.', challenge: 'Opening a chat does not prove a message, payment or order was accepted.', decision: 'Prepare a clear, itemized message with the selected options, quantities, product links and subtotal. The public concept previews the message without sending it.' },
+  ],
+  evidence: 'The concept includes 11 automated checks for cart arithmetic, variant limits, filters, input restrictions and enquiry URLs, plus desktop and phone-width browser checks. It is not a commissioned or approved Luxvibe client engagement. Product images, prices and inventory are illustrative; the owner controls are a browser-local simulation. No live orders, payments, sales or conversion results are claimed.',
+};
+
 // Camera keyframes: x, y, z. The scroll engine interpolates between chapters.
 export const cameraTimeline = [
   { camera: [0, 1, 8], target: [0, 0, 0], object: [1.65, -0.05, 0], rotation: [0.22, -0.4, -0.3], spread: 0 },

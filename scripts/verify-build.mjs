@@ -41,6 +41,7 @@ for (const [path, html] of rendered) {
     const url = new URL(href.replaceAll('&amp;', '&'), `${SITE_ORIGIN}${path}`);
     const targetPath = normalizePath(url.pathname);
     const target = rendered.get(targetPath);
+    if (!target && url.pathname === '/demos/luxvibe/') { assert.ok((await stat('dist/demos/luxvibe/index.html')).size > 0); continue; }
     if (!target && /\.[a-z0-9]+$/i.test(url.pathname)) { await stat(`dist${url.pathname}`); continue; }
     assert.ok(target, `Broken internal link on ${path}: ${href}`);
     if (url.hash) assert.ok(ids(target).has(decodeURIComponent(url.hash.slice(1))), `Broken fragment: ${path} -> ${href}`);

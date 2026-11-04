@@ -16,3 +16,8 @@
   [headers.values]
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/demos/luxvibe/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

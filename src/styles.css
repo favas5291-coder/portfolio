@@ -407,3 +407,6 @@ main input,main select,main textarea,main form,main label {pointer-events:auto;}
   .mobile-contact[data-visible='true']{opacity:1;visibility:visible;pointer-events:auto;}
   .mobile-contact svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
 }
+
+.concept-mobile-proof{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);gap:clamp(28px,6vw,90px);align-items:center}.concept-mobile-proof figure{margin:0}.concept-mobile-proof figure img{width:100%;max-width:340px;height:auto;border:1px solid var(--rule);margin:0 auto}.concept-mobile-proof figcaption{max-width:340px;margin:14px auto 0;color:var(--muted)}.concept-mobile-proof .button-solid{margin-top:24px}
+@media(max-width:760px){.concept-mobile-proof{grid-template-columns:1fr}.concept-mobile-proof figure img{max-width:300px}.concept-mobile-proof figcaption{max-width:300px}}
