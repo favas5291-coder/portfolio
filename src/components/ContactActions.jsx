@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { PHONE_DISPLAY, PHONE_HREF, whatsappHref } from '../data/site.js';
+import Arrow from './Arrow.jsx';
 import { profile } from '../data/portfolio.js';
 
 export function ContactActions({ quote = true, compact = false }) {
   return <div className={`enquiry-actions ${compact ? 'compact' : ''}`}>
-    {quote && <a className="button-solid" href="/contact/">Discuss Your Website <span aria-hidden="true">↗</span></a>}
-    <a className={quote ? 'button-outline' : 'button-solid'} href={whatsappHref()} target="_blank" rel="noopener noreferrer" data-contact="whatsapp">WhatsApp Me <span className="sr-only">(opens in a new tab)</span><span aria-hidden="true">↗</span></a>
+    {quote && <a className="button-solid" href="/contact/">Discuss Your Website <Arrow/></a>}
+    <a className={quote ? 'button-outline' : 'button-solid'} href={whatsappHref()} target="_blank" rel="noopener noreferrer" data-contact="whatsapp">WhatsApp Me <span className="sr-only">(opens in a new tab)</span><Arrow/></a>
     {!compact && <a className="text-link" href={PHONE_HREF} data-contact="call">Call {PHONE_DISPLAY}</a>}
   </div>;
 }

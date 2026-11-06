@@ -1,15 +1,9 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { profile, project, luxvibe, fabea, skills } from '../data/portfolio.js';
-import { projectPreviews } from '../data/project-previews.js';
+import Capture from '../components/Capture.jsx';
 import { PHONE_DISPLAY, PHONE_HREF, processSteps, services, whatsappHref } from '../data/site.js';
 import { evidenceRoot } from './ProductBench.jsx';
 
-const date = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'Asia/Kolkata',
-});
 function Chapter({ n, children }) {
   return (
     <p className="chapter-cap">
@@ -17,65 +11,6 @@ function Chapter({ n, children }) {
       <i />
       {children}
     </p>
-  );
-}
-function Capture({ projectId = 'gymdrobe', name = 'GymDrobe' }) {
-  const proof = projectPreviews[projectId];
-  const [device, setDevice] = useState('Desktop');
-  const dialog = useRef(null),
-    button = useRef(null);
-  const paired = proof.mobile?.matchesDesktop === proof.screenshot;
-  const mobile = paired && device === 'Mobile',
-    capture = mobile ? proof.mobile : proof;
-  return (
-    <figure className="capture">
-      <div className="capture-bar">
-        <span className="eyeline">Captured preview</span>
-        {paired && (
-          <div className="tools" role="group" aria-label="Compare desktop and mobile">
-            {['Desktop', 'Mobile'].map((d) => (
-              <button key={d} aria-pressed={device === d} onClick={() => setDevice(d)}>
-                {d}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className={'capture-image' + (mobile ? ' portrait' : '')}>
-        <img
-          loading="lazy"
-          src={capture.screenshot}
-          width={capture.width}
-          height={capture.height}
-          alt={name + ' ' + device.toLowerCase() + ' homepage'}
-        />
-      </div>
-      <figcaption>
-        <span>Captured {date.format(new Date(capture.capturedAt))}</span>
-        <button ref={button} onClick={() => dialog.current.showModal()}>
-          Enlarge screenshot ↗
-        </button>
-      </figcaption>
-      <dialog
-        className="fit-dialog capture-dialog"
-        ref={dialog}
-        aria-label={`${name} storefront capture`}
-        onClose={() => button.current.focus()}
-      >
-        <div>
-          <header>
-            <strong>{name} · {device}</strong>
-            <button onClick={() => dialog.current.close()}>Close ×</button>
-          </header>
-          <img
-            src={capture.screenshot}
-            width={capture.width}
-            height={capture.height}
-            alt={'Enlarged ' + device.toLowerCase() + ' storefront'}
-          />
-        </div>
-      </dialog>
-    </figure>
   );
 }
 export function Work() {
