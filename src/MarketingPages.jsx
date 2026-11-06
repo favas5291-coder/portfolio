@@ -1,16 +1,19 @@
 import { profile, project, luxvibe, fabea } from './data/portfolio.js';
 import { projectPreviews } from './data/project-previews.js';
-import { services, processSteps } from './data/site.js';
+import { services, processSteps, whatsappHref } from './data/site.js';
 import { ContactActions, MobileContact } from './components/ContactActions.jsx';
 import ServiceLinks from './components/ServiceLinks.jsx';
 import AnalyticsPreference from './components/AnalyticsPreference.jsx';
+import Arrow from './components/Arrow.jsx';
+import Capture from './components/Capture.jsx';
+import './marketing-polish.css';
 
 const External = ({ href, children, ...props }) => <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}<span className="sr-only"> (opens in a new tab)</span></a>;
 export function Process() {
   return <section className="marketing-section" aria-labelledby="process-title"><p className="mono overline">FROM BRIEF TO BUILD</p><h2 id="process-title">A clear process, together.</h2><ol className="process-list">{processSteps.map(([name, detail], i) => <li key={name}><span className="mono">0{i + 1}</span><div><h3>{name}</h3><p>{detail}</p></div></li>)}</ol><p className="scope-note">Scope, quote, schedule and any support arrangement are agreed for your project.</p></section>;
 }
 function ProjectEvidence({ text }) {
-  return <aside className="project-proof"><div><p className="mono overline">REAL PROJECT / MY OWN BUILD</p><h2>GymDrobe, from product to purchase.</h2><p>{text || 'My own fitness e-commerce platform brings clothing, supplements and accessories into one store. See how the interface, shopping state and checkout connect.'}</p><a href="/projects/gymdrobe/" className="text-link">Read the GymDrobe case study <span aria-hidden="true">↗</span></a></div><a href="/projects/gymdrobe/" aria-label="View the GymDrobe case study"><img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async"/></a></aside>;
+  return <aside className="project-proof"><div><p className="mono overline">REAL PROJECT / MY OWN BUILD</p><h2>GymDrobe, from product to purchase.</h2><p>{text || 'My own fitness e-commerce platform brings clothing, supplements and accessories into one store. See how the interface, shopping state and checkout connect.'}</p><a href="/projects/gymdrobe/" className="text-link">Read the GymDrobe case study <Arrow/></a></div><a href="/projects/gymdrobe/" aria-label="View the GymDrobe case study"><img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" loading="lazy" decoding="async"/></a></aside>;
 }
 function QuoteCTA() { return <section className="quote-cta"><p className="mono overline">YOUR NEXT WEBSITE</p><h2>Tell me what your business needs.</h2><p>Share your idea or existing website. We can define the right scope and a quote.</p><ContactActions/></section>; }
 function ServicePage({ service }) {
@@ -21,7 +24,23 @@ function ServicePage({ service }) {
     <QuoteCTA/><section className="marketing-section"><h2>Need something different?</h2><ServiceLinks exclude={service.slug}/></section></>;
 }
 function ServicesPage() {
-  return <><section className="marketing-hero"><p className="mono overline">FREELANCE WEBSITE DEVELOPMENT</p><h1>A website that works for your business.</h1><p className="marketing-lead">I’m Muhammed Favas K, a freelance web developer in Kozhikode (Calicut), Kerala. I build business websites, online stores and focused landing pages, with remote availability across India.</p><ContactActions compact/></section><section className="marketing-section" aria-labelledby="services-title"><p className="mono overline">FIND YOUR STARTING POINT</p><h2 id="services-title">What do you need to build?</h2><ServiceLinks/></section><ProjectEvidence/><Process/><QuoteCTA/></>;
+  return <>
+    <section className="marketing-hero">
+      <p className="mono overline">FREELANCE WEBSITE DEVELOPMENT</p>
+      <h1>A website that works for your business.</h1>
+      <p className="marketing-lead">I’m Muhammed Favas K, a freelance web developer in Kozhikode (Calicut), Kerala. I build business websites, online stores and focused landing pages, with remote availability across India.</p>
+      <div className="enquiry-actions polish-actions">
+        <External className="button-solid" href={whatsappHref()} data-contact="whatsapp">Chat on WhatsApp <Arrow/></External>
+        <a className="text-link" href="/contact/#project-enquiry">Discuss your website <Arrow/></a>
+      </div>
+    </section>
+    <section className="marketing-section service-start" aria-labelledby="services-title">
+      <p className="mono overline">FIND YOUR STARTING POINT</p>
+      <h2 id="services-title">What do you need to build?</h2>
+      <ServiceLinks rows/>
+    </section>
+    <ProjectEvidence/><Process/><QuoteCTA/>
+  </>;
 }
 function GymDrobePage() {
   return <><section className="marketing-hero"><p className="mono overline">CASE STUDY / OWN PROJECT</p><h1>GymDrobe.<br/><span className="muted">One connected store.</span></h1><p className="marketing-lead">{project.description} I built GymDrobe as my own project; this is not a paid client engagement.</p><div className="enquiry-actions"><External className="button-solid" href={project.website}>Visit GymDrobe <span aria-hidden="true">↗</span></External><External className="text-link" href={project.repository}>Explore the source <span aria-hidden="true">↗</span></External></div></section>
@@ -48,21 +67,18 @@ function LuxvibePage() {
 }
 
 function FabeaPage() {
-  const preview = projectPreviews.fabea;
+  const discuss = whatsappHref('Hi Favas, I saw your FABEA storefront concept and would like to discuss a boutique website.');
   return <>
     <section className="marketing-hero">
       <p className="mono overline">CASE STUDY / INDEPENDENT STOREFRONT CONCEPT</p>
-      <h1>FABEA.<br/><span className="muted">Carry your style.</span></h1>
+      <h1>FABEA.<span className="case-tagline">Carry your style.</span></h1>
       <p className="marketing-lead">{fabea.description} The collection uses sample products and generated photography.</p>
-      <div className="enquiry-actions">
-        <a className="button-solid" href={fabea.demo}>Open the working demo <span aria-hidden="true">↗</span></a>
-        <a className="text-link" href="/contact/?service=ecommerce-development">Discuss this concept <span aria-hidden="true">↗</span></a>
+      <div className="enquiry-actions polish-actions">
+        <a className="button-solid" href={fabea.demo}>Open the working demo <Arrow/></a>
+        <External className="text-link" href={discuss} data-contact="whatsapp">Discuss on WhatsApp <Arrow/></External>
       </div>
     </section>
-    <figure className="case-image">
-      <img src={preview.screenshot} alt="FABEA concept homepage with a chocolate handbag campaign and warm ivory typography" width={preview.width} height={preview.height} fetchPriority="high" decoding="async"/>
-      <figcaption className="mono">STOREFRONT CAPTURE / SAMPLE COLLECTION</figcaption>
-    </figure>
+    <Capture projectId="fabea" name="FABEA" preferMobile/>
     <section className="marketing-section split-copy">
       <div><p className="mono overline">THE SHOPPING JOURNEY</p><h2>From a look to a piece.</h2><p>{fabea.problem}</p></div>
       <div><p className="mono overline">DESIGN & DEVELOPMENT</p><h2 className="small-heading">A boutique you can explore.</h2><p>{fabea.contribution}</p>
@@ -73,7 +89,7 @@ function FabeaPage() {
       <p className="mono overline">TRY THE DEMO</p><h2>Find a piece and prepare an enquiry.</h2>
       <ol className="deliverables"><li>Search for The Muse or browse the Bags collection.</li><li>Save a favourite, open a product and choose a quantity.</li><li>Add it to the enquiry bag and copy the sample message.</li></ol>
       <p className="scope-note">This independent preview uses illustrative inventory. A live store would use the boutique’s approved catalogue, business number and policies.</p>
-      <a className="button-solid" href={fabea.demo}>Explore FABEA <span aria-hidden="true">↗</span></a>
+      <a className="button-solid" href={fabea.demo}>Explore FABEA <Arrow/></a>
     </section>
     <QuoteCTA/>
   </>;
@@ -83,5 +99,6 @@ function PrivacyPage() {
   return <><section className="marketing-hero"><p className="mono overline">YOUR INFORMATION</p><h1>Privacy & enquiries.</h1><p className="marketing-lead">This site is operated by Muhammed Favas K in Kozhikode, Kerala, India. Contact <a href={`mailto:${profile.email}`} data-contact="email">{profile.email}</a> with questions about your information.</p></section><section className="marketing-section privacy-copy"><h2>Project details you choose to share</h2><p>The enquiry form asks for your name, a way to reply and a short project description. Business name and budget are optional. These details are used to discuss your project, rather than added to a marketing list.</p><p>When the form offers a WhatsApp handoff, your brief is prepared in a link. You review it and send it in WhatsApp yourself; opening the link does not prove a message was sent. WhatsApp handles that conversation under its own privacy terms.</p><p>When direct form delivery is enabled, Formspree processes the submitted details and forwards them to the site owner. Its processing and retention policies also apply. Please avoid sharing passwords, payment details or sensitive personal information.</p><p>You can ask me to correct or delete enquiry information by email. Information needed for an agreed project or required records may need to be retained. No fixed deletion schedule is promised here.</p><h2>Optional analytics</h2><p>Analytics are off by default. If configured, you can choose to enable Google Analytics using the control below. The integration records page views, contact-button clicks and form-service confirmations, without form contents, query strings, WhatsApp message text or contact details as event parameters. Google may process device and network data and use analytics cookies when you opt in.</p><p>A contact click does not confirm an enquiry, and an enquiry does not confirm a sale. You can turn analytics off below. Previously recorded data and cookies may remain subject to the provider’s settings; clearing this site’s browser data removes local preferences.</p><AnalyticsPreference/><h2>Local preferences & hosting</h2><p>Your chosen 2D/3D view, motion preference and analytics choice may be stored in your browser. The hosting provider may process ordinary request and security logs.</p><p><External href="https://formspree.io/legal/privacy-policy/" className="text-link">Formspree privacy information ↗</External></p><p><External href="https://policies.google.com/privacy" className="text-link">Google privacy information ↗</External></p></section></>;
 }
 export default function MarketingPages({ page }) {
-  return <div className="marketing-shell"><a className="skip-link" href="#main">Skip to content</a><header className="marketing-header"><a href="/" className="wordmark" aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>FAVAS<span className="wordmark-period">.</span></a><nav aria-label="Main navigation"><a href="/">Portfolio</a><a href="/services/" aria-current={page.path.startsWith('/services/') ? 'page' : undefined}>Services</a><a href="/#projects" aria-current={page.path.startsWith('/projects/') ? 'page' : undefined}>Work</a><a href="/contact/" aria-current={page.path === '/contact/' ? 'page' : undefined}>Contact</a></nav><a href="/contact/" className="header-contact">REQUEST A QUOTE <span aria-hidden="true">↗</span></a></header><main id="main" tabIndex={-1} className="marketing-main"><nav aria-label="Breadcrumb" className="breadcrumbs"><ol><li><a href="/">Home</a></li>{page.service && <li><a href="/services/">Services</a></li>}<li aria-current="page">{page.label}</li></ol></nav>{page.service ? <ServicePage service={page.service}/> : page.path === '/services/' ? <ServicesPage/> : page.path === '/projects/gymdrobe/' ? <GymDrobePage/> : page.path === '/projects/luxvibe/' ? <LuxvibePage/> : page.path === '/projects/fabea/' ? <FabeaPage/> : page.path === '/privacy/' ? <PrivacyPage/> : <section className="marketing-hero"><p className="mono overline">404 / PAGE NOT FOUND</p><h1>This page is missing.</h1><p className="marketing-lead">Explore my website development services or tell me what you need to build.</p><a className="button-solid" href="/services/">Explore services ↗</a></section>}</main><footer className="marketing-footer"><div><span className="mono">MUHAMMED FAVAS K / AFTERLIGHT</span><p>Web development from Kozhikode, Kerala.<br/>Remote projects across India.</p></div><nav aria-label="Footer navigation"><a href="/services/">Services</a><a href="/projects/gymdrobe/">GymDrobe</a><a href="/projects/luxvibe/">Luxvibe concept</a><a href="/projects/fabea/">FABEA concept</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><External href={profile.github}>GitHub</External><External href={profile.linkedin}>LinkedIn</External></nav><AnalyticsPreference/></footer><MobileContact/></div>;
+  const polished = ['/services/', '/projects/fabea/'].includes(page.path);
+  return <div className={polished ? 'marketing-shell polished-marketing' : 'marketing-shell'}><a className="skip-link" href="#main">Skip to content</a><header className="marketing-header"><a href="/" className="wordmark" aria-label="Favas home"><span className="forge-mark" aria-hidden="true"><i/><i/><i/></span>FAVAS<span className="wordmark-period">.</span></a><nav aria-label="Main navigation"><a href="/">Portfolio</a><a href="/services/" aria-current={page.path.startsWith('/services/') ? 'page' : undefined}>Services</a><a href="/#projects" aria-current={page.path.startsWith('/projects/') ? 'page' : undefined}>Work</a><a href="/contact/" aria-current={page.path === '/contact/' ? 'page' : undefined}>Contact</a></nav><a href="/contact/" className="header-contact">REQUEST A QUOTE {polished ? <Arrow/> : <span aria-hidden="true">↗</span>}</a></header><main id="main" tabIndex={-1} className="marketing-main"><nav aria-label="Breadcrumb" className="breadcrumbs"><ol><li><a href="/">Home</a></li>{page.service && <li><a href="/services/">Services</a></li>}<li aria-current="page">{page.label}</li></ol></nav>{page.service ? <ServicePage service={page.service}/> : page.path === '/services/' ? <ServicesPage/> : page.path === '/projects/gymdrobe/' ? <GymDrobePage/> : page.path === '/projects/luxvibe/' ? <LuxvibePage/> : page.path === '/projects/fabea/' ? <FabeaPage/> : page.path === '/privacy/' ? <PrivacyPage/> : <section className="marketing-hero"><p className="mono overline">404 / PAGE NOT FOUND</p><h1>This page is missing.</h1><p className="marketing-lead">Explore my website development services or tell me what you need to build.</p><a className="button-solid" href="/services/">Explore services ↗</a></section>}</main><footer className="marketing-footer"><div><span className="mono">MUHAMMED FAVAS K / AFTERLIGHT</span><p>Web development from Kozhikode, Kerala.<br/>Remote projects across India.</p></div><nav aria-label="Footer navigation"><a href="/services/">Services</a><a href="/projects/gymdrobe/">GymDrobe</a><a href="/projects/luxvibe/">Luxvibe concept</a><a href="/projects/fabea/">FABEA concept</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><External href={profile.github}>GitHub</External><External href={profile.linkedin}>LinkedIn</External></nav><AnalyticsPreference/></footer><MobileContact/></div>;
 }

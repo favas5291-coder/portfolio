@@ -1,0 +1,47 @@
+.capture {
+  margin: 0;
+  background: #f1f0e9;
+  border: 1px solid #aaa99f;
+  color: var(--fg);
+  padding: 0 14px;
+}
+.capture-bar,
+.capture figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+}
+.capture-image {
+  display: grid;
+  place-items: center;
+  border: 1px solid #c6c8bf;
+  background: #deded4;
+  min-height: 120px;
+}
+.capture-image img {
+  width: 100%;
+  height: auto;
+}
+.capture-image.portrait img {
+  width: auto;
+  max-height: 530px;
+  max-width: 100%;
+}
+.capture figcaption,
+.capture figcaption button {
+  font-size: 0.77rem;
+}
+.capture figcaption button {
+  min-height: 44px;
+  text-decoration: underline;
+}
+.capture-dialog img {
+  max-width: 100%;
+  height: auto;
+  margin: auto;
+}
+.capture-dialog {
+  max-width: max-content;
+}

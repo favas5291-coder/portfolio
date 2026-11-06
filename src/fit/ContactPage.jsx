@@ -1,17 +1,10 @@
+import Arrow from '../components/Arrow.jsx';
 import EnquiryForm from '../components/EnquiryForm.jsx';
 import { profile } from '../data/portfolio.js';
 import { PHONE_DISPLAY, PHONE_HREF, processSteps, whatsappHref } from '../data/site.js';
 import { Header, Footer } from './Layout.jsx';
 import './fit.css';
 import './contact.css';
-
-function Arrow({ down = false }) {
-  return (
-    <svg className="contact-arrow" viewBox="0 0 24 24" aria-hidden="true">
-      <path d={down ? 'M12 4v16m-6-6 6 6 6-6' : 'M5 19 19 5M5 5h14v14'} />
-    </svg>
-  );
-}
 
 export default function ContactPage() {
   return (

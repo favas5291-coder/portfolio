@@ -1,0 +1,168 @@
+.polished-marketing {
+  --page-gutter: clamp(20px, 4vw, 64px);
+  --page-inset: max(var(--page-gutter), calc((100% - 1280px) / 2));
+}
+
+.polished-marketing .marketing-header,
+.polished-marketing .marketing-main {
+  padding-inline: var(--page-inset);
+}
+.polished-marketing .marketing-main {
+  max-width: none;
+}
+.polished-marketing .header-contact {
+  min-height: 44px;
+}
+.polished-marketing .header-contact .contact-arrow {
+  width: 14px;
+  height: 14px;
+}
+.polished-marketing .breadcrumbs {
+  padding-block: 8px;
+}
+.polished-marketing .marketing-hero {
+  padding: clamp(14px, 2.5vw, 34px) 0 clamp(24px, 3vw, 42px);
+}
+.polished-marketing .marketing-hero .overline {
+  margin-bottom: 12px;
+}
+.polished-marketing .marketing-hero h1 {
+  max-width: 19ch;
+}
+.polished-marketing .marketing-lead {
+  line-height: 1.65;
+  margin-top: 16px;
+  max-width: 65ch;
+}
+.case-tagline {
+  display: block;
+  font-size: .72em;
+  font-weight: 500;
+  color: #c7c5bb;
+  margin-top: 6px;
+}
+.polish-actions {
+  margin: 16px 0 0;
+  gap: 8px 18px;
+}
+.polish-actions a {
+  min-height: 44px;
+}
+.polish-actions .button-solid {
+  border-radius: 100px;
+  padding: 11px 16px;
+  gap: 9px;
+}
+.polish-actions .text-link {
+  gap: 7px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.polished-marketing .service-start {
+  padding-top: clamp(22px, 3vw, 42px);
+}
+.service-start h2 {
+  margin-bottom: 16px;
+}
+.service-start .overline {
+  margin-bottom: 10px;
+}
+.service-rows .service-card {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding-block: 16px;
+}
+.service-rows .service-card:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+.service-rows .service-card h3 {
+  margin: 0;
+  font-size: clamp(19px, 2.1vw, 27px);
+}
+.service-rows .service-card p {
+  max-width: 58ch;
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+.service-rows .contact-arrow {
+  align-self: center;
+  color: var(--accent);
+}
+.polished-marketing .capture {
+  margin-bottom: clamp(24px, 4vw, 54px);
+  max-width: 1040px;
+  background: #161614;
+  color: var(--paper);
+  border-color: var(--rule);
+}
+.polished-marketing .capture-image {
+  background: var(--ink);
+  border-color: var(--rule);
+}
+.polished-marketing .capture-bar {
+  flex-wrap: wrap;
+}
+.polished-marketing .capture-bar .eyeline {
+  font: 10px var(--mono);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.polished-marketing .tools {
+  display: flex;
+  gap: 8px;
+}
+.polished-marketing .capture button {
+  min-height: 44px;
+  padding-inline: 6px;
+  color: inherit;
+}
+.polished-marketing .tools [aria-pressed='true'] {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.polished-marketing .capture figcaption button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.polished-marketing .capture-dialog {
+  margin: auto;
+  width: min(1024px, 94vw);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--rule);
+  background: var(--ink);
+  color: var(--paper);
+}
+.polished-marketing .capture-dialog::backdrop {
+  background: #000c;
+}
+.polished-marketing .capture-dialog header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-inline: 12px;
+  background: var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+.polished-marketing .capture-dialog button {
+  padding-inline: 8px;
+}
+@media (max-width: 767px) {
+  .polished-marketing .marketing-header {
+    padding-block: 3px 0;
+    gap: 0 12px;
+  }
+  .polished-marketing .marketing-hero h1 {
+    font-size: clamp(35px, 9.7vw, 58px);
+  }
+  .polished-marketing .capture-image.portrait img {
+    max-height: min(400px, 64svh);
+  }
+}
