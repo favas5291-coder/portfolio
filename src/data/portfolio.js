@@ -95,6 +95,18 @@ export const luxvibe = {
   evidence: 'The concept includes 11 automated checks for cart arithmetic, variant limits, filters, input restrictions and enquiry URLs, plus desktop and phone-width browser checks. It is not a commissioned or approved Luxvibe client engagement. Product images, prices and inventory are illustrative; the owner controls are a browser-local simulation. No live orders, payments, sales or conversion results are claimed.',
 };
 
+export const fabea = {
+  name: 'FABEA',
+  category: 'Fashion storefront',
+  status: 'Independent concept',
+  demo: '/demos/fabea/',
+  caseStudy: '/projects/fabea/',
+  description: 'An editorial storefront concept for a boutique collection of bags and heels. Shoppers can browse styled pairings, save favourites and prepare an enquiry with their selected pieces.',
+  problem: 'Make it easy to move from a fashion campaign to a specific piece and share the details in one enquiry.',
+  contribution: 'Art direction, responsive React storefront, product search and filters, product galleries, saved favourites and an itemized sample enquiry.',
+  features: ['Bags and heels collections', 'The FABEA Edit styling pairings', 'Product galleries and search', 'Wishlist and enquiry bag', 'Copy a sample enquiry'],
+};
+
 // Camera keyframes: x, y, z. The scroll engine interpolates between chapters.
 export const cameraTimeline = [
   { camera: [0, 1, 8], target: [0, 0, 0], object: [1.65, -0.05, 0], rotation: [0.22, -0.4, -0.3], spread: 0 },

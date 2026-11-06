@@ -21,3 +21,8 @@
   for = "/demos/luxvibe/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/demos/fabea/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

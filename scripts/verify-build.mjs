@@ -41,7 +41,10 @@ for (const [path, html] of rendered) {
     const url = new URL(href.replaceAll('&amp;', '&'), `${SITE_ORIGIN}${path}`);
     const targetPath = normalizePath(url.pathname);
     const target = rendered.get(targetPath);
-    if (!target && url.pathname === '/demos/luxvibe/') { assert.ok((await stat('dist/demos/luxvibe/index.html')).size > 0); continue; }
+    if (!target && ['/demos/luxvibe/', '/demos/fabea/'].includes(url.pathname)) {
+      assert.ok((await stat(`dist${url.pathname}index.html`)).size > 0);
+      continue;
+    }
     if (!target && /\.[a-z0-9]+$/i.test(url.pathname)) { await stat(`dist${url.pathname}`); continue; }
     assert.ok(target, `Broken internal link on ${path}: ${href}`);
     if (url.hash) assert.ok(ids(target).has(decodeURIComponent(url.hash.slice(1))), `Broken fragment: ${path} -> ${href}`);
@@ -55,6 +58,9 @@ const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
 assert.deepEqual(locations.sort(), (preview ? [] : pages.map(p => `${SITE_ORIGIN}${p.path}`)).sort());
 const robots = await readFile('dist/robots.txt', 'utf8');
 assert.ok(robots.includes('Allow: /'));
+assert.ok(robots.includes('Disallow: /demos/fabea/'));
+const fabeaDemo = await readFile('dist/demos/fabea/index.html', 'utf8');
+assert.ok(fabeaDemo.includes('noindex, nofollow') && fabeaDemo.includes('Boutique Concept by Fazhere'));
 assert.equal(robots.includes(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`), !preview);
 const error = await readFile('dist/404.html', 'utf8');
 assert.ok(error.includes('noindex, follow') && !error.includes('rel="canonical"'));

@@ -27,5 +27,19 @@ export const projectPreviews = {
       "height": 844,
       "matchesDesktop": "/images/projects/luxvibe-2ae9d601a7f19661.webp"
     }
+  },
+  "fabea": {
+    "website": "https://fazhere.com/demos/fabea/",
+    "width": 1348,
+    "height": 926,
+    "screenshot": "/images/projects/fabea-40138d458cd668dd.webp",
+    "capturedAt": "2026-11-06T05:57:50.714Z",
+    "mobile": {
+      "screenshot": "/images/projects/fabea-mobile-b2a55f0e22e41a23.webp",
+      "capturedAt": "2026-11-06T05:58:57.106Z",
+      "width": 390,
+      "height": 844,
+      "matchesDesktop": "/images/projects/fabea-40138d458cd668dd.webp"
+    }
   }
 };

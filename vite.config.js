@@ -5,7 +5,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pageForPath } from './src/seo/pages.js';
 import { renderHead } from './scripts/seo.mjs';
-import { serveLuxvibe } from './scripts/serve-demo.mjs';
+import { serveDemo, serveLuxvibe } from './scripts/serve-demo.mjs';
 
 // Production preview uses real static routes rather than an SPA catch-all.
 function staticPages() {
@@ -17,6 +17,7 @@ function staticPages() {
     configureServer(server) { server.middlewares.use(serveLuxvibe('public')); },
     configurePreviewServer(server) {
       server.middlewares.use(serveLuxvibe('dist'));
+      server.middlewares.use(serveDemo('dist', 'fabea'));
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url, 'http://localhost');
         const page = pageForPath(url.pathname);
@@ -37,9 +38,12 @@ function staticPages() {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [staticPages(), react(), tailwindcss()],
   server: { host: '0.0.0.0', port: 4173, strictPort: true, allowedHosts: ['terminal.local'] },
   preview: { host: '0.0.0.0', port: 4173, allowedHosts: ['terminal.local'] },
-  build: { target: 'es2022', sourcemap: false, manifest: true },
-});
+  build: {
+    target: 'es2022', sourcemap: false, manifest: true,
+    ...(!isSsrBuild && { rollupOptions: { input: [resolve('index.html'), resolve('demos/fabea/index.html')] } }),
+  },
+}));

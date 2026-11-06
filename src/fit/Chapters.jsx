@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { profile, project, luxvibe, skills } from '../data/portfolio.js';
+import { profile, project, luxvibe, fabea, skills } from '../data/portfolio.js';
 import { projectPreviews } from '../data/project-previews.js';
 import { PHONE_DISPLAY, PHONE_HREF, processSteps, services, whatsappHref } from '../data/site.js';
 import { evidenceRoot } from './ProductBench.jsx';
@@ -142,6 +142,23 @@ export function Work() {
             </div>
           </div>
           <Capture projectId="luxvibe" name="Luxvibe concept" />
+        </article>
+        <article className="work-grid concept-project" aria-labelledby="fabea-work-title">
+          <div>
+            <p className="eyeline">{fabea.category} / {fabea.status}</p>
+            <h2 className="display" id="fabea-work-title">Carry your <em>style.</em></h2>
+            <p className="chapter-intro">{fabea.description}</p>
+            <dl className="story">
+              <dt>The shopping journey</dt><dd>{fabea.problem}</dd>
+              <dt>What I built</dt><dd>{fabea.contribution}</dd>
+            </dl>
+            <p className="concept-disclosure">Independent FABEA concept with illustrative products and generated photography.</p>
+            <div className="work-links">
+              <a className="pill" href={fabea.demo}>Open FABEA demo ↗</a>
+              <a href={fabea.caseStudy}>Read concept case study</a>
+            </div>
+          </div>
+          <Capture projectId="fabea" name="FABEA concept" />
         </article>
       </div>
     </section>
