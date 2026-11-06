@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { ArrowLeft, ArrowRight, ArrowUpRight, Camera, Check, ChevronDown, Copy, Heart, Menu, Minus, Plus, Search, ShoppingBag, SlidersHorizontal, X, ZoomIn } from "lucide-react";
 import { enquiryText, isValidSelection, money, price, productPath, selectionKey, type Product, type Selection } from "./catalogue"
 import { demoHref } from "./routes";
+import CheckoutPreview from "./CheckoutPreview";
+import "./checkout-preview.css";
 
 const colours: Record<string, string> = {
   Chocolate: "#4b2c20", Burgundy: "#68242d", Sand: "#c6ac8d", Black: "#222", Espresso: "#38251b"
@@ -153,7 +155,7 @@ export default function Storefront({ products, path, query }: { products: Produc
 
   return <Shop.Provider value={{ products, saved, bag, toggleSaved, add, setBag, notify, enquire }}>
     <a className="skip-link" href="#main" onClick={event => { event.preventDefault(); document.getElementById("main")?.focus(); }}>Skip to content</a>
-    <div className="announcement">Independent FABEA concept by Fazhere<span>—</span><a href="/projects/fabea/">Project overview <ArrowUpRight size={12}/></a></div>
+    <div className="announcement">Independent FABEA concept by Fazhere<span>—</span><a href="/projects/fabea/">Project overview <ArrowUpRight size={12}/></a><span>—</span><a href={demoHref("/checkout-preview")}>Self-service checkout preview <ArrowUpRight size={12}/></a></div>
     <header className="site-header">
       <div className="header-main">
         <div className="header-left">
@@ -175,9 +177,10 @@ export default function Storefront({ products, path, query }: { products: Produc
         <p className="eyebrow">SAVED FOR ANOTHER LOOK</p><h1>Your favourites.</h1><p className="page-intro">A little collection of the pieces you love.</p>
         {saved.length ? <ProductGrid products={products.filter(p => saved.includes(p.id))}/> : <Empty title="Something will catch your eye." description="Save a piece with the heart icon and find it here whenever you like."/>}
       </section>}
-      {path === "/enquiry" && <EnquiryBag count={count}/>}
+      {path === "/enquiry" && <EnquiryBag count={count}/>} 
+       {path === "/checkout-preview" && <CheckoutPreview/>}
       {current && <ProductDetail key={current.id} product={current}/>}
-      {!current && !["/", "/shop", "/wishlist", "/enquiry"].includes(path) && <Information path={path}/>}
+      {!current && !["/", "/shop", "/wishlist", "/enquiry", "/checkout-preview"].includes(path) && <Information path={path}/>}
     </main>
     <Footer/>
     {notice && <div className="toast" role="status"><Check size={17}/>{notice}</div>}
@@ -418,6 +421,7 @@ function EnquiryBag({ count }: { count: number }) {
         <div className="summary-line"><span>Delivery</span><span>Confirmed on enquiry</span></div>
         <button className="button" onClick={() => enquire(bag)}><Copy size={17}/> Copy your enquiry<ArrowUpRight size={16}/></button>
         <p className="fine">Illustrative products. Review the concept with Fazhere.</p>
+         <a className="text-link" href={demoHref("/checkout-preview")}>Explore a self-service checkout prototype <ArrowUpRight size={16}/></a>
       </aside>
     </div>}
   </section>;
