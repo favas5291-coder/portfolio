@@ -184,6 +184,16 @@ export default function ProofPress({ edition, visit }) {
   }
   function toggle() { settle(1 - target.current); }
 
+  function closeEnlargement() {
+    setEnlarged(false);
+    // The dialog close event can arrive after the browser has already restored
+    // focus and the visitor has tabbed onward. Only restore abandoned focus.
+    const active = document.activeElement;
+    if (!active || active === document.body || active === dialog.current || dialog.current?.contains(active)) {
+      opener.current?.focus({ preventScroll: true });
+    }
+  }
+
   return (
     <div className="ed-feature" id="demonstration">
       {editions.map(item => <span key={item.id} id={'proof-' + item.id} className="ed-proof-anchor" />)}
@@ -218,7 +228,7 @@ export default function ProofPress({ edition, visit }) {
         <h3>{edition.decision}</h3><p>{edition.impact}</p>
         <div className="ed-evidence-links"><a href={edition.detail.href}>{edition.detail.linkLabel} <ActionMark/></a><a href={edition.caseStudy}>Read case study</a>{edition.source && <a href={edition.source}>View code <ActionMark/></a>}</div>
       </section> : <p className="ed-caption">{edition.disclosure} <span>Captured {printedDate.format(new Date(capture.capturedAt))}.</span> {edition.source && <a href={edition.source}>View code <ActionMark/></a>}</p>}
-      <dialog className="ed-modal" ref={dialog} aria-label={edition.name + ' enlarged proof'} onClose={() => { setEnlarged(false); opener.current?.focus(); }}
+      <dialog className="ed-modal" ref={dialog} aria-label={edition.name + ' enlarged proof'} onClose={closeEnlargement}
         onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}>
         {enlarged && <div className="ed-modal-inner">
           <header><h2>{edition.name}</h2><button type="button" autoFocus onClick={() => dialog.current.close()}>Close ×</button></header>

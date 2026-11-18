@@ -32,8 +32,21 @@ const report = {
   browser: browser.version(),
   environment: 'Headless Chromium with SwiftShader, DPR 1. Phones use emulated touch and viewport. No physical device or business-owner session.',
   widths: [],
+  completedSteps: [],
   fallbacks: [],
 };
+function checking(step) {
+  report.currentStep = step;
+  console.log('Checking ' + step);
+}
+function passed(step) {
+  report.completedSteps.push(step);
+}
+async function waitDialogClosed(page) {
+  const modal = page.locator('dialog.ed-modal');
+  await modal.locator('.ed-modal-inner').waitFor({ state: 'detached' });
+  await page.waitForFunction(() => document.activeElement === document.querySelector('.ed-controls .ed-minor[type=button]'));
+}
 function context(width, height, overrides = {}) {
   return browser.newContext({
     viewport: { width, height }, deviceScaleFactor: 1,
@@ -102,9 +115,11 @@ async function proofJourney(page, isPhone) {
   await dialog.waitFor();
   await dialog.locator('img:visible').first().evaluate(image => image.decode());
   await page.keyboard.press('Escape');
-  await dialog.waitFor({ state: 'hidden' });
+  await waitDialogClosed(page);
   assert.ok(await enlarge(page).evaluate(el => el === document.activeElement), 'Focus returns to Enlarge');
+  passed('Proof corner drag, keyboard return and enlarged screenshot at ' + report.currentWidth);
   for (const [id, proof] of Object.entries(projectPreviews)) {
+    checking('Project selection and modal at ' + report.currentWidth + 'px: ' + id);
     await page.locator('a[href="#proof-' + id + '"][aria-label]').first().click();
     await waitFace(page, 'front', id);
     const image = stage(page).locator('.press-sheet img').first();
@@ -125,12 +140,13 @@ async function proofJourney(page, isPhone) {
       }
     } else assert.equal(await comparison.count(), 0);
     await dialog.getByRole('button', { name: /^Close/ }).click();
-    await dialog.waitFor({ state: 'hidden' });
+    await waitDialogClosed(page);
     await turn(page).press('Enter');
     await waitFace(page, 'back', id);
     await showFront(page).click();
     await waitFace(page, 'front', id);
     assert.equal(await page.locator('a[href="/projects/' + id + '/"]').count() > 0, true);
+    passed(report.currentStep);
   }
 }
 function verifyWhatsApp(href, expectedText) {
@@ -239,7 +255,30 @@ function medians(rows) {
   }));
 }
 try {
+  report.currentWidth = 1440;
+  checking('Recording the opening and manual proof turn');
+  const recorder = await context(1440, 900, {
+    recordVideo: { dir: output + '/.recording', size: { width: 1280, height: 800 } },
+  });
+  const page = await recorder.newPage();
+  const video = page.video();
+  try {
+    await page.goto(head);
+    await settled(page);
+    await sleep(3200);
+    await drag(page, page.locator('[data-turn-corner]').first(), (await page.locator('.press-sheet').boundingBox()).width * .83, false, 800);
+    await waitFace(page, 'back');
+    await sleep(1600);
+  } finally { await recorder.close(); }
+  execFileSync(process.env.FFMPEG_PATH || 'ffmpeg', [
+    '-y', '-hide_banner', '-loglevel', 'error', '-i', await video.path(), '-an', '-c:v', 'libx264',
+    '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output + '/Fazhere-Editions-opening.mp4',
+  ]);
+  await rm(output + '/.recording', { recursive: true, force: true });
+  passed(report.currentStep);
   for (const [width, height] of viewports) {
+    report.currentWidth = width;
+    checking('Opening and direct actions at ' + width + 'px');
     const c = await context(width, height);
     try {
       const page = await c.newPage();
@@ -266,16 +305,24 @@ try {
       if (width === 390) assert.ok(sheet.y < height - 70, 'Product is recognisable on the opening phone screen');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal overflow at ' + width);
       await screenshot(page, 'opening-' + width);
+      passed(report.currentStep);
       if (width === 390 || width === 1440) {
+        checking('Proof turn, enlargement and keyboard at ' + width + 'px');
         await proofJourney(page, width === 390);
+        checking('Service prefill, WhatsApp draft, case studies and Back at ' + width + 'px');
         await enquiryJourney(page);
+        passed(report.currentStep);
       }
+      checking('Direct contact at ' + width + 'px');
       await contactCheck(page, width);
+      passed(report.currentStep);
       assert.deepEqual(errors, []);
       report.widths.push(width);
     } finally { await c.close(); }
   }
   for (const mode of ['reduced-motion', 'no-webgl', 'no-javascript']) {
+    report.currentWidth = 390;
+    checking(mode + ' at 390px');
     const c = await context(390, 844, {
       reducedMotion: mode === 'reduced-motion' ? 'reduce' : 'no-preference',
       javaScriptEnabled: mode !== 'no-javascript',
@@ -303,24 +350,8 @@ try {
       report.fallbacks.push(mode);
     } finally { await c.close(); }
   }
-  const recorder = await context(1440, 900, {
-    recordVideo: { dir: output + '/.recording', size: { width: 1280, height: 800 } },
-  });
-  const page = await recorder.newPage();
-  const video = page.video();
-  try {
-    await page.goto(head);
-    await settled(page);
-    await sleep(3200);
-    await drag(page, page.locator('[data-turn-corner]').first(), (await page.locator('.press-sheet').boundingBox()).width * .83, false, 800);
-    await waitFace(page, 'back');
-    await sleep(1600);
-  } finally { await recorder.close(); }
-  execFileSync(process.env.FFMPEG_PATH || 'ffmpeg', [
-    '-y', '-hide_banner', '-loglevel', 'error', '-i', await video.path(), '-an', '-c:v', 'libx264',
-    '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output + '/Fazhere-Editions-opening.mp4',
-  ]);
-  await rm(output + '/.recording', { recursive: true, force: true });
+  report.currentWidth = 390;
+  checking('Standalone download offline');
   const offline = await context(390, 844);
   try {
     await offline.setOffline(true);
@@ -336,6 +367,7 @@ try {
     report.offlineHomepage = true;
   } finally { await offline.close(); }
   if (base) {
+    checking('Alternating base and head performance measurements');
     const samples = { before: [], after: [] };
     for (let i = 0; i < 3; i++) {
       samples.before.push(await measure(base));
@@ -345,8 +377,10 @@ try {
       conditions: 'Three alternating cold contexts per build at 390 × 844, local production servers, Chromium / SwiftShader, DPR 1, unthrottled. Frame intervals cover a 2.2 s window around a 200 CSS px touch drag of the principal control. Values are lab medians.',
       before: medians(samples.before), after: medians(samples.after), samples,
     };
+    console.log('Performance medians ' + JSON.stringify({ before: report.performance.before, after: report.performance.after }));
   }
 } catch (error) {
+  console.error('Review failed during ' + report.currentStep);
   report.failure = String(error);
   throw error;
 } finally {
