@@ -1,398 +1,432 @@
-// Production build and base are started by the review workflow. Playwright is CI-only.
+// Exercise the shipped Vite pages with physical inputs. The app only exposes read-only pose telemetry.
 import assert from 'node:assert/strict';
-import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { chromium } from 'playwright';
+import { WHATSAPP_NUMBER } from '../src/data/site.js';
+import { projectPreviews } from '../src/data/project-previews.js';
 
-const home = 'http://127.0.0.1:4173/',
-  before = process.env.BASELINE_URL,
-  out = 'visual-checks';
-const sizes = [
-  [360, 800],
-  [390, 844],
-  [430, 932],
-  [768, 1024],
-  [1024, 768],
-  [1440, 900],
-  [1920, 1080],
-];
-const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+const head = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/';
+const base = process.env.BASELINE_URL;
+const milestone = process.env.DRIVE_REVIEW === 'milestone';
+const out = 'visual-checks';
+const widths = [[360, 800], [390, 844], [430, 932], [768, 1024], [1024, 768], [1440, 900], [1920, 1080]];
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const host = '[data-drive-host]';
+const report = {
+  kind: milestone ? 'first street' : 'expanded world',
+  head: process.env.HEAD_SHA, base: process.env.BASE_SHA,
+  environment: 'Chromium on Linux, SwiftShader software rendering, emulated viewport and touch, DPR 1, no CPU/network throttling. No physical devices or human participants.',
+  passed: [], failures: [], widths: [], drives: {}, coldLoad: {},
+};
 await mkdir(out, { recursive: true });
-for (const url of [home, before].filter(Boolean)) {
+for (const url of [base, head].filter(Boolean)) {
   let ready = false;
-  for (let i = 0; i < 50 && !ready; i++) {
-    try {
-      ready = (await fetch(url)).ok;
-    } catch {}
+  for (let attempt = 0; !ready && attempt < 80; attempt++) {
+    try { ready = (await fetch(url)).ok; } catch {}
     if (!ready) await sleep(250);
   }
-  assert.ok(ready, 'Preview unavailable: ' + url);
+  assert.ok(ready, 'Could not serve ' + url);
 }
 const browser = await chromium.launch({
-  args: [
-    '--enable-webgl',
-    '--use-gl=angle',
-    '--use-angle=swiftshader',
-    '--enable-unsafe-swiftshader',
-    '--disable-dev-shm-usage',
-  ],
+  executablePath: process.env.CHROME_PATH || undefined,
+  args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
 });
-const ctx = (w, h, extra = {}) =>
-  browser.newContext({
-    viewport: { width: w, height: h },
-    deviceScaleFactor: 1,
-    isMobile: w < 600,
-    hasTouch: w < 600,
-    ...extra,
-  });
-const slider = (p) => p.getByRole('slider', { name: 'Resize product layout' });
-const bench = (p) => p.getByRole('region', { name: 'GymDrobe product demonstration' });
-const report = {
-  head: process.env.HEAD_SHA,
-  base: process.env.BASE_SHA,
-  chromium: browser.version(),
-  widths: [],
-  fallbacks: [],
-  performance: {},
-  contactWidths: [],
-};
-const shot = (p, name) => p.screenshot({ path: out + '/' + name + '.png', timeout: 35000 });
-async function render(p) {
-  await p.locator('.mount[data-renderer=webgl]').waitFor({ timeout: 35000 });
-  await p.evaluate(async () => {
-    await document.fonts.ready;
-    await document.querySelector('.sample-photo img').decode();
-  });
+report.browser = browser.version();
+const context = (width, height, options = {}) => browser.newContext({
+  viewport: { width, height }, deviceScaleFactor: 1, hasTouch: width < 600, isMobile: width < 600, ...options,
+});
+const shot = (page, filename) => page.screenshot({ path: out + '/' + filename + '.png', timeout: 35000 });
+const waitWorld = page => page.waitForFunction(() => {
+  const stage = document.querySelector('[data-drive-host]');
+  return stage?.dataset.renderer === 'webgl' && Number(stage.dataset.step) > 0 && stage.querySelector('canvas');
+}, undefined, { timeout: 50000 });
+function quantiles(list) {
+  const a = [...list].sort((l, r) => l - r);
+  const at = q => a.length ? Math.round(a[Math.floor((a.length - 1) * q)] * 100) / 100 : null;
+  return { count: a.length, p50: at(0.5), p95: at(0.95), max: at(1) };
 }
-async function choose(p) {
-  await bench(p).getByRole('button', { name: 'Choose Red', exact: true }).click();
-  await bench(p).getByRole('button', { name: 'Size M', exact: true }).click();
-}
-async function persisted(p) {
-  assert.equal(
-    await bench(p).getByRole('button', { name: 'Choose Red' }).getAttribute('aria-pressed'),
-    'true',
-  );
-  assert.equal(
-    await bench(p).getByRole('button', { name: 'Size M' }).getAttribute('aria-pressed'),
-    'true',
-  );
-  assert.match(
-    await bench(p).getByRole('img', { name: 'Red COITONIC compression shirt' }).getAttribute('src'),
-    /shirt-red|data:image/,
-  );
-}
-async function drag(p) {
-  const rail = slider(p);
-  await rail.scrollIntoViewIfNeeded();
-  const { x, y, width, height } = await rail.boundingBox();
-  const initial = Number(await rail.getAttribute('aria-valuenow'));
-  await p.mouse.move(x + width / 2, y + height / 2);
-  await p.mouse.down();
-  await p.mouse.move(x + width / 2 - 180, y + height / 2, { steps: 24 });
-  await p.mouse.up();
-  assert.ok(
-    Number(await rail.getAttribute('aria-valuenow')) < initial,
-    'Rail drag narrowed the actual layout',
-  );
-}
-async function journey(p, w) {
-  const product = bench(p);
-  if (w < 600) await product.getByRole('button', { name: 'Choose Red', exact: true }).tap();
-  await choose(p);
-  await product.getByRole('button', { name: 'Desktop', exact: true }).click();
-  await drag(p);
-  await persisted(p);
-  await slider(p).focus();
-  await slider(p).press('Home');
-  let a = Number(await slider(p).getAttribute('aria-valuenow'));
-  await slider(p).press('ArrowRight');
-  assert.ok(Number(await slider(p).getAttribute('aria-valuenow')) > a);
-  await product.getByRole('button', { name: 'Mobile', exact: true }).click();
-  await persisted(p);
-  const logical = await product.locator('.sample-window .sample').evaluate((el) => el.offsetWidth);
-  assert.equal(logical, Number(await slider(p).getAttribute('aria-valuenow')));
-  await product.getByRole('button', { name: 'Enlarge product demo' }).click();
-  await p.getByRole('dialog', { name: 'Enlarged product demo' }).waitFor();
-  await p.keyboard.press('Escape');
-  assert.equal(
-    await product
-      .getByRole('button', { name: 'Enlarge product demo' })
-      .evaluate((el) => el === document.activeElement),
-    true,
-  );
-  await p.getByRole('link', { name: 'View GymDrobe', exact: true }).click();
-  for (const d of ['Mobile', 'Desktop']) {
-    const group = p.getByRole('group', { name: 'Compare desktop and mobile' });
-    if (await group.count()) await group.getByRole('button', { name: d }).click();
-    const enlarge = p.getByRole('button', { name: 'Enlarge screenshot' });
-    await enlarge.click();
-    const image = p.getByRole('dialog', { name: 'GymDrobe storefront capture' }).locator('img');
-    await image.evaluate((el) => el.decode());
-    if (await group.count())
-      assert.equal(await image.evaluate((el) => el.naturalHeight > el.naturalWidth), d === 'Mobile');
-    await p.keyboard.press('Escape');
-    assert.ok(await enlarge.evaluate((el) => el === document.activeElement));
+async function check(name, fn) {
+  console.log('Checking ' + name);
+  try { await fn(); report.passed.push(name); }
+  catch (error) {
+    console.error(error);
+    report.failures.push({ name, message: String(error.stack || error).slice(0, 2600) });
   }
-  const ecom = p.getByRole('button', { name: /E-commerce development/i });
-  await ecom.click();
-  await p.getByRole('link', { name: /Discuss this service/ }).click();
-  const select = p.locator('#enquiry-service');
-  await select.waitFor();
-  await p.waitForFunction(() =>
-    document.querySelector('#enquiry-service')?.selectedOptions[0]?.textContent.includes('E-commerce'),
-  );
-  await p.goBack();
-  await bench(p).waitFor();
-  assert.ok(await p.locator('#contact a[href^="https://wa.me/"]').count());
-}
-async function contactJourney(p) {
-  await p.goto(home + 'contact/?service=ecommerce-development');
-  const select = p.getByLabel('Service needed', { exact: true });
-  await p.waitForFunction(() => document.querySelector('#enquiry-service')?.value === 'E-commerce development');
-  await p.getByRole('link', { name: 'Send a brief', exact: true }).click();
-  assert.ok(p.url().endsWith('#project-enquiry'));
-  await p.getByRole('button', { name: 'Prepare WhatsApp Enquiry' }).click();
-  assert.ok(await p.getByLabel('Your name', { exact: true }).evaluate(el => el === document.activeElement));
-  await p.getByLabel('Your name', { exact: true }).fill('QA Example');
-  await p.getByLabel('Email (or add a phone number)', { exact: true }).fill('example@example.com');
-  await p.getByLabel('What would you like to build or improve?', { exact: true }).fill('An online store with product variants and a clear enquiry flow.');
-  await p.getByRole('button', { name: 'Prepare WhatsApp Enquiry' }).click();
-  const handoff = p.getByRole('link', { name: /Open WhatsApp and review/ });
-  const destination = new URL(await handoff.getAttribute('href'));
-  assert.equal(destination.hostname, 'wa.me');
-  assert.equal(destination.pathname, '/918156805806');
-  assert.match(destination.searchParams.get('text'), /E-commerce development/);
-  assert.match(destination.searchParams.get('text'), /QA Example/);
-  assert.match(await p.getByRole('status').innerText(), /Nothing has been sent/);
-  assert.equal(await select.inputValue(), 'E-commerce development');
-  await shot(p, 'contact-enquiry-ready');
-  await p.getByRole('link', { name: 'Home', exact: true }).click();
-  await bench(p).waitFor();
-  await p.goBack();
-  await p.locator('.fit-contact').waitFor();
-  report.contactJourney = 'Prefill, validation, anchor, local WhatsApp preparation and Back passed. No message sent.';
-}
-async function perf(url, old) {
-  const c = await ctx(390, 844),
-    p = await c.newPage();
-  try {
-    await p.addInitScript(() => {
-      window.metrics = { lcp: null, cls: 0 };
-      new PerformanceObserver((l) => {
-        for (const e of l.getEntries()) window.metrics.lcp = e.startTime;
-      }).observe({ type: 'largest-contentful-paint', buffered: true });
-      new PerformanceObserver((l) => {
-        for (const e of l.getEntries()) if (!e.hadRecentInput) window.metrics.cls += e.value;
-      }).observe({ type: 'layout-shift', buffered: true });
-    });
-    await p.goto(url);
-    await p
-      .locator(old ? '[data-renderer=webgl]' : '.mount[data-renderer=webgl]')
-      .first()
-      .waitFor();
-    await p.waitForTimeout(5200);
-    const rail = p.getByRole('slider').first();
-    await rail.focus();
-    await rail.press('Home');
-    const sampling = p.evaluate(
-      () =>
-        new Promise((resolve) => {
-          let last;
-          const values = [];
-          function tick(t) {
-            if (last !== undefined) values.push(t - last);
-            last = t;
-            if (values.reduce((a, b) => a + b, 0) < 2200) {
-              requestAnimationFrame(tick);
-              return;
-            }
-            values.sort((a, b) => a - b);
-            resolve({
-              p50FrameMs: values[Math.floor(values.length / 2)],
-              p95FrameMs: values[Math.floor(values.length * 0.95)],
-            });
-          }
-          requestAnimationFrame(tick);
-        }),
-    );
-    for (let i = 0; i < 18; i++) {
-      await rail.press(i % 8 < 4 ? 'ArrowRight' : 'ArrowLeft');
-      await sleep(65);
-    }
-    const frames = await sampling;
-    return {
-      ...(await p.evaluate(() => ({
-        loadMs: performance.getEntriesByType('navigation')[0].loadEventEnd,
-        fcpMs: performance.getEntriesByName('first-contentful-paint')[0]?.startTime,
-        lcpMs: window.metrics.lcp,
-        cls: window.metrics.cls,
-      }))),
-      ...frames,
-    };
-  } finally {
-    await c.close();
-  }
-}
-try {
-  for (const [w, h] of sizes) {
-    const c = await ctx(w, h);
-    try {
-      const p = await c.newPage();
-      const errors = [];
-      p.on('pageerror', (e) => errors.push(e.message));
-      await p.goto(home);
-      await render(p);
-      const whatsapp = p.getByRole('link', { name: /^Chat on WhatsApp/ }).first();
-      assert.equal(new URL(await whatsapp.getAttribute('href')).pathname, '/918156805806');
-      assert.match(await whatsapp.getAttribute('class'), /pill/);
-      assert.ok(
-        await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-        'Overflow at ' + w,
-      );
-      for (const link of ['View GymDrobe', 'Chat on WhatsApp'])
-        assert.ok(
-          (
-            await p
-              .getByRole('link', { name: new RegExp('^' + link) })
-              .first()
-              .boundingBox()
-          ).y < h,
-        );
-      await shot(p, 'opening-' + w);
-      if ([390, 1440].includes(w)) {
-        await journey(p, w);
-        await p.locator('#projects').scrollIntoViewIfNeeded();
-        await shot(p, 'work-' + w);
-      }
-      await p.goto(home + 'contact/');
-      await p.locator('.fit-contact').waitFor();
-      assert.match(await p.getByRole('link', { name: /^Chat on WhatsApp/ }).getAttribute('class'), /pill/);
-      assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Contact overflow at ' + w);
-      assert.equal(await p.getByRole('link', { name: 'Contact', exact: true }).getAttribute('aria-current'), 'page');
-      for (const href of ['tel:+918156805806', 'mailto:favas5291@gmail.com'])
-        assert.equal(await p.locator('a[href="' + href + '"]').count(), 1);
-      for (const field of await p.locator('.form-field input, .form-field select, .form-field textarea').all()) {
-        const box = await field.boundingBox();
-        assert.ok(box.width > 0 && box.height >= 44, 'Contact touch target at ' + w);
-        assert.ok(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize) >= 16), 'Contact field font at ' + w);
-      }
-      await shot(p, 'contact-' + w);
-      report.contactWidths.push(w);
-      if (w === 390) await contactJourney(p);
-      assert.deepEqual(errors, []);
-      report.widths.push(w);
-    } finally {
-      await c.close();
-    }
-  }
-  for (const mode of ['reduced-motion', 'no-webgl', 'no-javascript']) {
-    const c = await ctx(390, 844, {
-      reducedMotion: mode === 'reduced-motion' ? 'reduce' : 'no-preference',
-      javaScriptEnabled: mode !== 'no-javascript',
-    });
-    try {
-      const p = await c.newPage();
-      if (mode === 'no-webgl')
-        await p.addInitScript(() => {
-          const get = HTMLCanvasElement.prototype.getContext;
-          HTMLCanvasElement.prototype.getContext = function (t, ...args) {
-            return /webgl/.test(t) ? null : get.call(this, t, ...args);
-          };
-        });
-      await p.goto(home);
-      await p.getByRole('heading', { level: 1 }).waitFor();
-      if (mode !== 'no-javascript') {
-        await choose(p);
-        await persisted(p);
-      }
-      assert.equal(await p.locator('.mount').getAttribute('data-renderer'), 'illustration');
-      await p.getByRole('link', { name: /^Send a brief/ }).click();
-      assert.ok(new URL(p.url()).pathname === '/contact/');
-      await p.locator('.fit-contact').waitFor();
-      assert.equal(await p.getByRole('heading', { level: 1 }).innerText(), 'What are you planning to build?');
-      report.fallbacks.push(mode);
-    } finally {
-      await c.close();
-    }
-  }
-  const recording = await ctx(1440, 900, {
-    recordVideo: { dir: out + '/.recording', size: { width: 1152, height: 720 } },
-  });
-  const page = await recording.newPage(),
-    video = page.video();
-  await page.goto(home);
-  await render(page);
-  await sleep(1300);
-  await choose(page);
-  await sleep(600);
-  await drag(page);
-  await bench(page).getByRole('button', { name: 'Mobile', exact: true }).click();
-  await sleep(900);
-  await persisted(page);
-  await recording.close();
-  execFileSync('ffmpeg', [
-    '-y',
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    '-i',
-    await video.path(),
-    '-an',
-    '-c:v',
-    'libx264',
-    '-crf',
-    '20',
-    '-pix_fmt',
-    'yuv420p',
-    '-movflags',
-    '+faststart',
-    out + '/Built-to-Fit-opening.mp4',
-  ]);
-  await rm(out + '/.recording', { recursive: true, force: true });
-  const offline = await ctx(390, 844);
-  try {
-    await offline.setOffline(true);
-    const p = await offline.newPage();
-    await p.goto(pathToFileURL(resolve(out, 'Fazhere-Built-to-Fit-Preview.html')).href);
-    await render(p);
-    await journey(p, 390);
-    report.offline = true;
-  } finally {
-    await offline.close();
-  }
-  if (before) {
-    const samples = { before: [], after: [] };
-    for (let i = 0; i < 3; i++) {
-      samples.before.push(await perf(before, true));
-      samples.after.push(await perf(home, false));
-    }
-    const median = (rows) =>
-      Object.fromEntries(
-        Object.keys(rows[0]).map((k) => [
-          k,
-          Number(
-            rows
-              .map((x) => x[k])
-              .sort((a, b) => a - b)[1]
-              .toFixed(3),
-          ),
-        ]),
-      );
-    report.performance = {
-      conditions:
-        'Three alternating cold 390 × 844 Chromium contexts, DPR 1, software GPU, local production builds, unthrottled network and CPU. Animation-frame intervals sampled for 2.2 seconds during keyboard input to the primary control.',
-      before: median(samples.before),
-      after: median(samples.after),
-      samples,
-    };
-  }
-} catch (e) {
-  report.failure = String(e);
-  throw e;
-} finally {
   await writeFile(out + '/review.json', JSON.stringify(report, null, 2));
-  await browser.close();
 }
+async function pose(page) {
+  return page.locator(host).evaluate(el => ({
+    x: Number(el.dataset.x), z: Number(el.dataset.z), heading: Number(el.dataset.heading),
+    parked: el.dataset.parked, speed: Number(el.dataset.speed), collisions: Number(el.dataset.collisions), step: Number(el.dataset.step),
+  }));
+}
+// Measure the interval between browser animation frames while the observable vehicle pose changes.
+// This includes JS, renderer scheduling and runner GPU emulation. It is not a physical device GPU time.
+async function armTelemetry(page) {
+  await page.evaluate(() => {
+    const stage = document.querySelector('[data-drive-host]');
+    const sample = window.__driveReview = { active: true, frames: [], inputAt: null, firstMotionMs: null };
+    const startZ = Number(stage.dataset.z);
+    const onInput = e => {
+      if (e.type === 'pointermove' && !e.buttons) return;
+      if (sample.inputAt === null) sample.inputAt = performance.now();
+    };
+    for (const type of ['pointermove', 'keydown']) document.addEventListener(type, onInput, { capture: true, passive: true });
+    let previous = null;
+    function frame(now) {
+      if (!sample.active) {
+        for (const type of ['pointermove', 'keydown']) document.removeEventListener(type, onInput, true);
+        return;
+      }
+      const speed = Math.abs(Number(stage.dataset.speed));
+      if (sample.inputAt !== null && sample.firstMotionMs === null && Math.abs(Number(stage.dataset.z) - startZ) > 0.005) {
+        sample.firstMotionMs = performance.now() - sample.inputAt;
+      }
+      if (previous !== null && sample.inputAt !== null && speed > 0.2) sample.frames.push(now - previous);
+      previous = now;
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+async function waitZ(page, targetZ) {
+  await page.waitForFunction(z => Number(document.querySelector('[data-drive-host]').dataset.z) <= z, targetZ, { timeout: 30000 });
+}
+async function centre(locator) {
+  const box = await locator.boundingBox();
+  assert.ok(box?.width && box.height, 'visible input control');
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2, radius: Math.min(box.width, box.height) / 2 };
+}
+async function driveAndPark(page, touch) {
+  await armTelemetry(page);
+  if (touch) {
+    const session = await page.context().newCDPSession(page);
+    const stick = await centre(page.locator('[data-stick]'));
+    const pedal = await centre(page.locator('[data-brake]'));
+    const event = (type, touchPoints) => session.send('Input.dispatchTouchEvent', { type, touchPoints });
+    const thumb = (steer, gas) => ({ id: 1, x: stick.x + stick.radius * steer, y: stick.y - stick.radius * gas });
+    try {
+      await event('touchStart', [thumb(0, 0)]);
+      await event('touchMove', [thumb(0.12, 0.8)]);
+      await waitZ(page, 6.4);
+      await event('touchMove', [thumb(0, 0.8)]);
+      await waitZ(page, -3.6);
+      await event('touchEnd', []);
+      await event('touchStart', [{ id: 2, x: pedal.x, y: pedal.y }]);
+      await page.waitForFunction(() => Math.abs(Number(document.querySelector('[data-drive-host]').dataset.speed)) < 0.05);
+      await event('touchEnd', []);
+    } finally { await event('touchEnd', []).catch(() => {}); await session.detach(); }
+  } else {
+    await page.locator(host).focus();
+    await page.keyboard.down('ArrowUp');
+    await waitZ(page, 6.7);
+    await page.keyboard.down('ArrowRight');
+    await waitZ(page, 6.3);
+    await page.keyboard.up('ArrowRight');
+    await waitZ(page, -3.4);
+    await page.keyboard.up('ArrowUp');
+    await page.keyboard.down('b');
+    await page.waitForFunction(() => Math.abs(Number(document.querySelector('[data-drive-host]').dataset.speed)) < 0.05);
+    await page.keyboard.up('b');
+  }
+  const result = await pose(page);
+  const sample = await page.evaluate(() => {
+    window.__driveReview.active = false;
+    return { firstMotionMs: window.__driveReview.firstMotionMs, frames: window.__driveReview.frames };
+  });
+  return { stopped: result, firstInputToObservedPoseMs: sample.firstMotionMs, inputToFirstRenderedMovementMs: Number(await page.locator(host).getAttribute('data-input-ms')), movingFrameIntervalsMs: quantiles(sample.frames) };
+}
+async function firstFrame(page) {
+  const controls = [
+    page.getByText(/Muhammed Favas K\s*·\s*Full.stack developer/i).first(),
+    page.getByRole('heading', { name: /I build websites and apps that help businesses grow/i }).first(),
+    page.getByRole('link', { name: /^View GymDrobe/i }).first(),
+    page.getByRole('link', { name: /^Chat on WhatsApp/i }).first(),
+  ];
+  for (const control of controls) {
+    const b = await control.boundingBox();
+    assert.ok(b && b.x >= -1 && b.y >= -1 && b.x + b.width <= page.viewportSize().width + 1 && b.y + b.height <= page.viewportSize().height + 1, 'first-frame text/action fits: ' + await control.textContent());
+  }
+}
+async function exampleDrive(width, height, { record = false } = {}) {
+  const touch = width < 600;
+  const ctx = await context(width, height, record ? { recordVideo: { dir: out + '/video-temp', size: { width, height } } } : {});
+  const page = await ctx.newPage();
+  const video = page.video();
+  page.setDefaultTimeout(14000);
+  try {
+    await page.goto(head);
+    await waitWorld(page);
+    await firstFrame(page);
+    await shot(page, touch ? 'phone-spawn' : 'desktop-spawn');
+    await sleep(420);
+    const drive = await driveAndPark(page, touch);
+    report.drives[width] = drive;
+    assert.ok(drive.stopped.collisions > 0, 'pickup hit a movable object');
+    assert.equal(drive.stopped.parked, 'gymdrobe');
+    assert.ok(drive.firstInputToObservedPoseMs > 0 && drive.movingFrameIntervalsMs.count > 0, 'motion was sampled');
+    await shot(page, touch ? 'phone-parked' : 'desktop-parked');
+    const action = page.locator('[data-interact]');
+    if (touch) await action.tap(); else await action.click();
+    const dialog = page.getByRole('dialog').first();
+    await dialog.waitFor();
+    await dialog.locator('img').first().evaluate(img => img.decode());
+    const projectLink = dialog.locator('a[href*="gymdrobe.com"]').first();
+    assert.equal(new URL(await projectLink.getAttribute('href')).hostname.replace(/^www\./,''), 'gymdrobe.com');
+    const whatsApp = dialog.locator('a[href^="https://wa.me/"]').first();
+    const wa = new URL(await whatsApp.getAttribute('href'));
+    assert.equal(wa.pathname, '/' + WHATSAPP_NUMBER);
+    assert.ok(wa.searchParams.get('text')?.length);
+    await shot(page, touch ? 'phone-project' : 'desktop-project');
+    if (record) {
+      await whatsApp.scrollIntoViewIfNeeded();
+      await whatsApp.focus();
+      await sleep(620);
+      await shot(page, 'phone-whatsapp-path');
+    }
+    // Read a case study then return. No WhatsApp message or enquiry is sent.
+    if (touch) await page.goBack();
+    else await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'hidden' });
+    const returned = await pose(page);
+    assert.deepEqual([returned.x, returned.z, returned.heading], [drive.stopped.x, drive.stopped.z, drive.stopped.heading]);
+    await sleep(420);
+  } catch (error) { await shot(page, 'error-drive-' + width).catch(() => {}); throw error; }
+  finally {
+    await ctx.close();
+    if (video) {
+      const original = await video.path();
+      execFileSync(process.env.FFMPEG_PATH || 'ffmpeg', ['-y', '-loglevel', 'error', '-i', original, '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-codec:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out + '/drive-from-spawn.mp4']);
+      await rm(out + '/video-temp', { recursive: true, force: true });
+    }
+  }
+}
+async function layout(width, height) {
+  const ctx = await context(width, height);
+  try {
+    const page = await ctx.newPage();
+    await page.goto(head);
+    await waitWorld(page);
+    await page.evaluate(() => document.fonts.ready);
+    await firstFrame(page);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    assert.ok(overflow <= 1, 'horizontal overflow ' + overflow + ' px');
+    const stage = await page.locator(host).boundingBox();
+    assert.ok(stage && stage.width > 200 && stage.y < height, 'world is visible on arrival');
+    await shot(page, 'opening-' + width);
+    report.widths.push({ width, height, visibleWorldHeight: Math.min(stage.height, height - stage.y), overflow });
+  } finally { await ctx.close(); }
+}
+async function directRoutes() {
+  const ctx = await context(390, 844);
+  try {
+    const page = await ctx.newPage();
+    for (const path of ['/services/', '/contact/', ...Object.keys(projectPreviews).map(id => '/projects/' + id + '/')]) {
+      const response = await page.goto(new URL(path, head).href);
+      assert.equal(response.status(), 200);
+      assert.ok((await page.locator('h1').first().innerText()).trim());
+      assert.equal(new URL(await page.locator('link[rel="canonical"]').getAttribute('href')).pathname, path);
+    }
+    await page.goto(head);
+    await page.locator('#services').getByRole('button', { name: /I want to sell online/ }).click();
+    const section = page.locator('#services');
+    const draft = new URL(await section.getByRole('link', { name: /Discuss on WhatsApp/ }).getAttribute('href'));
+    assert.equal(draft.pathname, '/' + WHATSAPP_NUMBER);
+    assert.match(draft.searchParams.get('text'), /e-commerce/i);
+    await section.getByRole('link', { name: /Send a brief/i }).click();
+    await page.waitForFunction(() => document.querySelector('#enquiry-service')?.value === 'E-commerce development');
+    assert.ok(await page.locator('form').first().isVisible());
+  } finally { await ctx.close(); }
+}
+async function fallback(mode) {
+  const ctx = await context(390, 844, mode === 'reduced-motion' ? { reducedMotion: 'reduce' } : mode === 'no-javascript' ? { javaScriptEnabled: false } : {});
+  try {
+    if (mode === 'webgl-unavailable') await ctx.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, ...options) {
+        return /webgl/i.test(type) ? null : original.call(this, type, ...options);
+      };
+    });
+    const page = await ctx.newPage();
+    await page.goto(head);
+    await firstFrame(page);
+    const gym = page.getByRole('link', { name: /^View GymDrobe/i }).first();
+    assert.equal(await gym.getAttribute('href'), '/projects/gymdrobe/');
+    if (mode !== 'no-javascript') {
+      await page.waitForFunction(() => !document.querySelector('[data-drive-host] canvas'));
+      await gym.click();
+      await page.getByRole('dialog').first().waitFor();
+    } else {
+      await gym.click();
+      assert.equal(new URL(page.url()).pathname, '/projects/gymdrobe/');
+    }
+  } finally { await ctx.close(); }
+}
+async function coldLoad(width, height) {
+  const series = { before: [], after: [] };
+  // Interleave distinct empty browser contexts to limit cache warming and scheduling drift.
+  for (let r = 0; r < 3; r++) {
+    const order = r % 2 ? ['after', 'before'] : ['before', 'after'];
+    for (const version of order) {
+      const ctx = await context(width, height);
+      try {
+        const page = await ctx.newPage();
+        await page.goto(version === 'before' ? base : head);
+        if (version === 'after') await waitWorld(page);
+        else await page.locator('[data-renderer="webgl"]').first().waitFor({ timeout: 50000 });
+        const timing = await page.evaluate(() => {
+          const navigation = performance.getEntriesByType('navigation')[0];
+          const paint = performance.getEntriesByName('first-contentful-paint')[0];
+          return { load: navigation.loadEventEnd, dom: navigation.domContentLoadedEventEnd, fcp: paint?.startTime ?? null, observedReady: performance.now(),
+            bytesThroughReady: performance.getEntriesByType('resource').reduce((total, item) => total + item.transferSize, navigation.transferSize) };
+        });
+        series[version].push(timing);
+        if (!r && version === 'before') await shot(page, 'baseline-' + width);
+      } finally { await ctx.close(); }
+    }
+  }
+  const summarise = list => Object.fromEntries(Object.keys(list[0]).map(key => [key, quantiles(list.map(sample => sample[key]).filter(Number.isFinite)).p50]));
+  report.coldLoad[width] = { raw: series, median: { before: summarise(series.before), after: summarise(series.after) },
+    note: 'Cold context, localhost, same Chromium and machine. Observed ready is a browser test upper bound for a painted and initialized WebGL scene. Bytes include all resources completed up to that observation.' };
+}
+async function verifyCaptures() {
+  const ctx = await context(390, 844);
+  try {
+    const page = await ctx.newPage();
+    await page.goto(head);
+    for (const [id, preview] of Object.entries(projectPreviews)) {
+      await page.locator('#projects').locator('h3 a[href="/projects/' + id + '/"]').click();
+      const dialog = page.getByRole('dialog').first();
+      const image = dialog.locator('figure img');
+      if (preview.mobile?.matchesDesktop === preview.screenshot) {
+        await page.waitForFunction(src => document.querySelector('dialog[open] figure img, [role="dialog"] figure img')?.getAttribute('src') === src, preview.mobile.screenshot);
+        await dialog.getByRole('button', { name: 'Desktop', exact: true }).click();
+      }
+      assert.equal(await image.getAttribute('src'), preview.screenshot);
+      await image.evaluate(img => img.decode());
+      const info = await image.evaluate(img => [img.naturalWidth, img.naturalHeight]);
+      assert.deepEqual(info, [preview.width, preview.height]);
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'hidden' });
+    }
+  } finally { await ctx.close(); }
+}
+async function controlsAndPause() {
+  const ctx = await context(1024, 768);
+  try {
+    const page = await ctx.newPage();
+    await page.goto(head);
+    await waitWorld(page);
+    const sound = page.getByRole('button', { name: 'Sound', exact: true });
+    assert.equal(await sound.getAttribute('aria-pressed'), 'false');
+    await sound.click();
+    assert.equal(await sound.getAttribute('aria-pressed'), 'true');
+    await sound.click();
+    await page.locator(host).focus();
+    await page.keyboard.press('m');
+    const modal = page.getByRole('dialog');
+    await modal.getByRole('link', { name: 'Explore Fazhere office' }).click();
+    assert.ok(await modal.getByRole('heading', { name: /what are you planning to build/i }).isVisible());
+    assert.equal(await page.locator(host).getAttribute('data-paused'), 'true');
+    await modal.getByText('From the first brief to handover', { exact: true }).click();
+    assert.ok(await modal.getByText('Launch and handover', { exact: true }).isVisible());
+    const before = await pose(page);
+    await page.keyboard.down('ArrowUp');
+    await page.waitForTimeout(300);
+    await page.keyboard.up('ArrowUp');
+    assert.equal((await pose(page)).z, before.z);
+    await modal.getByRole('button', {name: /Back to drive/i}).click();
+    await modal.waitFor({ state: 'hidden' });
+    await page.locator(host).focus();
+    await page.keyboard.down('ArrowUp');
+    await waitZ(page, 6.5);
+    await page.keyboard.up('ArrowUp');
+    await page.keyboard.press('r');
+    await page.waitForFunction(() => Number(document.querySelector('[data-drive-host]').dataset.z) === 7);
+    await page.getByRole('button', {name: 'Controls', exact: true}).click();
+    assert.ok(await page.getByRole('dialog').getByText('Recover the pickup', { exact: true }).isVisible());
+    await page.keyboard.press('Escape');
+    await modal.waitFor({state: 'hidden'});
+    await page.locator('#contact').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    const pausedStep = (await pose(page)).step;
+    await page.waitForTimeout(350);
+    assert.equal((await pose(page)).step, pausedStep, 'engine stops offscreen');
+  } finally { await ctx.close(); }
+}
+async function baselineFrames(width, height) {
+  const ctx = await context(width, height);
+  try {
+    const page = await ctx.newPage();
+    await page.goto(base);
+    const handle = page.getByRole('slider', { name: /resize product layout/i });
+    await handle.scrollIntoViewIfNeeded();
+    const box = await centre(handle);
+    await page.evaluate(() => {
+      const sample = window.__railReview = { active: true, frames: [] };
+      let prev;
+      function frame(now) {
+        if (!sample.active) return;
+        if (prev) sample.frames.push(now - prev);
+        prev = now; requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+    await page.mouse.move(box.x, box.y); await page.mouse.down();
+    for (let i = 0; i <= 45; i++) {
+      await page.mouse.move(box.x - Math.min(180, box.x - 3) * Math.sin(Math.PI * i / 45), box.y);
+      await sleep(25);
+    }
+    await page.mouse.up();
+    const frames = await page.evaluate(() => { window.__railReview.active = false; return window.__railReview.frames; });
+    report.baselineRailFrames ??= {};
+    report.baselineRailFrames[width] = quantiles(frames);
+    assert.ok(frames.length > 0);
+  } finally { await ctx.close(); }
+}
+
+try {
+  await check('390 px genuine touch drive, object impact, brake, park, project, WhatsApp and Back', () => exampleDrive(390, 844, { record: true }));
+  await check('desktop keyboard drive, parking and Escape', () => exampleDrive(1440, 900));
+  if (!milestone) {
+    await check('phone busy street without recording overhead', async () => {
+      const ctx = await context(390, 844);
+      try {
+        const page = await ctx.newPage();
+        await page.goto(head);
+        await waitWorld(page);
+        report.recordedPhoneDrive = report.drives[390];
+        // Let streamed storefronts settle before timing the busy approach to GymDrobe.
+        await page.waitForTimeout(1500);
+        report.drives[390] = await driveAndPark(page, true);
+        assert.equal(report.drives[390].stopped.parked, 'gymdrobe');
+      } finally { await ctx.close(); }
+    });
+    for (const [width, height] of widths) await check(width + ' px opening', () => layout(width, height));
+    await check('service selection, WhatsApp destination, enquiry prefill and deep links', directRoutes);
+    await check('all project captures and correct desktop/mobile pairing', verifyCaptures);
+    await check('sound, keyboard map, office, process, pause, respawn and offscreen stop', controlsAndPause);
+    for (const mode of ['reduced-motion', 'webgl-unavailable', 'no-javascript']) await check(mode, () => fallback(mode));
+    if (base) for (const [w, h] of [widths[1], widths[5]]) {
+      await check('cold load comparison at ' + w, () => coldLoad(w, h));
+      await check('baseline rail interaction at ' + w, () => baselineFrames(w, h));
+    }
+  }
+  await check('standalone preview can render and drive', async () => {
+    const ctx = await context(390, 844);
+    try {
+      const page = await ctx.newPage();
+      await ctx.setOffline(true);
+      await page.goto(pathToFileURL(resolve(out, 'Fazhere-Drive-Preview.html')).href);
+      await waitWorld(page);
+      await page.locator(host).focus();
+      await page.keyboard.down('ArrowUp'); await waitZ(page, 6.7); await page.keyboard.up('ArrowUp');
+    } finally { await ctx.close(); }
+  });
+} finally {
+  await browser.close(); await writeFile(out + '/review.json', JSON.stringify(report, null, 2));
+}
+if (report.failures.length) process.exitCode = 1;

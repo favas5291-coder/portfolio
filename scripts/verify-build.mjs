@@ -7,6 +7,8 @@ import { SITE_ORIGIN } from '../src/data/site.js';
 import { pages, normalizePath } from '../src/seo/pages.js';
 import { escapeHTML, isPreview } from './seo.mjs';
 
+import { pageEntry } from './page-entry.mjs';
+
 const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
 const preview = isPreview(env);
 const home = await readFile('dist/index.html', 'utf8');
@@ -66,7 +68,8 @@ const error = await readFile('dist/404.html', 'utf8');
 assert.ok(error.includes('noindex, follow') && !error.includes('rel="canonical"'));
 const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
 const sizes = {};
-for (const [name, route] of [['home', 'src/App.jsx'], ['services', 'src/MarketingPages.jsx']]) {
+for (const [name, file] of [['home', 'src/App.jsx'], ['services', 'src/MarketingPages.jsx']]) {
+  const route = pageEntry(manifest, file);
   const initialHTML = name === 'home' ? home : rendered.get('/services/');
   for (const css of manifest[route]?.css || []) assert.ok(initialHTML.includes(`href="/${css}"`), `Page CSS must be present before JavaScript: ${name} ${css}`);
   const seen = new Set();

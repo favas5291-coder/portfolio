@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { profile, project, luxvibe, fabea, skills } from '../data/portfolio.js';
 import { projectPreviews } from '../data/project-previews.js';
 import { PHONE_DISPLAY, PHONE_HREF, processSteps, services, whatsappHref } from '../data/site.js';
-import { evidenceRoot } from './ProductBench.jsx';
+import { evidenceRoot } from '../data/product-evidence.js';
 
 const date = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',

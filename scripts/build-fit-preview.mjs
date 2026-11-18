@@ -20,6 +20,10 @@ const bundle = await build({
       const href = anchor?.getAttribute('href');
       if (!href?.startsWith('/') || href.startsWith('//')) return;
       const route = new URL(href, 'https://fazhere.com');
+      if (route.pathname.startsWith('/demos/')) {
+        anchor.href = route.href;
+        return;
+      }
       const destination = new URL(location.href);
       destination.search = route.search;
       if (route.pathname !== '/') destination.searchParams.set('reviewPath', route.pathname);
@@ -50,11 +54,24 @@ async function embed(text) {
   }
   return text;
 }
-const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere · Built to Fit review</title><style>' +
+const icon = await embed('<link rel="icon" type="image/png" href="/favicon-32.png">');
+const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere Drive · Interactive review</title>' + icon + '<style>' +
   (await embed(styles.join('\n'))).replace(/@import\s+[^;]*;/g,'') +
   '</style></head><body><div id="root"></div><script>' +
   (await embed(bundle.outputFiles[0].text)).replace(/<\/script/gi,'<\\/script') + '</script></body></html>';
-const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Built-to-Fit-Preview.html');
+const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Drive-Preview.html');
 await mkdir(dirname(output), {recursive: true});
 await writeFile(output, html);
+if (!process.argv[2]) await writeFile(join(dirname(output), 'README.txt'), [
+  'Fazhere Drive review',
+  '',
+  'Open Fazhere-Drive-Preview.html in a browser for an offline copy of the portfolio. Drive the pickup with the arrows or touch pad, then park beside GymDrobe and open the project. Its links to the public stores and WhatsApp need an internet connection.',
+  '',
+  'For the exact Vite production build, including both local boutique demos, extract Fazhere-Drive-production.zip from the review workflow. In the extracted folder run:',
+  'python3 -m http.server 8000 --bind 127.0.0.1 --directory dist',
+  'Open http://127.0.0.1:8000/ in your browser. Stop the server with Ctrl+C.',
+  '',
+  'The workflow also generates the opening MP4, viewport screenshots, and measured before/after results in review.json. Check the failure field if the workflow was interrupted.',
+  '',
+].join('\n'));
 console.log('Standalone review:', output, '(' + Buffer.byteLength(html) + ' bytes)');
