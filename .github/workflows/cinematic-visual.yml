@@ -1,4 +1,4 @@
-name: Built to Fit visual review
+name: Fazhere Drive visual review
 
 on:
   pull_request:
@@ -16,8 +16,8 @@ permissions:
 
 jobs:
   capture:
-    runs-on: ubuntu-latest
-    timeout-minutes: 24
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,6 +28,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci && npm run verify
+      - name: Select the checkpoint or complete street review
+        shell: bash
+        run: |
+          if git log -1 --pretty=%s | grep -qF '[drive-milestone]'; then
+            echo 'DRIVE_REVIEW=milestone' >> "$GITHUB_ENV"
+          else
+            echo 'DRIVE_REVIEW=full' >> "$GITHUB_ENV"
+          fi
       - name: Check out comparison baseline
         uses: actions/checkout@v4
         with:
@@ -37,26 +45,37 @@ jobs:
       - name: Build baseline from its own lockfile
         working-directory: .sites-runtime/baseline
         run: npm ci && npm run build
-      - name: Install browser and recording tooling on the runner
+      - name: Use the runner's Chrome and prepare video capture
         run: |
-          npm install --no-save --package-lock=false playwright@1.56.1
-          npx playwright install --with-deps chromium
-          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
+          npm install --prefix "$RUNNER_TEMP/drive-tools" --no-audit --no-fund playwright@1.56.1 @ffmpeg-installer/linux-x64@4.1.0
+          ln -s "$RUNNER_TEMP/drive-tools/node_modules/playwright" node_modules/playwright
+          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          "$chrome_path" --version
+          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
+          ffmpeg_path="$(command -v ffmpeg || echo "$RUNNER_TEMP/drive-tools/node_modules/@ffmpeg-installer/linux-x64/ffmpeg")"
+          ffmpeg_rev="$(node -p "require(process.env.RUNNER_TEMP + '/drive-tools/node_modules/playwright-core/browsers.json').browsers.find(b => b.name === 'ffmpeg').revision")"
+          tool_cache="$RUNNER_TEMP/drive-browsers"
+          mkdir -p "$tool_cache/ffmpeg-$ffmpeg_rev"
+          ln -s "$ffmpeg_path" "$tool_cache/ffmpeg-$ffmpeg_rev/ffmpeg-linux"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$tool_cache" >> "$GITHUB_ENV"
+          echo "FFMPEG_PATH=$ffmpeg_path" >> "$GITHUB_ENV"
       - name: Package review preview for offline use
-        run: node scripts/build-fit-preview.mjs
+        run: |
+          node scripts/build-fit-preview.mjs
+          python -m zipfile -c visual-checks/Fazhere-Drive-production.zip dist
       - name: Run browser checks and compare head with base
         env:
           BASELINE_URL: http://127.0.0.1:4174/
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          npm run preview -- --host 127.0.0.1 --strictPort > /tmp/fazhere-built-to-fit.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --strictPort > /tmp/fazhere-drive.log 2>&1 &
           (cd .sites-runtime/baseline && npm run preview -- --host 127.0.0.1 --port 4174 --strictPort) > /tmp/fazhere-before.log 2>&1 &
           node scripts/capture-cinematic.mjs
       - name: Upload review bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fazhere-built-to-fit-review
+          name: fazhere-drive-${{ env.DRIVE_REVIEW }}-review
           path: visual-checks/
           if-no-files-found: error

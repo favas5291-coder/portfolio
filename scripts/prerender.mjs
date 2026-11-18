@@ -6,6 +6,8 @@ import { pages, notFound } from '../src/seo/pages.js';
 import { SITE_ORIGIN } from '../src/data/site.js';
 import { renderHead, isPreview } from './seo.mjs';
 
+import { pageEntry } from './page-entry.mjs';
+
 const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
 await build({ build: { ssr: 'src/entry-server.jsx', outDir: '.sites-runtime/ssr', emptyOutDir: true }, logLevel: 'warn' });
 const { render } = await import(pathToFileURL(resolve('.sites-runtime/ssr/entry-server.js')).href);
@@ -20,7 +22,7 @@ function pageStyles(path) {
     for (const css of chunk?.css || []) styles.add(css);
     for (const child of chunk?.imports || []) visit(child);
   };
-  visit(path === '/' ? 'src/App.jsx' : path === '/contact/' ? 'src/fit/ContactPage.jsx' : 'src/MarketingPages.jsx');
+  visit(pageEntry(manifest, path === '/' ? 'src/App.jsx' : path === '/contact/' ? 'src/fit/ContactPage.jsx' : 'src/MarketingPages.jsx'));
   return [...styles].filter(css => !template.includes(`/${css}`)).map(css => `<link rel="stylesheet" href="/${css}"/>`).join('');
 }
 if (!template.includes('<!--app-html-->') || !template.includes('<!--page-meta-->')) throw new Error('Missing prerender placeholders');
