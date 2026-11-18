@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { WHATSAPP_NUMBER } from '../src/data/site.js';
 import { projectPreviews } from '../src/data/project-previews.js';
+import { RAMP, LOADING_BAY } from '../src/drive/layout.js';
 
 const head = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/';
 const base = process.env.BASELINE_URL;
@@ -401,50 +402,73 @@ async function baselineFrames(width, height) {
   } finally { await ctx.close(); }
 }
 
-// Replay a discovered route with real keyboard inputs and a controlled frame clock.
-// This optional observation cannot affect the measured frame times or gate a build.
+// Real touch input on the visible stick and brake. Read the same fixed-step pose
+// diagnostics as the main drive; this separate run never alters the simulation clock.
 async function probeDelivery() {
-  const ctx = await context(900, 700);
+  const ctx = await context(390, 844);
   const page = await ctx.newPage();
-  let paused = false;
+  let session;
   const results = report.deliveryObservation = {
-    method: 'Real keyboard input in a separate Chromium context, Playwright virtual clock. No position injection.',
-    observed: false,
+    method: 'Touch joystick and brake driven from sampled pickup poses along five waypoints. Real clock, no pose injection.',
+    observed: false, reached: [],
   };
   try {
     page.setDefaultTimeout(15000);
-    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
     await page.goto(head);
     await waitStreet(page);
-    await page.locator(host).focus();
-    const next = await page.evaluate(() => new Date(Date.now() + 450).toISOString());
-    await page.clock.pauseAt(next);
-    paused = true;
-    const held = new Set();
+    const stick = await centre(page.locator('[data-stick]'));
+    const brake = await centre(page.locator('[data-brake]'));
+    // The UI measures deflection from 37% of the stick's diameter.
+    const radius = stick.radius * 2 * 0.37;
+    session = await ctx.newCDPSession(page);
+    const send = (type, touchPoints) => session.send('Input.dispatchTouchEvent', { type, touchPoints });
+    await send('touchStart', [{ id: 1, x: stick.x, y: stick.y }]);
     const route = [
-      [['w', 'd'], 44], [['w'], 59], [['w', 'a'], 22], [['b'], 48],
-      [['w'], 67], [[], 82], [['w', 'a'], 109], [['w'], 12], [['b'], 50],
+      { x: 6.2, z: -0.7, throttle: 0.62, tolerance: 1.6 },
+      { x: RAMP.x, z: -8.5, throttle: 0.55, tolerance: 1.1 },
+      { x: RAMP.x, z: RAMP.z + 1.9, throttle: 0.48, tolerance: 1.3 },
+      { x: RAMP.x, z: -22, throttle: 0.43, tolerance: 1.2 },
+      { ...LOADING_BAY, throttle: 0.35, tolerance: 1.4 },
     ];
-    for (const [keys, ticks] of route) {
-      for (const key of [...held]) if (!keys.includes(key)) {
-        await page.keyboard.up(key); held.delete(key);
+    const deadline = Date.now() + 65000;
+    for (const target of route) {
+      let reached = false;
+      while (!reached && Date.now() < deadline) {
+        const p = await pose(page);
+        const dx = target.x - p.x, dz = target.z - p.z;
+        if (Math.hypot(dx, dz) < target.tolerance) {
+          results.reached.push({ x: p.x, z: p.z, step: p.step });
+          reached = true;
+          continue;
+        }
+        const delta = Math.atan2(-dx, -dz) - p.heading;
+        const error = Math.atan2(Math.sin(delta), Math.cos(delta));
+        // Keep both requested axes inside the physical joystick's circular travel.
+        const limit = Math.sqrt(1 - target.throttle ** 2);
+        const steer = Math.max(-limit, Math.min(limit, -2.2 * error));
+        await send('touchMove', [{ id: 1, x: stick.x + steer * radius, y: stick.y - target.throttle * radius }]);
+        await sleep(55);
       }
-      for (const key of keys) if (!held.has(key)) {
-        await page.keyboard.down(key); held.add(key);
-      }
-      await page.clock.runFor(Math.round(ticks * 1000 / 60));
+      if (!reached) throw Error('Timed out before reaching waypoint ' + (results.reached.length + 1));
     }
-    for (const key of held) await page.keyboard.up(key);
-    await page.clock.runFor(800);
-    await page.clock.resume();
-    paused = false;
-    results.end = await pose(page);
-    results.observed = await page.locator(host).getAttribute('data-discovered') === 'true';
-    if (results.observed) await shot(page, 'delivery-bay');
+    await send('touchEnd', []);
+    await send('touchStart', [{ id: 2, x: brake.x, y: brake.y }]);
+    await page.locator(host + '[data-discovered="true"]').waitFor({ timeout: 6000 });
+    await page.waitForFunction(() => Number(document.querySelector('[data-drive-host]').dataset.speed) === 0);
+    await send('touchEnd', []);
+    results.observed = true;
+    // Allow the unlocked bay's shutter to finish rising before documenting the cargo.
+    await sleep(700);
+    await shot(page, 'delivery-bay');
   } catch (err) {
     results.note = String(err).slice(0, 450);
+    await shot(page, 'delivery-attempt').catch(() => {});
   } finally {
-    if (paused) await page.clock.resume().catch(() => {});
+    results.end = await pose(page).catch(() => null);
+    if (session) {
+      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {});
+      await session.detach().catch(() => {});
+    }
     await ctx.close();
   }
 }
@@ -496,7 +520,7 @@ try {
     for (const [width, height] of widths) await check(width + ' px opening', () => layout(width, height));
     await check('service selection, WhatsApp destination, enquiry prefill and deep links', directRoutes);
     await check('all project captures and correct desktop/mobile pairing', verifyCaptures);
-    console.log('Observing optional keyboard delivery replay');
+    console.log('Observing real touch drive over the delivery ramp and into the rear bay');
     await probeDelivery();
     await check('sound, keyboard map, office, process, pause, respawn and offscreen stop', controlsAndPause);
     for (const mode of ['reduced-motion', 'webgl-unavailable', 'no-javascript']) await check(mode, () => fallback(mode));
