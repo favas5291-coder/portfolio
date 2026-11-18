@@ -45,7 +45,7 @@ function archFace(root, x, z, bottom, width, height, paint) {
   root.add(mesh);
 }
 
-function boutique(root, builder, site, print, alive) {
+function boutique(root, builder, site, print) {
   const { id, x, z, width: w, depth: d } = site;
   const f = z + d / 2;
   const luxury = id === 'luxvibe';
@@ -65,6 +65,18 @@ function boutique(root, builder, site, print, alive) {
     paper: fascia, ink: luxury ? '#f7ead8' : '#49382c', serif: true, bold: false,
   });
 
+  // The two boutiques have distinct rooflines. Luxvibe carries a stepped
+  // cornice; the low FABEA parapet screens its compact ventilation unit.
+  if (luxury) {
+    for (let n = 0; n < 3; n++) {
+      builder.part('soft', n % 2 ? '#c9b199' : '#dfc9ae', x, h + .31 + n * .14, f - .05,
+        w + .20 - n * .70, .15, .38);
+    }
+  } else {
+    builder.part('block', '#b4ab96', x - w * .24, h + .52, z - .78, 1.31, .29, .92);
+    builder.part('post', '#889384', x - w * .24, h + .70, z - .78, .69, .10, .69);
+    builder.part('post', '#a0a48b', x - w * .24, h + .76, z - .78, .39, .04, .39);
+  }
   if (luxury) {
     const blueGlass = '#688077';
     for (const [cx, ww] of [[x - 1.72, 2.03], [x + .07, 1.23], [x + 1.83, 1.84]]) {
@@ -74,7 +86,7 @@ function boutique(root, builder, site, print, alive) {
     }
     awning(builder, x, 2.82, f + .13, w - .19, 1.02, 11, '#7f4750', '#efe1c8');
     builder.part('block', '#6c5345', x - 1.72, .52, f + .24, 2.17, .11, .37);
-    print(root, id, x - 1.72, 1.41, f + .194, 1.86, 1.65, alive);
+    print(root, id, x - 1.72, 1.41, f + .194, 1.86, 1.65);
   } else {
     for (const [dx, aw] of [[-2.08, 1.70], [0, 1.35], [2.05, 1.74]]) {
       archFace(root, x + dx, f + .075, .34, aw + .17, 2.51, '#c4aa84');
@@ -82,7 +94,7 @@ function boutique(root, builder, site, print, alive) {
       builder.part('block', '#95856e', x + dx, 1.34, f + .115, .054, 1.84, .068);
       builder.part('block', '#a99677', x + dx, 1.92, f + .115, aw, .058, .068);
     }
-    print(root, id, x + 2.05, 1.30, f + .157, 1.53, 1.54, alive);
+    print(root, id, x + 2.05, 1.30, f + .157, 1.53, 1.54);
     const bladeX = x - w / 2 + .21;
     builder.part('block', '#594e40', bladeX, 2.68, f + .70, .09, .07, 1.18);
     for (const zz of [.68, 1.04]) builder.part('post', '#625548', bladeX, 2.56, f + zz, .045, .23, .045);
@@ -263,7 +275,7 @@ function streetFurniture(root, b) {
   return leaf.group;
 }
 
-export function addDistricts(root, { kerb, shopPrint, alive }) {
+export function addDistricts(root, { kerb, shopPrint }) {
   const group = new Group();
   root.add(group);
   const builder = craft(group);
@@ -271,7 +283,7 @@ export function addDistricts(root, { kerb, shopPrint, alive }) {
     kerb(builder, i + 1);
     switch (site.id) {
       case 'luxvibe':
-      case 'fabea': boutique(group, builder, site, shopPrint, alive); break;
+      case 'fabea': boutique(group, builder, site, shopPrint); break;
       case 'tea': teaShop(group, builder, site); break;
       case 'workshop': workshop(group, builder, site); break;
       case 'office': office(group, builder, site); break;

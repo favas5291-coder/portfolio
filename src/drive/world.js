@@ -16,7 +16,7 @@ function kerb(builder, index) {
 
 // The live screenshots are texture-mapped using their native proportions.
 // A CSS-pixel phone can use a portrait capture only when its desktop pairing is current.
-export function shopPrint(root,id,x,y,z,maxWidth,maxHeight,alive) {
+function shopPrint(root, id, x, y, z, maxWidth, maxHeight, alive, onChange) {
   const project=projectPreviews[id];
   if (!project) return;
   const phone=typeof matchMedia==='function' && matchMedia('(max-width: 600px)').matches;
@@ -31,10 +31,16 @@ export function shopPrint(root,id,x,y,z,maxWidth,maxHeight,alive) {
     texture.colorSpace=SRGBColorSpace;
     texture.anisotropy=2;
     mat.color.set(0xffffff);mat.map=texture;mat.needsUpdate=true;
-  },undefined,()=>{ image.visible=false; });
+    onChange();
+  }, undefined, () => {
+    if (alive()) {
+      image.visible = false;
+      onChange();
+    }
+  });
 }
 
-function flagship(root, builder, alive) {
+function flagship(root, builder, print) {
   const site=BUILDINGS[0],z=site.z+site.depth/2;
   const dark='#29453a', wall='#bcc3a0', concrete='#dfd5b6', timber='#a88d66';
   kerb(builder,0);
@@ -54,6 +60,13 @@ function flagship(root, builder, alive) {
     builder.part('block','#a3b7a5',-1.7,4.054,site.z+row,4.10,.09,.93,-.12);
     for(const x of [-3.59,-2.36,-1.02,.19]) builder.part('block',concrete,x,3.81,site.z+row+.43,.07,.5,.07);
   }
+  // Banded rooftop tank set against the rear parapet, clear of the fascia.
+  const tankX = -4.34, tankZ = site.z - 2.72;
+  for (const dx of [-.59, .59]) builder.part('block', '#7b8075', tankX + dx, 3.77, tankZ, .19, .36, 1.08);
+  builder.part('post', '#546356', tankX, 4.23, tankZ, 1.38, .81, 1.38);
+  for (const yy of [3.90, 4.10, 4.34, 4.60]) builder.part('post', '#687466', tankX, yy, tankZ, 1.43, .054, 1.43);
+  builder.part('post', '#667465', tankX, 4.65, tankZ, 1.23, .10, 1.23);
+  builder.part('post', '#798374', tankX, 4.72, tankZ, .47, .065, .47);
   // Laterite masonry at the side, alternating courses with deep reveal lines.
   builder.part('block','#ad6f4e',5.99,1.17,site.z,.12,2.02,9);
   for(let i=0;i<5;i++) {
@@ -68,8 +81,18 @@ function flagship(root, builder, alive) {
     builder.part('block',dark,x,1.4,z+.25,.095,2.04,.08);
     builder.part('block',timber,x,.36,z+.23,3.22,.12,.19);
   }
+  // Stock silhouettes and timber display shelves sit in front of the dark
+  // glazing; the selected storefront itself remains the authentic capture.
+  for (const xx of [-4.01, 4.06]) {
+    builder.part('block', '#b49d77', xx, .70, z + .31, 2.74, .09, .24);
+    for (const [dx, colour] of [[-.72, '#b59b72'], [.60, '#687c67']]) {
+      builder.part('soft', colour, xx + dx, .96, z + .35, .78, .42, .24);
+      for (const a of [-1, 1]) builder.part('block', '#575f4e', xx + dx + a * .18, .98, z + .49, .055, .37, .025);
+      builder.part('block', '#65715b', xx + dx, 1.20, z + .38, .22, .055, .063);
+    }
+  }
   builder.part('block','#e5d9b7',0,1.46,z+.24,4.03,2.42,.11);
-  shopPrint(root,'gymdrobe',0,1.47,z+.31,3.80,2.22,alive);
+  print(root, 'gymdrobe', 0, 1.47, z + .31, 3.80, 2.22);
   const door=craft(root);
   // Slats telescope behind the sign; compressing the group keeps the opened
   // shutter inside its housing, without clipping through the roof.
@@ -103,12 +126,19 @@ export function createWorld(scene) {
   let disposed = false, opened = 0, backOpen = 0;
   let districts = null;
   let loading;
-  const alive=()=>!disposed;
+  const alive = () => !disposed;
+  let paintVersion = 0;
+  const changed = () => { paintVersion++; };
+  const print = (parent, id, x, y, z, width, height) =>
+    shopPrint(parent, id, x, y, z, width, height, alive, changed);
   makeGround(root);
   const builder=craft(root);
-  const gym=flagship(root,builder,alive);
+  const gym = flagship(root, builder, print);
+  const moving = [gym.door, gym.canopy];
   builder.finish();
   return {
+    get paintVersion() { return paintVersion; },
+    movingObjects() { return moving; },
     update(dt, state={}) {
       if(disposed) return;
       const goal = state.opened === 'gymdrobe' ? 1 : state.nearby === 'gymdrobe' ? .37 : 0;
@@ -128,7 +158,10 @@ export function createWorld(scene) {
     loadDistricts() {
       if (!loading && !disposed) {
         loading = import('./districts.js').then(({ addDistricts }) => {
-          if (!disposed) districts = addDistricts(root, { kerb, shopPrint, alive });
+          if (disposed) return;
+          districts = addDistricts(root, { kerb, shopPrint: print });
+          moving.push(districts.rear, districts.leaf);
+          changed();
         });
       }
       return loading;

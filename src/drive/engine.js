@@ -6,6 +6,7 @@ import { DRIVE_BOUNDS, LOADING_BAY } from './layout.js';
 import { createDriveState, FIXED_STEP, respawn as resetDrive, stepDrive } from './simulation.js';
 import { createPickup, createStreetProps } from './pickup.js';
 import { createWorld } from './world.js';
+import { createSceneryCache } from './scenery-cache.js';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const throttleKeys = new Set(['ArrowUp', 'KeyW', 'ArrowDown', 'KeyS']);
@@ -125,8 +126,7 @@ export function createDrive(host, callbacks = {}) {
   const sun = new DirectionalLight(0xfff1de, 2.34);
   sun.position.set(-20, 34, 20);
   sun.castShadow = true;
-  const shadowSize = software ? 512 : 1024;
-  sun.shadow.mapSize.set(shadowSize, shadowSize);
+  sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 32, bottom: -30, near: 1, far: 95 });
   sun.shadow.camera.updateProjectionMatrix();
   sun.shadow.normalBias = 0.035;
@@ -145,6 +145,7 @@ export function createDrive(host, callbacks = {}) {
   }
   scene.add(truck.root, movable.root);
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.2, 145);
+  const sceneryCache = software ? createSceneryCache(renderer, scene, world, truck.root, movable.root, camera) : null;
   const eye = new Vector3();
   const cameraOffset = new Vector3();
   const focus = new Vector3();
@@ -184,6 +185,7 @@ export function createDrive(host, callbacks = {}) {
   let pausedPaintsUntil = 0;
   let firstInputTime;
   let expanded = false;
+  let districtsReady = false;
 
   function sampleInput() {
     input.throttle = clamp(stick.y + Number(pressed.has('ArrowUp') || pressed.has('KeyW')) -
@@ -365,6 +367,11 @@ export function createDrive(host, callbacks = {}) {
     // While parked on a CPU renderer, spend the budget on a sharper held
     // composition. Physics and input keep their normal clock between paints.
     if (!resting || now - lastPresented >= 85 || renderer.shadowMap.needsUpdate) {
+      if (sceneryCache) {
+        const savedView = sceneryCache.prepare(now, districtsReady && yardLift < .0001 && reveal < .0001);
+        const path = savedView ? 'cached' : 'live';
+        if (host.dataset.scenery !== path) host.dataset.scenery = path;
+      }
       renderer.render(scene, camera);
       lastPresented = now;
     }
@@ -535,6 +542,7 @@ export function createDrive(host, callbacks = {}) {
     canvas.removeEventListener('pointerdown', focusGame);
     canvas.removeEventListener('webglcontextlost', contextLost);
     motor.dispose();
+    sceneryCache?.dispose();
     movable.dispose();
     truck.dispose();
     world.dispose();
@@ -545,6 +553,7 @@ export function createDrive(host, callbacks = {}) {
     delete host.dataset.driverReady;
     delete host.dataset.renderer;
     delete host.dataset.districts;
+    delete host.dataset.scenery;
   }
 
   async function setExpanded() {
@@ -553,6 +562,7 @@ export function createDrive(host, callbacks = {}) {
     await world.loadDistricts();
     lastShadowPaint = -Infinity;
     if (!disposed) {
+      districtsReady = true;
       host.dataset.districts = 'ready';
       schedule();
     }

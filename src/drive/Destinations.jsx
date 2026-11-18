@@ -3,6 +3,7 @@ import { fabea, luxvibe, profile, project, skills } from '../data/portfolio.js';
 import { projectPreviews } from '../data/project-previews.js';
 import { PHONE_DISPLAY, PHONE_HREF, processSteps, services, whatsappHref } from '../data/site.js';
 import { evidenceRoot, productURL } from '../data/product-evidence.js';
+import { Icon } from './Controls.jsx';
 import './destinations.css';
 
 const works = [
@@ -119,7 +120,7 @@ function Discussion({ subject, children }) {
     : whatsappHref();
   return (
     <a className="stop-action" href={href} data-contact="whatsapp">
-      {children} {arrow}
+      <Icon name="wa" /> {children}
     </a>
   );
 }
@@ -149,10 +150,10 @@ function WorkDetail({ work }) {
       </dl>
       {flagship ? (
         <div className="stop-evidence">
-          <h3>Keep the shopper’s size when the colour changes.</h3>
+          <h3>Share the colour you picked.</h3>
           <p>
-            On the COITONIC shirt, selecting red replaced the black product photo. Both colours offered medium, so
-            switching colours kept M selected.
+            Choosing a colour changes the gallery and saves the selection in the product link. When someone opens a
+            shared link, the store selects that colour if the product still offers it.
           </p>
           <div className="stop-actions">
             <a href={productURL}>See the product {arrow}</a>
@@ -167,7 +168,7 @@ function WorkDetail({ work }) {
         </p>
       )}
       <div className="stop-actions">
-        <Discussion subject={'a store like ' + work.name}>Discuss a similar store</Discussion>
+        <Discussion subject={'a store like ' + work.name}>Discuss a similar store on WhatsApp</Discussion>
         <a href="/contact/">Contact options {arrow}</a>
       </div>
     </article>
@@ -191,6 +192,16 @@ function ServiceWorkshop() {
   const [, example, href] = needs[selected];
   return (
     <div className="stop-workshop">
+      <noscript>
+        <style>{'.stop-workshop .stop-needs, .stop-workshop .stop-offer { display: none }'}</style>
+        <nav className="stop-direct" aria-label="Service detail pages">
+          {services.map(({ name, slug }) => (
+            <a href={'/services/' + slug + '/'} key={slug}>
+              {name} {arrow}
+            </a>
+          ))}
+        </nav>
+      </noscript>
       <div className="stop-needs" role="group" aria-label="Choose your business need">
         {services.map(({ name, slug }) => (
           <button key={slug} type="button" aria-pressed={slug === selected} onClick={() => setSelected(slug)}>
