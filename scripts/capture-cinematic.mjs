@@ -23,6 +23,7 @@ for (const url of [head, base].filter(Boolean)) {
   assert.ok(ready, 'Could not serve the built site at ' + url);
 }
 const browser = await chromium.launch({
+  executablePath: process.env.CHROME_PATH || undefined,
   args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
 });
 const report = {
@@ -315,7 +316,7 @@ try {
     await waitFace(page, 'back');
     await sleep(1600);
   } finally { await recorder.close(); }
-  execFileSync('ffmpeg', [
+  execFileSync(process.env.FFMPEG_PATH || 'ffmpeg', [
     '-y', '-hide_banner', '-loglevel', 'error', '-i', await video.path(), '-an', '-c:v', 'libx264',
     '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output + '/Fazhere-Editions-opening.mp4',
   ]);
