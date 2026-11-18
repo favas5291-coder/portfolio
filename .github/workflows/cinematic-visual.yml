@@ -1,4 +1,4 @@
-name: Built to Fit visual review
+name: Fazhere Editions visual review
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,20 +43,22 @@ jobs:
           npx playwright install --with-deps chromium
           command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
       - name: Package review preview for offline use
-        run: node scripts/build-fit-preview.mjs
+        run: |
+          node scripts/build-fit-preview.mjs
+          python -m zipfile -c visual-checks/Fazhere-Editions-production.zip dist
       - name: Run browser checks and compare head with base
         env:
           BASELINE_URL: http://127.0.0.1:4174/
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          npm run preview -- --host 127.0.0.1 --strictPort > /tmp/fazhere-built-to-fit.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --strictPort > /tmp/fazhere-editions.log 2>&1 &
           (cd .sites-runtime/baseline && npm run preview -- --host 127.0.0.1 --port 4174 --strictPort) > /tmp/fazhere-before.log 2>&1 &
           node scripts/capture-cinematic.mjs
       - name: Upload review bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fazhere-built-to-fit-review
+          name: fazhere-editions-review
           path: visual-checks/
           if-no-files-found: error
