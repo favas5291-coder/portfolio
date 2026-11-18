@@ -1,6 +1,6 @@
 import { Mesh, MeshLambertMaterial, PlaneGeometry } from 'three';
 import { canvasTexture, seeded } from './craft.js';
-import { STOPS } from './layout.js';
+import { BUILDINGS, STOPS, TREE_SITES } from './layout.js';
 
 const minX=-30, minZ=-31, width=60, depth=55;
 
@@ -38,6 +38,46 @@ export function makeGround(root) {
       ctx.lineWidth=.07;ctx.strokeStyle='#eee1bf';
       for(const side of [-1,1]){const lx=x+side*1.25;ctx.beginPath();ctx.moveTo(lx,z-1.7);ctx.lineTo(lx,z+1.7);ctx.lineTo(lx-side*.45,z+1.7);ctx.stroke();}
     });
+    // Fine, persistent contact shading where concrete or plants meet earth.
+    // It keeps the scene grounded even on drivers using a single shadow pass.
+    function patch(x, z, rx, rz, strength) {
+      ctx.save();
+      ctx.translate(x, z); ctx.scale(rx, rz);
+      const shade = ctx.createRadialGradient(0, 0, .15, 0, 0, 1);
+      shade.addColorStop(0, 'rgba(47,47,34,' + strength + ')');
+      shade.addColorStop(.72, 'rgba(47,47,34,' + strength * .7 + ')');
+      shade.addColorStop(1, 'rgba(47,47,34,0)');
+      ctx.fillStyle = shade; ctx.fillRect(-1, -1, 2, 2); ctx.restore();
+    }
+    for (const site of BUILDINGS) {
+      patch(site.x + .12, site.z + .4, site.width * .76, site.depth * .89, .32);
+    }
+    for (const tree of TREE_SITES) patch(tree.x, tree.z, 1.20 * tree.size, 1.09 * tree.size, .32);
+    // Programme the road surface as paint and cast iron, keeping the lane
+    // markings, drain inlets and fading wear in the same inexpensive ground map.
+    const grate = (x, z, turn) => {
+      ctx.save(); ctx.translate(x,z); ctx.rotate(turn);
+      ctx.fillStyle='#585e55'; ctx.fillRect(-.44,-.16,.88,.32);
+      ctx.strokeStyle='#a49f8b'; ctx.lineWidth=.023; ctx.strokeRect(-.44,-.16,.88,.32);
+      ctx.fillStyle='#8d8e7e';
+      for(let i=0;i<9;i++) ctx.fillRect(-.38+i*.092,-.11,.035,.22);
+      ctx.restore();
+    };
+    grate(-2.5, 4.6, -.16); grate(3.0, 3.1, 1.48); grate(5.9,-9.42,-.11);
+    grate(-13.5,-10.01,0); grate(14.4,11.05,-.04);
+    for(const [x,z] of [[1.33,6.0],[-11,-6.3],[6.0,10.3],[8.7,-12.8]]) {
+      ctx.save();ctx.translate(x,z);ctx.rotate(.47);
+      ctx.fillStyle='#75796e'; ctx.strokeStyle='#a7a291'; ctx.lineWidth=.025;
+      ctx.beginPath();ctx.arc(0,0,.31,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.arc(0,0,.23,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#595f56';for(let i=0;i<4;i++) ctx.fillRect(-.11+i*.068,-.10,.024,.2);
+      ctx.restore();
+    }
+    ctx.save();ctx.translate(-.60,-1.25);ctx.rotate(.04);
+    ctx.fillStyle='rgba(231,218,181,.72)';
+    ctx.fillRect(-.082,-.4,.164,1.14);
+    ctx.beginPath();ctx.moveTo(-.50,-.35);ctx.lineTo(0,-1.01);ctx.lineTo(.50,-.35);ctx.lineTo(.29,-.30);
+    ctx.lineTo(0,-.63);ctx.lineTo(-.30,-.30);ctx.closePath();ctx.fill();ctx.restore();
     // Road grit and leaf litter drawn into a single, deterministic diffuse map.
     for(let i=0;i<9000;i++){
       const x=minX+rand()*width,z=minZ+rand()*depth;

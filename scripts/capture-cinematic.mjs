@@ -1,7 +1,7 @@
 // Exercise the shipped Vite pages with physical inputs. The app only exposes read-only pose telemetry.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { appendFile, mkdir, writeFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
@@ -43,6 +43,10 @@ const waitWorld = page => page.waitForFunction(() => {
   const stage = document.querySelector('[data-drive-host]');
   return stage?.dataset.renderer === 'webgl' && Number(stage.dataset.step) > 0 && stage.querySelector('canvas');
 }, undefined, { timeout: 50000 });
+async function waitStreet(page) {
+  await waitWorld(page);
+  if (!milestone) await page.locator(host + '[data-districts="ready"]').waitFor({ timeout: 45000 });
+}
 function quantiles(list) {
   const a = [...list].sort((l, r) => l - r);
   const at = q => a.length ? Math.round(a[Math.floor((a.length - 1) * q)] * 100) / 100 : null;
@@ -159,7 +163,7 @@ async function exampleDrive(width, height, { record = false } = {}) {
   page.setDefaultTimeout(14000);
   try {
     await page.goto(head);
-    await waitWorld(page);
+    await waitStreet(page);
     await firstFrame(page);
     await shot(page, touch ? 'phone-spawn' : 'desktop-spawn');
     await sleep(420);
@@ -187,10 +191,19 @@ async function exampleDrive(width, height, { record = false } = {}) {
       await sleep(620);
       await shot(page, 'phone-whatsapp-path');
     }
-    // Read a case study then return. No WhatsApp message or enquiry is sent.
-    if (touch) await page.goBack();
+    // Desktop also follows the real prerendered route across an entire page navigation.
+    if (!touch && !milestone) {
+      await dialog.getByRole('link', { name: /Read case study/i }).click();
+      await page.waitForURL('**/projects/gymdrobe/');
+      assert.ok(await page.locator('main h1').first().isVisible());
+      await page.goBack();
+      await dialog.waitFor();
+      assert.ok(await dialog.getByRole('link', { name: /Read case study/i }).isVisible());
+      await page.goBack();
+    } else if (touch) await page.goBack();
     else await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
+    await page.waitForFunction(() => Number.isFinite(Number(document.querySelector('[data-drive-host]')?.dataset.heading)));
     const returned = await pose(page);
     assert.deepEqual([returned.x, returned.z, returned.heading], [drive.stopped.x, drive.stopped.z, drive.stopped.heading]);
     await sleep(420);
@@ -209,7 +222,7 @@ async function layout(width, height) {
   try {
     const page = await ctx.newPage();
     await page.goto(head);
-    await waitWorld(page);
+    await waitStreet(page);
     await page.evaluate(() => document.fonts.ready);
     await firstFrame(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
@@ -388,6 +401,82 @@ async function baselineFrames(width, height) {
   } finally { await ctx.close(); }
 }
 
+// Replay a discovered route with real keyboard inputs and a controlled frame clock.
+// This optional observation cannot affect the measured frame times or gate a build.
+async function probeDelivery() {
+  const ctx = await context(900, 700);
+  const page = await ctx.newPage();
+  let paused = false;
+  const results = report.deliveryObservation = {
+    method: 'Real keyboard input in a separate Chromium context, Playwright virtual clock. No position injection.',
+    observed: false,
+  };
+  try {
+    page.setDefaultTimeout(15000);
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+    await page.goto(head);
+    await waitStreet(page);
+    await page.locator(host).focus();
+    const next = await page.evaluate(() => new Date(Date.now() + 450).toISOString());
+    await page.clock.pauseAt(next);
+    paused = true;
+    const held = new Set();
+    const route = [
+      [['w', 'd'], 44], [['w'], 59], [['w', 'a'], 22], [['b'], 48],
+      [['w'], 67], [[], 82], [['w', 'a'], 109], [['w'], 12], [['b'], 50],
+    ];
+    for (const [keys, ticks] of route) {
+      for (const key of [...held]) if (!keys.includes(key)) {
+        await page.keyboard.up(key); held.delete(key);
+      }
+      for (const key of keys) if (!held.has(key)) {
+        await page.keyboard.down(key); held.add(key);
+      }
+      await page.clock.runFor(Math.round(ticks * 1000 / 60));
+    }
+    for (const key of held) await page.keyboard.up(key);
+    await page.clock.runFor(800);
+    await page.clock.resume();
+    paused = false;
+    results.end = await pose(page);
+    results.observed = await page.locator(host).getAttribute('data-discovered') === 'true';
+    if (results.observed) await shot(page, 'delivery-bay');
+  } catch (err) {
+    results.note = String(err).slice(0, 450);
+  } finally {
+    if (paused) await page.clock.resume().catch(() => {});
+    await ctx.close();
+  }
+}
+async function writeSummary() {
+  const lines = [
+    '# Fazhere Drive browser review', '',
+    'Tested commit `' + report.head + '` against `' + report.base + '`.',
+    '', report.environment, '',
+    '## Driving to GymDrobe', '',
+    '| Viewport | Moving frames sampled | Median frame interval | 95th percentile | First input to changed-pose render submission |',
+    '| --- | ---: | ---: | ---: | ---: |',
+  ];
+  for (const [width, drive] of Object.entries(report.drives)) {
+    const f = drive.movingFrameIntervalsMs;
+    lines.push('| ' + [width + ' px', f.count, f.p50 + ' ms', f.p95 + ' ms', drive.inputToFirstRenderedMovementMs + ' ms'].join(' | ') + ' |');
+  }
+  lines.push('', 'Input latency ends when Three.js submits the first changed-pose frame; the GPU and display can present it later. The primary route crosses the opening junction and the flagship’s frontage. The final full review measures both devices with video recording disabled. The checkpoint recording includes capture overhead on the phone.', '');
+  if (Object.keys(report.coldLoad).length) {
+    lines.push('## Cold loads', '', 'Medians from three fresh contexts per build at each size. Both builds used the same local server configuration, machine and browser.', '',
+      '| Viewport | Version | First contentful paint | Load event | Scene ready (upper bound) | Transferred through ready |',
+      '| --- | --- | ---: | ---: | ---: | ---: |');
+    for (const [width, metrics] of Object.entries(report.coldLoad)) for (const [version, data] of Object.entries(metrics.median)) {
+      lines.push('| ' + [width + ' px', version, data.fcp + ' ms', data.load + ' ms', data.observedReady + ' ms', Math.round(data.bytesThroughReady / 1024) + ' KiB'].join(' | ') + ' |');
+    }
+    lines.push('', 'The previous homepage’s equivalent animated control was its resize rail. Its frame samples are included in review.json alongside the new drive.', '');
+  }
+  lines.push('## Browser checks', '', ...report.passed.map(check => '- Passed — ' + check), ...report.failures.map(f => '- Failed — ' + f.name), '');
+  const summary = lines.join('\n');
+  await writeFile(out + '/review.md', summary);
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+}
+
 try {
   await check('390 px genuine touch drive, object impact, brake, park, project, WhatsApp and Back', () => exampleDrive(390, 844, { record: true }));
   await check('desktop keyboard drive, parking and Escape', () => exampleDrive(1440, 900));
@@ -397,10 +486,9 @@ try {
       try {
         const page = await ctx.newPage();
         await page.goto(head);
-        await waitWorld(page);
+        await waitStreet(page);
         report.recordedPhoneDrive = report.drives[390];
-        // Let streamed storefronts settle before timing the busy approach to GymDrobe.
-        await page.waitForTimeout(1500);
+        // The timed route starts after the streamed shops and scenery have joined the world.
         report.drives[390] = await driveAndPark(page, true);
         assert.equal(report.drives[390].stopped.parked, 'gymdrobe');
       } finally { await ctx.close(); }
@@ -408,6 +496,8 @@ try {
     for (const [width, height] of widths) await check(width + ' px opening', () => layout(width, height));
     await check('service selection, WhatsApp destination, enquiry prefill and deep links', directRoutes);
     await check('all project captures and correct desktop/mobile pairing', verifyCaptures);
+    console.log('Observing optional keyboard delivery replay');
+    await probeDelivery();
     await check('sound, keyboard map, office, process, pause, respawn and offscreen stop', controlsAndPause);
     for (const mode of ['reduced-motion', 'webgl-unavailable', 'no-javascript']) await check(mode, () => fallback(mode));
     if (base) for (const [w, h] of [widths[1], widths[5]]) {
@@ -427,6 +517,8 @@ try {
     } finally { await ctx.close(); }
   });
 } finally {
-  await browser.close(); await writeFile(out + '/review.json', JSON.stringify(report, null, 2));
+  await browser.close();
+  await writeFile(out + '/review.json', JSON.stringify(report, null, 2));
+  await writeSummary();
 }
 if (report.failures.length) process.exitCode = 1;

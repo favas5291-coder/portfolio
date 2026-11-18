@@ -21,3 +21,21 @@ export const KERBS = BUILDINGS.map(({ x, z, width, depth }) => ({
 }));
 export const RAMP = { x: 8.8, z: -18.1, width: 3.1, depth: 3.9, height: 0.93 };
 export const LOADING_BAY = { x: 0, z: -22.4, radius: 3.0 };
+
+// Each stem has its own contact; spreading foliage leaves room to drive underneath.
+export const TREE_SITES = [
+  { x: -10.15, z: 4.55, radius: 0.48, size: 1.05, kind: 'rain' },
+  { x: 8.6, z: 0.0, radius: 0.24, size: 0.87, kind: 'palm' },
+  { x: -11.9, z: -15.6, radius: 0.22, size: 0.85, kind: 'palm' },
+  { x: 11.3, z: -15.0, radius: 0.22, size: 0.90, kind: 'palm' },
+  { x: -18.5, z: -20.6, radius: 0.43, size: 0.87, kind: 'rain' },
+  { x: 20.2, z: -19.8, radius: 0.40, size: 0.82, kind: 'rain' },
+  { x: -21.1, z: 0.5, radius: 0.21, size: 0.81, kind: 'palm' },
+  { x: 21.5, z: 2.4, radius: 0.21, size: 0.85, kind: 'palm' },
+  { x: -11.0, z: 17.6, radius: 0.39, size: 0.74, kind: 'rain' },
+  { x: 13.0, z: 17.6, radius: 0.39, size: 0.76, kind: 'rain' },
+];
+export const COLLIDERS = [
+  ...BUILDINGS,
+  ...TREE_SITES.map(({ x, z, radius }) => ({ x, z, width: radius * 2, depth: radius * 2 })),
+];

@@ -12,11 +12,25 @@ const paths = {
   pin: 'M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0z M14 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z',
   wa: 'M20 11a8 8 0 0 1-12 7l-5 2 1.5-5A8.5 8.5 0 1 1 20 11z M8 8c1 4 3 6 7 7',
 };
-export function Icon({name}) {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;
+export function Icon({ name }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={paths[name]} />
+    </svg>
+  );
 }
 
-export function Joystick({onStick}) {
+export function Joystick({ onStick }) {
   const active = useRef(null);
   function move(event) {
     if (event.pointerId !== active.current) return;
@@ -26,9 +40,10 @@ export function Joystick({onStick}) {
     const dx = (event.clientX - rect.left - rect.width / 2) / radius;
     const dy = (event.clientY - rect.top - rect.height / 2) / radius;
     const scale = Math.max(1, Math.hypot(dx, dy));
-    const x = dx / scale, y = dy / scale;
-    target.style.setProperty('--stick-x', (x * radius * .76) + 'px');
-    target.style.setProperty('--stick-y', (y * radius * .76) + 'px');
+    const x = dx / scale,
+      y = dy / scale;
+    target.style.setProperty('--stick-x', x * radius * 0.76 + 'px');
+    target.style.setProperty('--stick-y', y * radius * 0.76 + 'px');
     onStick(x, -y);
   }
   function release(event) {
@@ -38,13 +53,53 @@ export function Joystick({onStick}) {
     event.currentTarget.style.removeProperty('--stick-y');
     onStick(0, 0);
   }
-  return <div role="group" aria-label="Touch driving control" data-stick="" className="drive-stick"
-    onPointerDown={e => {if (active.current !== null) return; active.current=e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); move(e);}}
-    onPointerMove={move} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}><i/><span/></div>;
+  return (
+    <div
+      role="group"
+      aria-label="Touch driving control"
+      data-stick=""
+      className="drive-stick"
+      onPointerDown={(e) => {
+        if (active.current !== null) return;
+        active.current = e.pointerId;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        move(e);
+      }}
+      onPointerMove={move}
+      onPointerUp={release}
+      onPointerCancel={release}
+      onLostPointerCapture={release}
+    >
+      <i />
+      <span />
+    </div>
+  );
 }
 
 export function ControlsHelp() {
-  return <div className="drive-help"><h2>Driving controls</h2><p>On a phone, slide your thumb up to drive, sideways to steer, and down to reverse. Hold Brake to park. A shop can be opened when you slow down beside it.</p><dl>
-    {[['Drive and steer','W A S D / Arrow keys'],['Brake','B'],['Jump','Space'],['Explore a stop','Enter / E'],['Open the map','M'],['Sound on or off','L'],['Recover the pickup','R']].map(([action,keys])=><div key={action}><dt>{action}</dt><dd>{keys}</dd></div>)}
-  </dl></div>;
+  return (
+    <div className="drive-help">
+      <h2>Driving controls</h2>
+      <p>
+        On a phone, slide your thumb up to drive, sideways to steer, and down to reverse. Hold Brake to park. A
+        shop can be opened when you slow down beside it.
+      </p>
+      <dl>
+        {[
+          ['Drive and steer', 'W A S D / Arrow keys'],
+          ['Brake', 'B'],
+          ['Jump', 'Space'],
+          ['Explore a stop', 'Enter / E'],
+          ['Open the map', 'M'],
+          ['Sound on or off', 'L'],
+          ['Recover the pickup', 'R'],
+        ].map(([action, keys]) => (
+          <div key={action}>
+            <dt>{action}</dt>
+            <dd>{keys}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }

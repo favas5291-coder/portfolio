@@ -8,100 +8,538 @@
   color-scheme: light;
   font-family: Arial, Helvetica, sans-serif;
 }
-.drive-site main { pointer-events:auto }
-.drive-site :focus-visible {outline:3px solid #00769c;outline-offset:3px}
-.drive-site [hidden] {display:none!important}
-.drive-site .skip-link {color:#152b22;background:white}
-.drive-header,.drive-intro,.drive-caption,.drive-site .fit-foot {padding-inline:clamp(18px,4vw,80px)}
-.drive-header,.drive-header nav,.drive-header a,.drive-brand,.drive-links,.drive-links a,.drive-caption,.drive-caption a,.drive-toolbox,.drive-location,.drive-toolbox button,.drive-dialog-nav,.drive-dialog-nav a,.drive-dialog-nav button,.drive-prompt button,.drive-site .fit-foot,.drive-site .fit-foot nav {display:flex;align-items:center}
-.drive-header {justify-content:space-between;border-bottom:1px solid var(--drive-line);min-height:56px}
-.drive-brand {font:700 1.68rem/1 Georgia,serif;letter-spacing:-.08em;min-height:44px}
-.drive-brand i {width:17px;height:19px;border-inline:3px solid;transform:skew(-12deg);position:relative;margin-right:8px}
-.drive-brand i::after {content:'';position:absolute;top:3px;left:3px;height:12px;border-left:2px solid}
-.drive-brand span {font:italic 1.3rem Georgia,serif;letter-spacing:-.065em;margin-left:.36em}
-.drive-header nav {gap:clamp(16px,2.6vw,42px)}
-.drive-header nav a,.drive-caption a,.drive-dialog-nav a {min-height:44px;gap:.35em;font-size:.85rem;font-weight:650}
-.drive-header svg,.drive-caption svg,.drive-dialog-nav a svg {width:15px;height:15px}
-.drive-header nav a:hover,.drive-caption a:hover,.drive-dialog-nav a:hover,.drive-site .fit-foot a:hover {text-decoration:underline;text-underline-offset:.2em}
-.drive-intro {display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-block:clamp(16px,2.1vw,36px)}
-.drive-intro p,.drive-location,.drive-caption>span {font:600 .73rem/1.35 'IBM Plex Mono',ui-monospace,monospace}
-.drive-intro h1 {font:600 clamp(2rem,3.52vw,4.3rem)/1.03 'Syne',Arial,sans-serif;letter-spacing:-.065em;max-width:23ch;margin-top:6px;text-wrap:balance}
-.drive-intro h1 em {font:italic 1.09em/.9 Georgia,serif;letter-spacing:-.08em}
-.drive-links {gap:.6rem;flex-wrap:wrap;flex-shrink:0}
-.drive-links a {min-height:44px;justify-content:center;gap:.55rem;font-size:.87rem;font-weight:650;padding:.63rem .95rem;border:1px solid var(--drive-ink);border-radius:.3rem}
-.drive-ink-button {background:var(--drive-ink);color:var(--drive-paper)}
-.drive-whatsapp {background:transparent}
-.drive-links .drive-ink-button:hover {background:#304d3c}
-.drive-links .drive-whatsapp:hover {background:#e7e8d9}
-.drive-links svg {width:17px;height:17px}
-.drive-stage {position:relative;isolation:isolate;background:#e9dfc5;min-height:450px;height:clamp(450px,65svh,730px);border-block:1px solid #a19d86;overflow:hidden}
-.drive-host,.drive-chart {position:absolute;inset:0}
-.drive-host {z-index:0;pointer-events:none}
-.drive-stage.is-live .drive-host {pointer-events:auto}
-.drive-host canvas {touch-action:pan-y}
-.drive-chart {z-index:1;overflow:auto}
-.drive-location,.drive-toolbox,.drive-prompt,.drive-stick-wrap,.drive-pedals {position:absolute;z-index:2}
-.drive-location {top:16px;left:clamp(12px,2.4vw,42px);gap:6px;border:1px solid #455d45;background:#f8f5e9f5;color:#283c2e;border-radius:2px;padding:7px 10px;font-size:.71rem;user-select:none}
-.drive-location svg {width:15px;height:15px}
-.drive-toolbox {right:clamp(12px,2.4vw,42px);top:16px;gap:1px;box-shadow:0 3px 12px #2c261720;border:1px solid #394d36;border-radius:6px;overflow:hidden;background:#b1b7a6}
-.drive-toolbox button {justify-content:center;gap:.4rem;background:#f9f7eb;color:#293a2c;min-width:43px;height:43px;padding:0 10px;font-size:.8rem;font-weight:bold}
-.drive-toolbox button:hover {background:#dfe6d3}
-.drive-toolbox button:focus-visible {outline-offset:-3px}
-.drive-toolbox button svg {width:17px;height:17px}
-.drive-stick-wrap,.drive-pedals {display:none}
-.drive-prompt {bottom:15px;left:50%;transform:translateX(-50%);max-width:calc(100% - 28px);text-align:center;pointer-events:none}
-.drive-prompt>span,.drive-prompt button {display:inline-flex;align-items:center;justify-content:center;min-height:38px;border-radius:30px;padding:8px 15px;color:#fffaeb;background:#18392ef5;box-shadow:0 3px 12px #27251626;font-size:.84rem;font-weight:650;white-space:nowrap}
-.drive-prompt button {min-height:44px;gap:9px;pointer-events:auto;background:#fffbea;color:#203d2d;border:1px solid #314733}
-.drive-caption {min-height:44px;justify-content:space-between;border-bottom:1px solid var(--drive-line)}
-.drive-caption>span {font-size:.67rem;color:#4e5a4e}
-.drive-dialog {position:fixed;inset:0;margin:auto;z-index:100;background:var(--drive-paper);color:var(--drive-ink);border:1px solid #364536;padding:0;width:min(860px,calc(100% - 24px));max-width:100%;max-height:88svh;overflow:auto;overscroll-behavior:contain;box-shadow:0 22px 100px #0c1b1590}
-.drive-dialog::backdrop {background:#0a1911a6}
-.drive-dialog-nav {justify-content:space-between;gap:16px;position:sticky;top:0;z-index:2;background:var(--drive-paper);border-bottom:1px solid var(--drive-line);padding:4px 18px}
-.drive-dialog-nav button {background:transparent;gap:8px;min-height:44px;font-size:.84rem;font-weight:700}
-.drive-help {padding:clamp(20px,4vw,50px);max-width:720px}
-.drive-help h2 {font:normal 2.6rem/1 Georgia,serif;letter-spacing:-.05em}
-.drive-help p {margin:16px 0;line-height:1.55}
-.drive-help dl>div {display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--drive-line)}
-.drive-help dd {margin:0;font:600 .8rem ui-monospace,monospace}
-.drive-site .fit-foot {flex-wrap:wrap;justify-content:space-between;gap:16px;border-top:1px solid var(--drive-line);padding-block:18px;background:var(--drive-ink);color:var(--drive-paper)}
-.drive-site .fit-foot .brand {font:700 1.6rem Georgia,serif;letter-spacing:-.08em}
-.drive-site .fit-foot nav {gap:18px;font-size:.8rem}
-.drive-site .fit-foot button {background:transparent;color:inherit;font-size:.78rem}
-@media (max-width:840px) {
-  .drive-intro {display:block}
-  .drive-intro h1 {max-width:28ch}
-  .drive-links {margin-top:14px}
+.drive-site main {
+  pointer-events: auto;
 }
-@media (max-width:700px),(pointer:coarse) {
-  .drive-stick-wrap,.drive-pedals {display:flex;bottom: max(12px,env(safe-area-inset-bottom))}
-  .drive-stick-wrap {left:14px}
-  .drive-stick {width:88px;height:88px;position:relative;border-radius:50%;border:1px solid #fffc;box-shadow:0 0 0 1px #28392e5c,inset 0 0 0 5px #e4dbbc44;background:#304a36a6;touch-action:none;user-select:none}
-  .drive-stick:before,.drive-stick:after {content:'';position:absolute;left:50%;top:12%;height:76%;width:1px;background:#ede6c98c}
-  .drive-stick:after {transform:rotate(90deg)}
-  .drive-stick span {position:absolute;left:50%;top:50%;width:33px;height:33px;background:#f6f0d9;border:1px solid #344a32;border-radius:50%;box-shadow:0 3px 5px #17251745;z-index:1;transform:translate(calc(-50% + var(--stick-x,0px)),calc(-50% + var(--stick-y,0px)))}
-  .drive-pedals {right:13px;flex-direction:column;align-items:flex-end;gap:5px}
-  .drive-pedals button {min-width:52px;min-height:44px;border:1px solid #364833;border-radius:8px;background:#f7f2dfef;font-weight:700;color:#26372a;font-size:.73rem;touch-action:none;user-select:none}
-  .drive-pedals button[data-brake] {background:#293e2ff0;color:#fff9de}
-  .drive-prompt {bottom:20px}
-  .drive-prompt>span {font-size:.75rem}
+.drive-site :focus-visible {
+  outline: 3px solid #00769c;
+  outline-offset: 3px;
 }
-@media(max-width:600px) {
-  .drive-header {min-height:48px}
-  .drive-brand {font-size:1.48rem}
-  .drive-brand span {font-size:1.14rem}
-  .drive-header nav {gap:14px}
-  .drive-header nav a {font-size:.76rem}
-  .drive-intro {padding-block:13px}
-  .drive-intro p {font-size:.68rem}
-  .drive-intro h1 {font-size:clamp(1.75rem,7.6vw,2.6rem);max-width:23ch;line-height:1.01}
-  .drive-links {margin-top:10px;gap:7px}
-  .drive-links a {font-size:.79rem;min-height:44px;padding:7px 11px}
-  .drive-stage {height:clamp(370px,61svh,560px);min-height:0}
-  .drive-toolbox {top:10px;right:10px}
-  .drive-location {top:10px;left:10px;font-size:.65rem;min-height:32px}
-  .drive-toolbox button {width:42px;min-width:42px;height:44px;padding:0}
-  .drive-toolbox button span {display:none}
-  .drive-dialog {width:calc(100% - 12px);max-height:92svh}
-  .drive-dialog-nav {padding-inline:12px}
-  .drive-caption>span {font-size:.6rem}
+.drive-site [hidden] {
+  display: none !important;
+}
+.drive-site .skip-link {
+  color: #152b22;
+  background: white;
+}
+.drive-header,
+.drive-intro,
+.drive-caption,
+.drive-site .fit-foot {
+  padding-inline: clamp(18px, 4vw, 80px);
+}
+.drive-header,
+.drive-header nav,
+.drive-header a,
+.drive-brand,
+.drive-links,
+.drive-links a,
+.drive-caption,
+.drive-caption a,
+.drive-toolbox,
+.drive-location,
+.drive-toolbox button,
+.drive-dialog-nav,
+.drive-dialog-nav a,
+.drive-dialog-nav button,
+.drive-prompt button,
+.drive-site .fit-foot,
+.drive-site .fit-foot nav {
+  display: flex;
+  align-items: center;
+}
+.drive-header {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--drive-line);
+  min-height: 56px;
+}
+.drive-brand {
+  font:
+    700 1.68rem/1 Georgia,
+    serif;
+  letter-spacing: -0.08em;
+  min-height: 44px;
+}
+.drive-brand i {
+  width: 17px;
+  height: 19px;
+  border-inline: 3px solid;
+  transform: skew(-12deg);
+  position: relative;
+  margin-right: 8px;
+}
+.drive-brand i::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: 12px;
+  border-left: 2px solid;
+}
+.drive-brand span {
+  font:
+    italic 1.3rem Georgia,
+    serif;
+  letter-spacing: -0.065em;
+  margin-left: 0.36em;
+}
+.drive-header nav {
+  gap: clamp(16px, 2.6vw, 42px);
+}
+.drive-header nav a,
+.drive-caption a,
+.drive-dialog-nav a {
+  min-height: 44px;
+  gap: 0.35em;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+.drive-header svg,
+.drive-caption svg,
+.drive-dialog-nav a svg {
+  width: 15px;
+  height: 15px;
+}
+.drive-header nav a:hover,
+.drive-caption a:hover,
+.drive-dialog-nav a:hover,
+.drive-site .fit-foot a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.drive-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-block: clamp(16px, 2.1vw, 36px);
+}
+.drive-intro p,
+.drive-location,
+.drive-caption > span {
+  font:
+    600 0.73rem/1.35 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+}
+.drive-intro h1 {
+  font:
+    600 clamp(2rem, 3.52vw, 4.3rem) / 1.03 'Syne',
+    Arial,
+    sans-serif;
+  letter-spacing: -0.065em;
+  max-width: 23ch;
+  margin-top: 6px;
+  text-wrap: balance;
+}
+.drive-intro h1 em {
+  font:
+    italic 1.09em/0.9 Georgia,
+    serif;
+  letter-spacing: -0.08em;
+}
+.drive-links {
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.drive-links a {
+  min-height: 44px;
+  justify-content: center;
+  gap: 0.55rem;
+  font-size: 0.87rem;
+  font-weight: 650;
+  padding: 0.63rem 0.95rem;
+  border: 1px solid var(--drive-ink);
+  border-radius: 0.3rem;
+}
+.drive-ink-button {
+  background: var(--drive-ink);
+  color: var(--drive-paper);
+}
+.drive-whatsapp {
+  background: transparent;
+}
+.drive-links .drive-ink-button:hover {
+  background: #304d3c;
+}
+.drive-links .drive-whatsapp:hover {
+  background: #e7e8d9;
+}
+.drive-links svg {
+  width: 17px;
+  height: 17px;
+}
+.drive-stage {
+  position: relative;
+  isolation: isolate;
+  background: #e9dfc5;
+  min-height: 450px;
+  height: clamp(450px, 65svh, 730px);
+  border-block: 1px solid #a19d86;
+  overflow: hidden;
+}
+.drive-host,
+.drive-chart {
+  position: absolute;
+  inset: 0;
+}
+.drive-host {
+  z-index: 0;
+  pointer-events: none;
+}
+.drive-stage.is-live .drive-host {
+  pointer-events: auto;
+}
+.drive-host canvas {
+  touch-action: pan-y;
+}
+.drive-chart {
+  z-index: 1;
+  overflow: auto;
+}
+.drive-location,
+.drive-toolbox,
+.drive-prompt,
+.drive-stick-wrap,
+.drive-pedals {
+  position: absolute;
+  z-index: 2;
+}
+.drive-location {
+  top: 16px;
+  left: clamp(12px, 2.4vw, 42px);
+  gap: 6px;
+  border: 1px solid #455d45;
+  background: #f8f5e9f5;
+  color: #283c2e;
+  border-radius: 2px;
+  padding: 7px 10px;
+  font-size: 0.71rem;
+  user-select: none;
+}
+.drive-location svg {
+  width: 15px;
+  height: 15px;
+}
+.drive-toolbox {
+  right: clamp(12px, 2.4vw, 42px);
+  top: 16px;
+  gap: 1px;
+  box-shadow: 0 3px 12px #2c261720;
+  border: 1px solid #394d36;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #b1b7a6;
+}
+.drive-toolbox button {
+  justify-content: center;
+  gap: 0.4rem;
+  background: #f9f7eb;
+  color: #293a2c;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+.drive-toolbox button:hover {
+  background: #dfe6d3;
+}
+.drive-toolbox button:focus-visible {
+  outline-offset: -3px;
+}
+.drive-toolbox button svg {
+  width: 17px;
+  height: 17px;
+}
+.drive-stick-wrap,
+.drive-pedals {
+  display: none;
+}
+.drive-prompt {
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 28px);
+  text-align: center;
+  pointer-events: none;
+}
+.drive-prompt > span,
+.drive-prompt button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 30px;
+  padding: 8px 15px;
+  color: #fffaeb;
+  background: #18392ef5;
+  box-shadow: 0 3px 12px #27251626;
+  font-size: 0.84rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.drive-prompt button {
+  min-height: 44px;
+  gap: 9px;
+  pointer-events: auto;
+  background: #fffbea;
+  color: #203d2d;
+  border: 1px solid #314733;
+}
+.drive-caption {
+  min-height: 44px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--drive-line);
+}
+.drive-caption > span {
+  font-size: 0.67rem;
+  color: #4e5a4e;
+}
+.drive-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 100;
+  background: var(--drive-paper);
+  color: var(--drive-ink);
+  border: 1px solid #364536;
+  padding: 0;
+  width: min(860px, calc(100% - 24px));
+  max-width: 100%;
+  max-height: 88svh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 22px 100px #0c1b1590;
+}
+.drive-dialog::backdrop {
+  background: #0a1911a6;
+}
+.drive-dialog-nav {
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--drive-paper);
+  border-bottom: 1px solid var(--drive-line);
+  padding: 4px 18px;
+}
+.drive-dialog-nav button {
+  background: transparent;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.drive-help {
+  padding: clamp(20px, 4vw, 50px);
+  max-width: 720px;
+}
+.drive-help h2 {
+  font:
+    normal 2.6rem/1 Georgia,
+    serif;
+  letter-spacing: -0.05em;
+}
+.drive-help p {
+  margin: 16px 0;
+  line-height: 1.55;
+}
+.drive-help dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--drive-line);
+}
+.drive-help dd {
+  margin: 0;
+  font:
+    600 0.8rem ui-monospace,
+    monospace;
+}
+.drive-site .fit-foot {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--drive-line);
+  padding-block: 18px;
+  background: var(--drive-ink);
+  color: var(--drive-paper);
+}
+.drive-site .fit-foot .brand {
+  font:
+    700 1.6rem Georgia,
+    serif;
+  letter-spacing: -0.08em;
+}
+.drive-site .fit-foot nav {
+  gap: 18px;
+  font-size: 0.8rem;
+}
+.drive-site .fit-foot button {
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+}
+@media (max-width: 840px) {
+  .drive-intro {
+    display: block;
+  }
+  .drive-intro h1 {
+    max-width: 28ch;
+  }
+  .drive-links {
+    margin-top: 14px;
+  }
+}
+@media (max-width: 700px), (pointer: coarse) {
+  .drive-stick-wrap,
+  .drive-pedals {
+    display: flex;
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .drive-stick-wrap {
+    left: 14px;
+  }
+  .drive-stick {
+    width: 88px;
+    height: 88px;
+    position: relative;
+    border-radius: 50%;
+    border: 1px solid #fffc;
+    box-shadow:
+      0 0 0 1px #28392e5c,
+      inset 0 0 0 5px #e4dbbc44;
+    background: #304a36a6;
+    touch-action: none;
+    user-select: none;
+  }
+  .drive-stick:before,
+  .drive-stick:after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    height: 76%;
+    width: 1px;
+    background: #ede6c98c;
+  }
+  .drive-stick:after {
+    transform: rotate(90deg);
+  }
+  .drive-stick span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 33px;
+    height: 33px;
+    background: #f6f0d9;
+    border: 1px solid #344a32;
+    border-radius: 50%;
+    box-shadow: 0 3px 5px #17251745;
+    z-index: 1;
+    transform: translate(calc(-50% + var(--stick-x, 0px)), calc(-50% + var(--stick-y, 0px)));
+  }
+  .drive-pedals {
+    right: 13px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+  }
+  .drive-pedals button {
+    min-width: 52px;
+    min-height: 44px;
+    border: 1px solid #364833;
+    border-radius: 8px;
+    background: #f7f2dfef;
+    font-weight: 700;
+    color: #26372a;
+    font-size: 0.73rem;
+    touch-action: none;
+    user-select: none;
+  }
+  .drive-pedals button[data-brake] {
+    background: #293e2ff0;
+    color: #fff9de;
+  }
+  .drive-prompt {
+    bottom: 20px;
+  }
+  .drive-prompt > span {
+    font-size: 0.75rem;
+  }
+}
+@media (max-width: 600px) {
+  .drive-header {
+    min-height: 48px;
+  }
+  .drive-brand {
+    font-size: 1.48rem;
+  }
+  .drive-brand span {
+    font-size: 1.14rem;
+  }
+  .drive-header nav {
+    gap: 14px;
+  }
+  .drive-header nav a {
+    font-size: 0.76rem;
+  }
+  .drive-intro {
+    padding-block: 13px;
+  }
+  .drive-intro p {
+    font-size: 0.79rem;
+  }
+  .drive-intro h1 {
+    font-size: clamp(1.75rem, 7.6vw, 2.6rem);
+    max-width: 23ch;
+    line-height: 1.01;
+  }
+  .drive-links {
+    margin-top: 10px;
+    gap: 7px;
+  }
+  .drive-links a {
+    font-size: 0.79rem;
+    min-height: 44px;
+    padding: 7px 11px;
+  }
+  .drive-stage {
+    height: clamp(370px, 61svh, 560px);
+    min-height: 0;
+  }
+  .drive-toolbox {
+    top: 10px;
+    right: 10px;
+  }
+  .drive-location {
+    top: 10px;
+    left: 10px;
+    font-size: 0.65rem;
+    min-height: 32px;
+  }
+  .drive-toolbox button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  .drive-toolbox button span {
+    display: none;
+  }
+  .drive-dialog {
+    width: calc(100% - 12px);
+    max-height: 92svh;
+  }
+  .drive-dialog-nav {
+    padding-inline: 12px;
+  }
+  .drive-caption > span {
+    font-size: 0.6rem;
+  }
 }

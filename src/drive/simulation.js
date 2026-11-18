@@ -1,4 +1,4 @@
-import { BUILDINGS, DRIVE_BOUNDS, KERBS, LOADING_BAY, RAMP, SPAWN, STOPS } from './layout.js';
+import { COLLIDERS, DRIVE_BOUNDS, KERBS, LOADING_BAY, RAMP, SPAWN, STOPS } from './layout.js';
 
 export const FIXED_STEP = 1 / 60;
 
@@ -99,7 +99,7 @@ function resolveWalls(state, forwardX, forwardZ) {
   // Two rounded contacts approximate the long shape without snagging on corners.
   let struck = 0;
   for (const offset of [-0.7, 0.77]) {
-    for (const wall of BUILDINGS) {
+    for (const wall of COLLIDERS) {
       const cx = state.x + forwardX * offset;
       const cz = state.z + forwardZ * offset;
       const halfX = wall.width * 0.5, halfZ = wall.depth * 0.5;

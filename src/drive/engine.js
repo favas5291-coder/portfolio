@@ -1,8 +1,8 @@
 import {
-  Color, DirectionalLight, Fog, HemisphereLight, OrthographicCamera,
+  BasicShadowMap, Color, DirectionalLight, Fog, HemisphereLight, OrthographicCamera,
   PCFShadowMap, Scene, SRGBColorSpace, Vector3, WebGLRenderer,
 } from 'three';
-import { DRIVE_BOUNDS } from './layout.js';
+import { DRIVE_BOUNDS, LOADING_BAY } from './layout.js';
 import { createDriveState, FIXED_STEP, respawn as resetDrive, stepDrive } from './simulation.js';
 import { createPickup, createStreetProps } from './pickup.js';
 import { createWorld } from './world.js';
@@ -11,6 +11,14 @@ const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const throttleKeys = new Set(['ArrowUp', 'KeyW', 'ArrowDown', 'KeyS']);
 const steerKeys = new Set(['ArrowLeft', 'KeyA', 'ArrowRight', 'KeyD']);
 const gameKeys = new Set([...throttleKeys, ...steerKeys, 'KeyB', 'Space', 'KeyR', 'KeyE', 'Enter', 'KeyM', 'KeyL']);
+const smooth = value => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t); };
+
+function softwareRenderer(context) {
+  // This local decision only selects a render budget. No device ID is stored.
+  const info = context.getExtension('WEBGL_debug_renderer_info');
+  const renderer = context.getParameter(info?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER);
+  return /swiftshader|llvmpipe|softpipe|software rasterizer|microsoft basic render/i.test(renderer);
+}
 
 // An original, quiet oscillator motor. No network or decoder runs before
 // the driver opts in. Suspending the context stops audio work on hidden tabs.
@@ -21,6 +29,7 @@ function createMotor() {
   let gain;
   let muted = true;
   let running = false;
+  const pips = new Set();
 
   function wake() {
     if (!context) {
@@ -43,9 +52,29 @@ function createMotor() {
   function sync() {
     if (!context || context.state === 'closed') return;
     if (!muted && running) context.resume().catch(() => {});
-    else context.suspend().catch(() => {});
+    else {
+      for (const note of pips) note.stop();
+      context.suspend().catch(() => {});
+    }
   }
 
+  function pulse(fromHz, toHz, volume, duration, delay = 0) {
+    if (muted || !running || !context || context.state !== 'running') return;
+    const note = context.createOscillator();
+    const envelope = context.createGain();
+    const t = context.currentTime + delay;
+    note.type = 'sine';
+    note.frequency.setValueAtTime(fromHz, t);
+    note.frequency.exponentialRampToValueAtTime(toHz, t + duration);
+    envelope.gain.setValueAtTime(0.0001, t);
+    envelope.gain.exponentialRampToValueAtTime(volume, t + 0.006);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    note.connect(envelope).connect(context.destination);
+    note.onended = () => { pips.delete(note); note.disconnect(); envelope.disconnect(); };
+    pips.add(note);
+    note.start(t);
+    note.stop(t + duration);
+  }
   return {
     toggle() {
       if (!wake()) return true;
@@ -58,6 +87,8 @@ function createMotor() {
       running = value;
       sync();
     },
+    bump(speed) { pulse(150, 60, 0.026 + Math.min(Math.abs(speed), 10) * 0.003, 0.11); },
+    discovered() { pulse(523, 523, 0.045, 0.15); pulse(659, 659, 0.035, 0.18, 0.16); },
     update(speed, pedal) {
       if (muted || !running || !context) return;
       const load = Math.min(1, Math.abs(speed) / 11);
@@ -80,9 +111,10 @@ export function createDrive(host, callbacks = {}) {
   scene.background = new Color(0xf1dfbb);
   scene.fog = new Fog(0xf1dfbb, 58, 110);
   const renderer = new WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+  const software = softwareRenderer(renderer.getContext());
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFShadowMap;
+  renderer.shadowMap.type = software ? BasicShadowMap : PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
   const canvas = renderer.domElement;
   canvas.style.cssText = 'display:block;width:100%;height:100%;';
@@ -93,7 +125,8 @@ export function createDrive(host, callbacks = {}) {
   const sun = new DirectionalLight(0xfff1de, 2.34);
   sun.position.set(-20, 34, 20);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  const shadowSize = software ? 512 : 1024;
+  sun.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 32, bottom: -30, near: 1, far: 95 });
   sun.shadow.camera.updateProjectionMatrix();
   sun.shadow.normalBias = 0.035;
@@ -104,9 +137,16 @@ export function createDrive(host, callbacks = {}) {
   const truck = createPickup();
   const movable = createStreetProps();
   const world = createWorld(scene);
+  if (software) {
+    // Save a single sunlit impression of the architecture and trees. Wheels
+    // and loose street props must never leave a stale shadow at their spawn.
+    truck.root.traverse(item => { item.castShadow = false; });
+    movable.root.traverse(item => { item.castShadow = false; });
+  }
   scene.add(truck.root, movable.root);
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.2, 145);
   const eye = new Vector3();
+  const cameraOffset = new Vector3();
   const focus = new Vector3();
   const aim = new Vector3();
   const motor = createMotor();
@@ -129,7 +169,14 @@ export function createDrive(host, callbacks = {}) {
   let firstDrive = false;
   let discovered = false;
   let compact = false;
-  let ratio = 1;
+  let qualityScale = 1;
+  let resting = software;
+  let lastMovement = -Infinity;
+  let lastPresented = -Infinity;
+  let sampleTarget = 8;
+  let yardLift = 0;
+  let reveal = 0;
+  let rearView = false;
   let lastReadout = 0;
   let framesInSample = 0;
   let frameSum = 0;
@@ -166,20 +213,50 @@ export function createDrive(host, callbacks = {}) {
   function setCamera(dt, snap = false) {
     const speed = state.speed;
     const look = Math.min(Math.abs(speed) * 0.25, 3) * Math.sign(speed);
-    const streetBias = (compact ? 6.65 : 6.55) - Math.min(Math.abs(speed) * 0.30, 2.9);
-    // This paper-model viewpoint retains its bearing as the driver turns.
-    // A stable north makes returning to a shop or reading a sign much easier.
+    // The camera cranes up in the service lane. Keep the normal compass
+    // bearing for the jump so the bonnet stays visible behind the shop roof.
+    const yard = smooth((-13 - state.z) / 7) * smooth((15 - Math.abs(state.x)) / 4);
+    const bayDistance = Math.hypot(state.x - LOADING_BAY.x, state.z - LOADING_BAY.z);
+    if (state.unlocked && bayDistance <= LOADING_BAY.radius && Math.abs(speed) < 0.75) rearView = true;
+    if (!state.unlocked || bayDistance > LOADING_BAY.radius + 3.0) rearView = false;
+    yardLift += (yard - yardLift) * (snap ? 1 : 1 - Math.exp(-6 * dt));
+    // Turn only after parking. Keep that bearing for the first few metres of
+    // departure, so pressing the accelerator always gets a predictable view.
+    reveal += (Number(rearView) - reveal) * (snap ? 1 : 1 - Math.exp(-1.85 * dt));
+    const swing = smooth(reveal);
+    const bearing = Math.atan2(eye.x, eye.z);
+    const angle = bearing + (2.51 - bearing) * swing;
+    const distance = Math.hypot(eye.x, eye.z);
+    cameraOffset.set(Math.sin(angle) * distance,
+      eye.y + yardLift * 44 * (1 - swing) + swing * 10, Math.cos(angle) * distance);
+    const streetBias = ((compact ? 6.65 : 6.55) - Math.min(Math.abs(speed) * 0.30, 2.9)) * (1 - yardLift * .88);
     aim.set(
       clamp(state.x - Math.sin(state.heading) * look, DRIVE_BOUNDS.minX + 3, DRIVE_BOUNDS.maxX - 3),
       (compact ? 0.72 : 1.10) + Math.max(0, state.y) * 0.22,
       clamp(state.z - streetBias - Math.cos(state.heading) * look, DRIVE_BOUNDS.minZ + 4, DRIVE_BOUNDS.maxZ - 4),
     );
+    if (swing > 0) {
+      aim.x += (LOADING_BAY.x - aim.x) * .44 * swing;
+      aim.z += (LOADING_BAY.z + 1.65 - aim.z) * swing;
+    }
     if (snap) focus.copy(aim);
     else focus.lerp(aim, 1 - Math.exp(-5.1 * dt));
-    camera.position.copy(focus).add(eye);
+    const zoom = 1 + .31 * swing;
+    if (Math.abs(camera.zoom - zoom) > .0005) {
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+    }
+    camera.position.copy(focus).add(cameraOffset);
     camera.lookAt(focus);
   }
 
+  function renderScale(width, height) {
+    const deviceRatio = Math.min(window.devicePixelRatio || 1, compact ? 1.4 : 1.65);
+    if (!software) return deviceRatio * qualityScale;
+    // Labels and the parked truck deserve more pixels when the street is held.
+    const budget = resting ? (compact ? 205000 : 480000) : (compact ? 118000 : 205000);
+    return Math.min(deviceRatio, Math.sqrt(budget / (width * height))) * (resting ? 1 : qualityScale);
+  }
   function size() {
     const width = Math.max(1, host.clientWidth);
     const height = Math.max(1, host.clientHeight);
@@ -192,8 +269,9 @@ export function createDrive(host, callbacks = {}) {
     camera.bottom = -camera.top;
     camera.updateProjectionMatrix();
     eye.set(compact ? 4.8 : 15.4, compact ? 19.6 : 19.7, 27.0);
-    renderer.setPixelRatio(ratio);
+    renderer.setPixelRatio(renderScale(width, height));
     renderer.setSize(width, height, false);
+    lastPresented = -Infinity;
     setCamera(0, !ready);
   }
 
@@ -235,6 +313,7 @@ export function createDrive(host, callbacks = {}) {
     elapsed += dt;
     sampleInput();
     if (!paused) {
+      const previousImpacts = state.impacts;
       accumulator = Math.min(0.15, accumulator + dt);
       while (accumulator >= FIXED_STEP) {
         input.jump = jumpQueued;
@@ -243,6 +322,7 @@ export function createDrive(host, callbacks = {}) {
         accumulator -= FIXED_STEP;
         stepCount++;
       }
+      if (state.impacts !== previousImpacts) motor.bump(state.speed);
       setCamera(dt);
       const invitation = eligibleStop();
       if (invitation !== nearby) {
@@ -255,6 +335,7 @@ export function createDrive(host, callbacks = {}) {
       }
       if (state.unlocked && !discovered) {
         discovered = true;
+        motor.discovered();
         callbacks.onDiscovery?.();
       }
     }
@@ -266,11 +347,27 @@ export function createDrive(host, callbacks = {}) {
     // Static architecture shares one sunlight map. The truck's small contact
     // shadow follows it each frame, even between directional-shadow passes.
     const activeShadow = Math.abs(state.speed) > 0.05 || !state.grounded || now < pausedPaintsUntil;
-    if (now - lastShadowPaint >= (activeShadow ? (compact ? 36 : 28) : 230)) {
+    if (lastShadowPaint === -Infinity || (!software && now - lastShadowPaint >= (activeShadow ? (compact ? 36 : 28) : 230))) {
       renderer.shadowMap.needsUpdate = true;
       lastShadowPaint = now;
     }
-    renderer.render(scene, camera);
+    if (software) {
+      const moving = activeShadow || input.throttle || input.steer || jumpQueued ||
+        Math.abs(reveal - Number(rearView)) > .016;
+      if (moving) lastMovement = now;
+      const parkedDetail = now - lastMovement > 800;
+      if (parkedDetail !== resting) {
+        resting = parkedDetail;
+        renderer.setPixelRatio(renderScale(Math.max(1, host.clientWidth), Math.max(1, host.clientHeight)));
+        lastPresented = -Infinity;
+      }
+    }
+    // While parked on a CPU renderer, spend the budget on a sharper held
+    // composition. Physics and input keep their normal clock between paints.
+    if (!resting || now - lastPresented >= 85 || renderer.shadowMap.needsUpdate) {
+      renderer.render(scene, camera);
+      lastPresented = now;
+    }
     if (!ready) {
       ready = true;
       host.dataset.renderer = 'webgl';
@@ -282,14 +379,16 @@ export function createDrive(host, callbacks = {}) {
     }
     readout(now, paused);
 
-    if (!paused && delta > 0 && delta < 0.4) {
+    if (!paused && !resting && delta > 0 && delta < 0.6) {
       framesInSample++;
       frameSum += delta;
-      if (framesInSample >= 45) {
-        if (frameSum / framesInSample > 0.040 && ratio > 0.72) {
-          ratio = Math.max(0.72, ratio * 0.82);
-          renderer.setPixelRatio(ratio);
+      if (framesInSample >= sampleTarget) {
+        const minimum = software ? .73 : .66;
+        if (frameSum / framesInSample > 0.038 && qualityScale > minimum) {
+          qualityScale = Math.max(minimum, qualityScale * .83);
+          renderer.setPixelRatio(renderScale(Math.max(1,host.clientWidth), Math.max(1,host.clientHeight)));
         }
+        sampleTarget = 18;
         framesInSample = 0;
         frameSum = 0;
       }
@@ -367,7 +466,13 @@ export function createDrive(host, callbacks = {}) {
       event.altKey || event.metaKey || event.ctrlKey || !gameKeys.has(event.code)) return;
     const target = event.target;
     if (target instanceof Element && target !== document.body &&
-        target !== document.documentElement && target !== host && target !== canvas) return;
+        target !== document.documentElement && target !== host && target !== canvas) {
+      if (!host.parentElement?.contains(target) ||
+          target.closest('input,textarea,select,[contenteditable="true"],[role="slider"]')) return;
+      // Keep native activation when tabbing between the scene's buttons and
+      // links. Driving keys still work directly after a pointer click on Sound.
+      if ((event.code === 'Space' || event.code === 'Enter') && target.closest('button,a')) return;
+    }
     event.preventDefault();
     pressed.add(event.code);
     if (throttleKeys.has(event.code)) firstMovement();
@@ -413,7 +518,6 @@ export function createDrive(host, callbacks = {}) {
   canvas.addEventListener('webglcontextlost', contextLost);
   resizeObserver.observe(host);
   visibilityObserver.observe(host);
-  ratio = Math.min(window.devicePixelRatio || 1, host.clientWidth < 680 ? 1.4 : 1.65);
   size();
   activity();
 
@@ -440,6 +544,7 @@ export function createDrive(host, callbacks = {}) {
     canvas.remove();
     delete host.dataset.driverReady;
     delete host.dataset.renderer;
+    delete host.dataset.districts;
   }
 
   async function setExpanded() {
@@ -447,7 +552,10 @@ export function createDrive(host, callbacks = {}) {
     expanded = true;
     await world.loadDistricts();
     lastShadowPaint = -Infinity;
-    if (!disposed) schedule();
+    if (!disposed) {
+      host.dataset.districts = 'ready';
+      schedule();
+    }
   }
 
   return {

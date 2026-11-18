@@ -100,7 +100,9 @@ export function createWorld(scene) {
   const root = new Group();
   root.name='Kozhikode neighbourhood';
   scene.add(root);
-  let disposed=false, opened=0;
+  let disposed = false, opened = 0, backOpen = 0;
+  let districts = null;
+  let loading;
   const alive=()=>!disposed;
   makeGround(root);
   const builder=craft(root);
@@ -109,12 +111,28 @@ export function createWorld(scene) {
   return {
     update(dt, state={}) {
       if(disposed) return;
-      const goal=state.opened==='gymdrobe'?1:0;
+      const goal = state.opened === 'gymdrobe' ? 1 : state.nearby === 'gymdrobe' ? .37 : 0;
       opened+=(goal-opened)*(1-Math.exp(-5.5*dt));
       gym.door.scale.y=1-opened*.965;
-      gym.canopy.rotation.x=Math.sin((state.time||0)*1.38)*.0075;
+      gym.canopy.rotation.x = Math.sin((state.time || 0) * 1.38) * .0075;
+      if (districts) {
+        backOpen += ((state.discovered ? 1 : 0) - backOpen) * (1 - Math.exp(-4.2 * dt));
+        districts.rear.scale.y = 1 - backOpen * .97;
+        const phase = ((state.time || 0) % 10) / 10;
+        districts.leaf.visible = phase < .79;
+        districts.leaf.position.set(-4.9 + phase * 7.3, .08 + 3.65 * Math.pow(1 - phase, 2),
+          2.7 + phase * 2.1 + Math.sin(phase * 14) * .34);
+        districts.leaf.rotation.set(phase * 8, phase * 21, Math.sin(phase * 19) * .51);
+      }
     },
-    loadDistricts(){},
+    loadDistricts() {
+      if (!loading && !disposed) {
+        loading = import('./districts.js').then(({ addDistricts }) => {
+          if (!disposed) districts = addDistricts(root, { kerb, shopPrint, alive });
+        });
+      }
+      return loading;
+    },
     dispose(){disposed=true;release(root);},
   };
 }

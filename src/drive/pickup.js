@@ -1,4 +1,4 @@
-import { BoxGeometry, BufferGeometry, Color, CylinderGeometry, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, TorusGeometry } from 'three';
+import { AdditiveBlending, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, Sprite, SpriteMaterial, TorusGeometry } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, release } from './craft.js';
@@ -171,13 +171,36 @@ export function createPickup() {
   root.add(shadow);
   const flash = new Group();
   const brakeLights = new Group();
+  // Compact hazard halos mark the delivery from either end, even in the overhead view.
+  const glowMap = canvasTexture(32, 32, (ctx, width, height) => {
+    const glow = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    glow.addColorStop(0, '#fff4c7');
+    glow.addColorStop(.32, 'rgba(255,187,73,.72)');
+    glow.addColorStop(1, 'rgba(255,157,45,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+  });
+  const glowMaterial = new SpriteMaterial({
+    map: glowMap, transparent: true, depthWrite: false, blending: AdditiveBlending
+  });
   for (const s of [-1, 1]) {
     const lamp = new Mesh(new BoxGeometry(.189, .137, .034), new MeshBasicMaterial({
       color: '#fff3c2',
       toneMapped: false
     }));
     lamp.position.set(s * .529, .644, -1.402);
-    flash.add(lamp);
+    const amber = new Mesh(new BoxGeometry(.112, .062, .031), new MeshBasicMaterial({
+      color: '#fff3a1', toneMapped: false
+    }));
+    amber.position.set(s * .567, .714, 1.37);
+    flash.add(lamp, amber);
+    for (const light of [lamp, amber]) {
+      const glow = new Sprite(glowMaterial);
+      glow.position.copy(light.position);
+      glow.position.z += Math.sign(light.position.z) * .035;
+      glow.scale.set(.42, .42, 1);
+      flash.add(glow);
+    }
     const tail = new Mesh(new BoxGeometry(.087, .108, .016), new MeshBasicMaterial({
       color: '#ff5a43',
       toneMapped: false
