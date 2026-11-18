@@ -29,7 +29,8 @@ function usePressScene(stage, capture, edition, allowMotion) {
       title: edition.name, decision: edition.decision, detail: edition.detail.label,
     };
     scene.current?.setProof(input.current);
-  }, [capture, edition]);
+    if (scene.current && stage.current?.dataset.face === 'back') scene.current.setTurn(1);
+  }, [stage, capture, edition]);
 
   useEffect(() => {
     if (!allowMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;

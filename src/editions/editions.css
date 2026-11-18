@@ -174,3 +174,9 @@
 .ed-caption a { text-decoration:underline; text-underline-offset:3px; white-space:nowrap; }
 .ed-fallback-handle::before { content:''; position:absolute; right:75%; top:0; width:195%; height:18%; background:linear-gradient(#c9c3af,#65665d 48%,#383b34); border-radius:5px; transform:rotate(14deg); transform-origin:right; }
 .editions .brand { white-space:nowrap; }
+@media(max-width:380px) {
+  .editions .fit-head { gap:7px; }
+  .editions .fit-head nav { gap:9px; }
+  .editions .fit-head .nav-contact svg { display:none; }
+  .editions .ed-brand-edition { font-size:1.1rem; }
+}
