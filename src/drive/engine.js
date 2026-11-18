@@ -435,7 +435,7 @@ export function createDrive(host, callbacks = {}) {
     release();
     resetDrive(state);
     setCamera(0, true);
-    lastShadowPaint = -Infinity;
+    if (!software) lastShadowPaint = -Infinity;
     schedule();
   }
   function getPose() {
@@ -458,7 +458,7 @@ export function createDrive(host, callbacks = {}) {
     nearby = eligibleStop();
     callbacks.onNearby?.(nearby);
     setCamera(0, true);
-    lastShadowPaint = -Infinity;
+    if (!software) lastShadowPaint = -Infinity;
     readout(performance.now(), true);
     schedule();
   }
