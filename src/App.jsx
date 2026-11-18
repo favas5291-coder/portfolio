@@ -1,44 +1,81 @@
-import ProductBench from './fit/ProductBench.jsx';
-import { Work, Services, Process, Contact } from './fit/Chapters.jsx';
-import { Header, Footer } from './fit/Layout.jsx';
+import ActionMark from './components/ActionMark.jsx';
+import { useEffect, useState } from 'react';
 import { profile } from './data/portfolio.js';
+import { projectPreviews } from './data/project-previews.js';
 import { whatsappHref } from './data/site.js';
-import './fit/fit.css';
+import { Header, Footer } from './fit/Layout.jsx';
+import { Services, Process, Contact } from './editions/Chapters.jsx';
+import { editions } from './editions/evidence.js';
+import ProofPress from './editions/ProofPress.jsx';
+import './editions/editions.css';
+
+const proofHash = id => '#proof-' + id;
 
 export default function App() {
+  const [edition, setEdition] = useState(editions[0]);
+  const [pressVisit, setPressVisit] = useState(0);
+
+  useEffect(() => {
+    function readLocation() {
+      const match = editions.find(item => proofHash(item.id) === window.location.hash);
+      if (match) {
+        setEdition(match);
+        setPressVisit(count => count + 1);
+      } else if (!window.location.hash || window.location.hash === '#home') {
+        setEdition(editions[0]);
+      }
+    }
+    readLocation();
+    window.addEventListener('hashchange', readLocation);
+    return () => window.removeEventListener('hashchange', readLocation);
+  }, []);
+
+  function chooseProof(event, item) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    // Hash navigation also supports a direct link, reload and browser Back.
+    if (window.location.hash === proofHash(item.id)) {
+      setEdition(item);
+      setPressVisit(count => count + 1);
+    }
+  }
+
   return (
-    <div className="fit">
-      <a href="#main" className="skip-link">
-        Skip to content
-      </a>
-      <Header />
+    <div className="editions">
+      <a href="#main" className="skip-link">Skip to content</a>
+      <Header editions />
       <main id="main" tabIndex={-1}>
-        <section id="home" className="opening wrap">
-          <div className="intro">
-            <p className="identity">{profile.name} · Full-stack developer</p>
-            <h1>
-              I build websites and apps that help businesses <em>grow.</em>
-            </h1>
-            <p className="lede">
-              I’m Favas, a developer from Kozhikode. Try a product from the fitness store I founded.
-            </p>
-            <div className="action-row">
-              <a className="pill" href={whatsappHref()} data-contact="whatsapp" target="_blank" rel="noopener noreferrer">
-                Chat on WhatsApp <span aria-hidden="true">↗︎</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-              <a className="linkline" href="#projects">
-                View selected work <span aria-hidden="true">↓</span>
-              </a>
+        <section id="home" className="ed-opening ed-wrap" aria-labelledby="ed-offer">
+          <div className="ed-intro">
+            <p className="ed-identity">{profile.name} · Full-stack developer</p>
+            <h1 id="ed-offer">I build websites and apps that help businesses <em>grow.</em></h1>
+            <div className="ed-hero-actions">
+              <a className="ed-primary" href={whatsappHref()} data-contact="whatsapp" target="_blank" rel="noopener noreferrer">Chat on WhatsApp <ActionMark/></a>
+              <a className="ed-textlink" href={proofHash('gymdrobe')} onClick={event => chooseProof(event, editions[0])}>View GymDrobe <ActionMark icon="down"/></a>
             </div>
-            <span className="folio">Independent practice · Kozhikode, India</span>
+            <p className="ed-location">Independent developer in Kozhikode, India</p>
           </div>
-          <ProductBench />
+          <ProofPress edition={edition} visit={pressVisit}/>
         </section>
-        <Work />
-        <Services />
-        <Process />
-        <Contact />
+        <section className="ed-work ed-wrap" id="projects" aria-labelledby="ed-work-title">
+          <div className="ed-work-head"><h2 id="ed-work-title">Selected <em>editions.</em></h2><span className="ed-small">Project index</span></div>
+          <div className="ed-index">
+            {editions.map((item, index) => {
+              const shot = projectPreviews[item.id];
+              return (
+                <article key={item.id} className="ed-index-row">
+                  <a className="ed-index-load" href={proofHash(item.id)} aria-label={'Load ' + item.name + ' on the press'} onClick={event => chooseProof(event, item)}>
+                    <span className="ed-index-number">{String(index + 1).padStart(2, '0')}</span>
+                    <img src={shot.screenshot} alt="" loading="lazy" width={shot.width} height={shot.height}/>
+                    <span className="ed-entry-title"><strong>{item.name}</strong><span>{item.disclosure}</span></span>
+                    <span className="ed-index-arrow" aria-hidden="true"><ActionMark icon="back"/></span>
+                  </a>
+                  <a className="ed-case" href={item.caseStudy} aria-label={'Read the ' + item.name + ' case study'}>Case study <ActionMark/></a>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+        <Services/><Process/><Contact/>
       </main>
       <Footer />
     </div>
