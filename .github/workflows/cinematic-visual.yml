@@ -1,4 +1,4 @@
-name: Fazhere Drive visual review
+name: Fazhere Studio visual review
 
 on:
   pull_request:
@@ -6,7 +6,8 @@ on:
       - 'src/**'
       - 'public/**'
       - 'package*.json'
-      - 'scripts/capture-cinematic.mjs'
+      - 'index.html'
+      - 'scripts/review-studio.mjs'
       - 'scripts/build-fit-preview.mjs'
       - '.github/workflows/cinematic-visual.yml'
   workflow_dispatch:
@@ -15,9 +16,9 @@ permissions:
   contents: read
 
 jobs:
-  capture:
+  review:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,54 +29,24 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci && npm run verify
-      - name: Select the checkpoint or complete street review
-        shell: bash
+      - name: Package the standalone review preview
+        run: node scripts/build-fit-preview.mjs visual-checks/Fazhere-Studio-Preview.html
+      - name: Prepare visual test browsers
         run: |
-          if git log -1 --pretty=%s | grep -qF '[drive-milestone]'; then
-            echo 'DRIVE_REVIEW=milestone' >> "$GITHUB_ENV"
-          else
-            echo 'DRIVE_REVIEW=full' >> "$GITHUB_ENV"
-          fi
-      - name: Check out comparison baseline
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.base.sha || 'main' }}
-          path: .sites-runtime/baseline
-          persist-credentials: false
-      - name: Build baseline from its own lockfile
-        working-directory: .sites-runtime/baseline
-        run: npm ci && npm run build
-      - name: Use the runner's Chrome and prepare video capture
-        run: |
-          npm install --prefix "$RUNNER_TEMP/drive-tools" --no-audit --no-fund playwright@1.56.1 @ffmpeg-installer/linux-x64@4.1.0
-          ln -s "$RUNNER_TEMP/drive-tools/node_modules/playwright" node_modules/playwright
-          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
-          "$chrome_path" --version
-          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
-          ffmpeg_path="$(command -v ffmpeg || echo "$RUNNER_TEMP/drive-tools/node_modules/@ffmpeg-installer/linux-x64/ffmpeg")"
-          ffmpeg_rev="$(node -p "require(process.env.RUNNER_TEMP + '/drive-tools/node_modules/playwright-core/browsers.json').browsers.find(b => b.name === 'ffmpeg').revision")"
-          tool_cache="$RUNNER_TEMP/drive-browsers"
-          mkdir -p "$tool_cache/ffmpeg-$ffmpeg_rev"
-          ln -s "$ffmpeg_path" "$tool_cache/ffmpeg-$ffmpeg_rev/ffmpeg-linux"
-          echo "PLAYWRIGHT_BROWSERS_PATH=$tool_cache" >> "$GITHUB_ENV"
-          echo "FFMPEG_PATH=$ffmpeg_path" >> "$GITHUB_ENV"
-      - name: Package review preview for offline use
-        run: |
-          node scripts/build-fit-preview.mjs
-          python -m zipfile -c visual-checks/Fazhere-Drive-production.zip dist
-      - name: Run browser checks and compare head with base
+          npm install --prefix "$RUNNER_TEMP/studio-tools" --no-audit --no-fund playwright@1.62.1
+          ln -s "$RUNNER_TEMP/studio-tools/node_modules/playwright" node_modules/playwright
+          "$RUNNER_TEMP/studio-tools/node_modules/.bin/playwright" install --with-deps chromium webkit
+      - name: Test visitor journeys and record room views
         env:
-          BASELINE_URL: http://127.0.0.1:4174/
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          npm run preview -- --host 127.0.0.1 --strictPort > /tmp/fazhere-drive.log 2>&1 &
-          (cd .sites-runtime/baseline && npm run preview -- --host 127.0.0.1 --port 4174 --strictPort) > /tmp/fazhere-before.log 2>&1 &
-          node scripts/capture-cinematic.mjs
-      - name: Upload review bundle
+          npm run preview -- --host 127.0.0.1 --strictPort > "$RUNNER_TEMP/fazhere-studio.log" 2>&1 &
+          curl --retry 18 --retry-delay 1 --retry-connrefused --fail --silent --output /dev/null http://127.0.0.1:4173/
+          node scripts/review-studio.mjs
+      - name: Upload screenshots and measured results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fazhere-drive-${{ env.DRIVE_REVIEW }}-review
+          name: fazhere-studio-review
           path: visual-checks/
           if-no-files-found: error

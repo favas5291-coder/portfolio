@@ -1,4 +1,4 @@
-import { SITE_ORIGIN } from '../src/data/site.js';
+import { SITE_NAME, SITE_ORIGIN } from '../src/data/site.js';
 import { structuredData } from '../src/seo/pages.js';
 
 export const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -14,14 +14,14 @@ export function renderHead(page, env = {}) {
     ${page.noindex ? '' : `<link rel="canonical" href="${esc(url)}"/>`}
     <meta property="og:type" content="website"/>
     <meta property="og:locale" content="en_IN"/>
-    <meta property="og:site_name" content="Favas — The Forge"/>
+    <meta property="og:site_name" content="${esc(SITE_NAME)}"/>
     <meta property="og:title" content="${esc(page.title)}"/>
     <meta property="og:description" content="${esc(page.description)}"/>
     <meta property="og:url" content="${esc(url)}"/>
     <meta property="og:image" content="${origin}/social-card.png"/>
     <meta property="og:image:width" content="1200"/>
     <meta property="og:image:height" content="630"/>
-    <meta property="og:image:alt" content="Muhammed Favas K — web developer, The Forge portfolio"/>
+    <meta property="og:image:alt" content="Fazhere Studio, the portfolio of full-stack developer Muhammed Favas K"/>
     <meta name="twitter:card" content="summary_large_image"/>
     <meta name="twitter:title" content="${esc(page.title)}"/>
     <meta name="twitter:description" content="${esc(page.description)}"/>

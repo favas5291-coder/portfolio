@@ -1,338 +1,339 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Footer } from './fit/Layout.jsx';
-import { profile } from './data/portfolio.js';
-import { whatsappHref } from './data/site.js';
-import { BrowsePortfolio, Destination, destinations } from './drive/Destinations.jsx';
-import DriveMap from './drive/Map.jsx';
-import { ControlsHelp, Icon, Joystick } from './drive/Controls.jsx';
-import './drive/drive.css';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, MapPin, Map, MessageCircle, Pause, Play } from 'lucide-react';
+import RoomContent from './studio/RoomContent.jsx';
+import { tourWhatsapp } from './studio/studioContent.js';
+import { StudioSound } from './studio/StudioSound.jsx';
+import AnalyticsPreference from './components/AnalyticsPreference.jsx';
+import './studio/tour.css';
 
-const isPanel = (id) => id === 'map' || id === 'controls' || Object.hasOwn(destinations, id);
-const currentPanel = () => {
-  const id = location.hash.slice('#drive-'.length);
-  return location.hash.startsWith('#drive-') && isPanel(id) ? id : null;
-};
+const rooms = [
+  ['entrance', 'Entrance', 'A shaded stone path leads to the glazed entrance of Fazhere Studio.', ['home']],
+  [
+    'reception',
+    'Reception',
+    'The receptionist and directory stand beside a long, daylit corridor.',
+    ['about', 'services', 'drive-map', 'drive-controls'],
+  ],
+  [
+    'project-room',
+    'Project room',
+    'The GymDrobe and FABEA storefronts on the project room displays.',
+    ['projects', 'demonstration', 'drive-gymdrobe', 'drive-luxvibe', 'drive-fabea'],
+  ],
+  [
+    'development-studio',
+    'Development studio',
+    'The development team compares mobile and desktop work at shared desks.',
+    ['skills', 'process', 'drive-workshop'],
+  ],
+  [
+    'client-review',
+    'Client review',
+    'A client and manager look at the same storefront in the meeting room.',
+    [],
+  ],
+  [
+    'founder-office',
+    'Founder’s office',
+    'The visitor’s view across the founder’s desk and its warm lamp.',
+    ['contact', 'drive-office'],
+  ],
+];
+// Literal asset paths also allow the self-contained review build to embed them.
+const roomViews = [
+  '/studio/entrance.webp',
+  '/studio/reception.webp',
+  '/studio/project-room.webp',
+  '/studio/development-studio.webp',
+  '/studio/client-review.webp',
+  '/studio/founder-office.webp',
+];
+const poster = (index) => roomViews[index];
+
+function StudioMark() {
+  return (
+    <span className="studio-wordmark">
+      <span className="studio-mark" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      Fazhere <em>Studio</em>
+    </span>
+  );
+}
+
+function RoomMenu({ active }) {
+  const menu = useRef(null);
+  useEffect(() => {
+    function outside(event) {
+      if (!menu.current?.contains(event.target)) menu.current.open = false;
+    }
+    function escape(event) {
+      if (event.key !== 'Escape' || !menu.current.open) return;
+      menu.current.open = false;
+      menu.current.querySelector('summary').focus();
+    }
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('focusin', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('focusin', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, []);
+  return (
+    <details className="studio-directory" ref={menu}>
+      <summary>
+        <Map size={17} aria-hidden="true" />
+        Jump to a room
+        <ChevronDown size={14} aria-hidden="true" />
+      </summary>
+      <nav aria-label="Room directory">
+        {rooms.map(([id, label], i) => (
+          <a
+            key={id}
+            href={'#' + id}
+            aria-current={active === i ? 'location' : undefined}
+            onClick={(event) => {
+              if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+              menu.current.open = false;
+              requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
+            }}
+          >
+            <small>{String(i + 1).padStart(2, '0')}</small>
+            {label}
+          </a>
+        ))}
+      </nav>
+    </details>
+  );
+}
 
 export default function App() {
+  const [room, setRoom] = useState(0);
+  const [render, setRender] = useState('still');
+  const [paused, setPaused] = useState(false);
+  const [canToggle, setCanToggle] = useState(false);
+  const stage = useRef(null),
+    header = useRef(null),
+    chapters = useRef(null);
   const host = useRef(null),
-    engine = useRef(null),
-    dialog = useRef(null),
-    opener = useRef(null);
-  const reveal = useRef(null);
-  const livePanel = useRef(null),
-    stick = useRef([0, 0]);
-  const [panel, setPanel] = useState(null),
-    [ready, setReady] = useState(false),
-    [nearby, setNearby] = useState(null);
-  const [muted, setMuted] = useState(true),
-    [moved, setMoved] = useState(false),
-    [discovered, setDiscovered] = useState(false);
+    progress = useRef(0);
 
-  const applyPanel = useCallback((id) => {
-    clearTimeout(reveal.current);
-    livePanel.current = id;
-    engine.current?.setPaused(Boolean(id), Object.hasOwn(destinations, id) ? id : null);
-    setPanel(id);
+  useEffect(() => {
+    const sections = [...chapters.current.querySelectorAll('[data-office-room]')];
+    let anchors = [],
+      tick = 0;
+    function measure() {
+      const mobile = matchMedia('(max-width:760px)').matches;
+      const top = header.current.offsetHeight + (mobile ? stage.current.offsetHeight : 0);
+      anchors = sections.map((el) => el.getBoundingClientRect().top + scrollY - top);
+      update();
+    }
+    function update() {
+      tick = 0;
+      const y = scrollY + 1;
+      let i = 0;
+      while (i < 5 && y >= anchors[i + 1]) i++;
+      const t = i < 5 ? Math.max(0, Math.min(1, (y - anchors[i]) / (anchors[i + 1] - anchors[i]))) : 0;
+      // Hold the composition while the current brief is being read.
+      // A short wheel stroke or thumb gesture opens the door and crosses the threshold.
+      // Scale the rest of the tour by content height, including expanded brief details.
+      const travel =
+        i === 0
+          ? Math.max(0, Math.min(1, (scrollY - anchors[0]) / 130))
+          : Math.min(1, Math.max(0, (t - 0.46) / 0.54));
+      progress.current = i + travel;
+      setRoom(Math.min(5, Math.round(progress.current)));
+    }
+    function scroll() {
+      if (!tick) tick = requestAnimationFrame(update);
+    }
+    const observer = new ResizeObserver(measure);
+    for (const element of [...sections, header.current, stage.current]) observer.observe(element);
+    measure();
+    window.addEventListener('scroll', scroll, { passive: true });
+    window.addEventListener('pageshow', measure);
+    // Fragment navigation on a client-rendered development build may precede React.
+    const target = location.hash && document.getElementById(location.hash.slice(1));
+    if (target && !scrollY) target.scrollIntoView({ behavior: 'instant' });
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(tick);
+      window.removeEventListener('scroll', scroll);
+      window.removeEventListener('pageshow', measure);
+    };
   }, []);
 
-  const open = useCallback(
-    (id, event) => {
-      if (
-        !isPanel(id) ||
-        (event && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0))
-      )
-        return;
-      event?.preventDefault();
-      if (livePanel.current === id) return;
-      if (!livePanel.current) opener.current = document.activeElement;
-      const state = { ...history.state, driveOverlay: true };
-      if (livePanel.current) history.replaceState(state, '', '#drive-' + id);
-      else history.pushState(state, '', '#drive-' + id);
-      applyPanel(id);
-    },
-    [applyPanel],
-  );
-
-  const close = useCallback(() => {
-    if (history.state?.driveOverlay) history.back();
-    else {
-      history.replaceState(history.state, '', location.pathname + location.search);
-      applyPanel(null);
-    }
-  }, [applyPanel]);
-
   useEffect(() => {
-    const changed = () => applyPanel(currentPanel());
-    changed();
-    window.addEventListener('popstate', changed);
-    window.addEventListener('hashchange', changed);
-    return () => {
-      window.removeEventListener('popstate', changed);
-      window.removeEventListener('hashchange', changed);
-    };
-  }, [applyPanel]);
-
-  useEffect(() => {
-    const el = dialog.current;
-    if (panel) {
-      if (!el.open) el.showModal();
-      el.scrollTop = 0;
-      el.querySelector('[data-close-drive]')?.focus({ preventScroll: true });
-    } else if (el.open) {
-      el.close();
-      const target = opener.current;
-      if (target && target !== document.body && target.isConnected) target.focus({ preventScroll: true });
-      else host.current?.focus({ preventScroll: true });
-      opener.current = null;
-    }
-  }, [panel]);
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let serial = 0,
-      idleTimer;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+    let engine,
+      generation = 0,
+      timer;
     function stop() {
-      ++serial;
-      clearTimeout(idleTimer);
-      clearTimeout(reveal.current);
-      engine.current?.dispose();
-      engine.current = null;
-      setReady(false);
-      setNearby(null);
-      setMuted(true);
-    }
-    function visit(id) {
-      // Hold the pickup in its bay while the shop opens, then bring the flat
-      // evidence into reach. Direct HTML links skip this physical transition.
-      if (id !== 'gymdrobe') {
-        open(id);
-        return;
-      }
-      if (reveal.current !== null) clearTimeout(reveal.current);
-      engine.current?.setPaused(true, id);
-      reveal.current = window.setTimeout(() => {
-        reveal.current = null;
-        open(id);
-      }, 560);
+      generation++;
+      clearTimeout(timer);
+      engine?.dispose();
+      engine = null;
+      setRender('still');
     }
     function start() {
       stop();
-      if (media.matches) return;
-      const ticket = serial;
-      import('./drive/engine.js')
-        .then(({ createDrive }) => {
-          if (ticket !== serial || !host.current) return;
-          const game = createDrive(host.current, {
-            onNearby: setNearby,
-            onInteract: visit,
-            onMap: () => open('map'),
-            onMuteChange: setMuted,
-            onFirstDrive: () => setMoved(true),
-            onDiscovery: () => setDiscovered(true),
-            onFallback: stop,
+      const allowed = !reduce.matches && !navigator.connection?.saveData;
+      setCanToggle(allowed);
+      if (!allowed || paused) return;
+      const ticket = generation;
+      timer = setTimeout(async () => {
+        try {
+          const { startOffice } = await import('./studio/engine.js');
+          if (ticket !== generation || !host.current) return;
+          engine = startOffice(host.current, {
+            readPosition: () => progress.current,
             onReady: () => {
-              if (ticket !== serial) return;
-              setReady(true);
-              idleTimer = window.setTimeout(() => engine.current?.setExpanded()?.catch(() => {}), 90);
+              if (ticket === generation) setRender('live');
+            },
+            onFailure: () => {
+              if (ticket === generation) {
+                stop();
+                setCanToggle(false);
+              }
             },
           });
-          engine.current = game;
-          game.restorePose?.(history.state?.drivePose);
-          const id = livePanel.current;
-          if (id) game.setPaused(true, Object.hasOwn(destinations, id) ? id : null);
-          else game.setStick(...stick.current);
-        })
-        .catch(() => {
-          if (ticket === serial) stop();
-        });
-    }
-    function remember() {
-      const pose = engine.current?.getPose?.();
-      if (pose) history.replaceState({ ...history.state, drivePose: pose }, '');
+        } catch {
+          if (ticket === generation) {
+            stop();
+            setCanToggle(false);
+          }
+        }
+      }, 120);
     }
     start();
-    media.addEventListener('change', start);
-    window.addEventListener('pagehide', remember);
+    reduce.addEventListener('change', start);
     return () => {
-      media.removeEventListener('change', start);
-      window.removeEventListener('pagehide', remember);
+      reduce.removeEventListener('change', start);
       stop();
     };
-  }, [open]);
+  }, [paused]);
 
-  function setStick(x, y) {
-    stick.current = [x, y];
-    engine.current?.setStick(x, y);
-  }
-  const gym = destinations.gymdrobe;
   return (
-    <div className="drive-site">
-      <a className="skip-link" href="#main">
-        Skip to content
+    <div className="studio-tour" data-room={rooms[room][0]} data-render={render}>
+      <a href="#main" className="skip-link">
+        Skip to the tour
       </a>
-      <header className="drive-header">
-        <a href="#home" aria-label="Fazhere home" className="drive-brand">
-          <i aria-hidden="true" />
-          Fazhere.<span>Drive</span>
+      <header className="studio-masthead" ref={header}>
+        <a href="#entrance" aria-label="Fazhere Studio, entrance">
+          <StudioMark />
         </a>
-        <nav aria-label="Portfolio navigation">
-          <a href="#projects">Browse projects</a>
-          <a href="/contact/">
-            Contact <Icon name="out" />
-          </a>
-        </nav>
-      </header>
-      <main id="main" tabIndex={-1}>
-        <section id="home" aria-label="Fazhere Drive">
-          <div className="drive-intro">
-            <div>
-              <p>{profile.name} · Full-stack developer</p>
-              <h1>
-                I build websites and apps that help businesses <em>grow.</em>
-              </h1>
-            </div>
-            <div className="drive-links">
-              <a className="drive-ink-button" href={gym.href} onClick={(e) => open('gymdrobe', e)}>
-                View GymDrobe <Icon name="arrow" />
-              </a>
-              <a
-                className="drive-whatsapp"
-                href={whatsappHref()}
-                data-contact="whatsapp"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icon name="wa" /> Chat on WhatsApp
-              </a>
-            </div>
-          </div>
-          <div
-            id="demonstration"
-            className={'drive-stage' + (ready ? ' is-live' : '')}
-            aria-label="Explore the Kozhikode neighbourhood"
+        <div className="studio-header-tools">
+          <RoomMenu active={room} />
+          <a
+            className="studio-contact-short"
+            href={tourWhatsapp}
+            data-contact="whatsapp"
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            <div className="drive-chart" hidden={ready}>
-              <DriveMap onOpen={open} />
-            </div>
-            <div
-              className="drive-host"
-              ref={host}
-              data-drive-host=""
-              tabIndex={ready ? 0 : -1}
-              aria-label="Drive the pickup. Use arrow keys or WASD, B to brake and Enter to explore a nearby stop."
+            <MessageCircle size={17} aria-hidden="true" />
+            <span>Talk to Favas</span>
+          </a>
+        </div>
+      </header>
+      <main className="studio-main" id="main" tabIndex={-1}>
+        <figure className="studio-stage" ref={stage} aria-label={'Office view: ' + rooms[room][1]}>
+          <div className="studio-viewport">
+            <img
+              className="studio-poster"
+              src={poster(room)}
+              alt={rooms[room][2]}
+              fetchPriority={room === 0 ? 'high' : 'auto'}
             />
-            {ready && (
-              <>
-                <div className="drive-location">
-                  <Icon name="pin" />
-                  <span>Kozhikode</span>
-                </div>
-                <div className="drive-toolbox">
-                  <button onClick={() => open('map')} aria-label="Map">
-                    <Icon name="map" />
-                    <span>Map</span>
-                  </button>
-                  <button
-                    aria-label="Sound"
-                    aria-pressed={!muted}
-                    title={muted ? 'Turn sound on' : 'Turn sound off'}
-                    onClick={() => engine.current?.toggleMute()}
-                  >
-                    <Icon name={muted ? 'mute' : 'sound'} />
-                  </button>
-                  <button aria-label="Controls" title="Driving controls" onClick={() => open('controls')}>
-                    <Icon name="controls" />
-                  </button>
-                  <button
-                    aria-label="Respawn"
-                    title="Recover the pickup"
-                    onClick={() => engine.current?.respawn()}
-                  >
-                    <Icon name="reset" />
-                  </button>
-                </div>
-                <div className="drive-stick-wrap">
-                  <Joystick onStick={setStick} />
-                </div>
-                <div className="drive-pedals">
-                  <button onClick={() => engine.current?.jump()}>Jump</button>
-                  <button
-                    data-brake=""
-                    onPointerDown={(e) => {
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      engine.current?.setBrake(true);
-                    }}
-                    onPointerUp={() => engine.current?.setBrake(false)}
-                    onPointerCancel={() => engine.current?.setBrake(false)}
-                    onLostPointerCapture={() => engine.current?.setBrake(false)}
-                    onKeyDown={(e) => {
-                      if (e.key === ' ' || e.key === 'Enter') engine.current?.setBrake(true);
-                    }}
-                    onKeyUp={() => engine.current?.setBrake(false)}
-                    onBlur={() => engine.current?.setBrake(false)}
-                  >
-                    Brake
-                  </button>
-                </div>
-                <div className="drive-prompt" aria-live="polite">
-                  {nearby && destinations[nearby] ? (
-                    <button data-interact="" onClick={() => engine.current?.interact()}>
-                      Explore {destinations[nearby].name} <Icon name="arrow" />
-                    </button>
-                  ) : discovered ? (
-                    <span>Delivery bay unlocked</span>
-                  ) : !moved ? (
-                    <span>Drive to explore.</span>
-                  ) : null}
-                </div>
-              </>
-            )}
+            <div className="studio-canvas" ref={host} aria-hidden="true" />
+            <div className="studio-media-tools">
+              {canToggle && (
+                <button
+                  type="button"
+                  className="studio-sound"
+                  aria-label="Pause 3D animation"
+                  aria-pressed={paused}
+                  title={paused ? 'Resume 3D visit' : 'Use still room views'}
+                  onClick={() => setPaused((v) => !v)}
+                >
+                  {paused ? <Play size={16} /> : <Pause size={16} />}
+                </button>
+              )}
+              <StudioSound />
+            </div>
           </div>
-          <div className="drive-caption">
-            <span>{ready ? 'Kozhikode, Kerala' : 'Kozhikode, Kerala · Neighbourhood map'}</span>
-            <a href="#projects">
-              Browse portfolio <Icon name="arrow" />
-            </a>
-          </div>
-        </section>
-        <BrowsePortfolio onOpen={open} />
+          <figcaption className="studio-filmstrip">
+            <div>
+              <span className="studio-frame-count">{String(room + 1).padStart(2, '0')} / 06</span>
+              <strong>{rooms[room][1]}</strong>
+            </div>
+            <nav aria-label="Tour stops">
+              {rooms.map(([id, label], i) => (
+                <a
+                  key={id}
+                  aria-label={'Go to ' + label}
+                  aria-current={room === i ? 'location' : undefined}
+                  href={'#' + id}
+                >
+                  <i />
+                </a>
+              ))}
+            </nav>
+          </figcaption>
+        </figure>
+        <div className="studio-chapters" ref={chapters}>
+          {rooms.map(([id, label, alt, aliases], i) => (
+            <section
+              key={id}
+              id={id}
+              data-office-room=""
+              className="studio-room"
+              tabIndex={-1}
+              aria-label={label}
+            >
+              {aliases.map((alias) => (
+                <span key={alias} id={alias} className="studio-anchor" aria-hidden="true" />
+              ))}
+              <noscript>
+                <img
+                  className="studio-static-photo"
+                  src={poster(i)}
+                  alt={alt}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                />
+              </noscript>
+              <div className="studio-room-inner">
+                <div className="studio-place">
+                  <span />
+                  {i === 0 ? 'Kozhikode, Kerala' : label}
+                </div>
+                <RoomContent index={i} />
+              </div>
+            </section>
+          ))}
+        </div>
       </main>
-      <Footer />
-      <dialog
-        className="drive-dialog"
-        ref={dialog}
-        aria-label={destinations[panel]?.name || (panel === 'controls' ? 'Driving controls' : 'Neighbourhood map')}
-        onCancel={(e) => {
-          e.preventDefault();
-          close();
-        }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            const r = e.currentTarget.getBoundingClientRect();
-            if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close();
+      <footer className="studio-footer">
+        <a href="#entrance">
+          <StudioMark />
+        </a>
+        <span>
+          <MapPin size={14} aria-hidden="true" /> Kozhikode, Kerala
+        </span>
+        <a href="/privacy/">Privacy</a>
+        <AnalyticsPreference />
+      </footer>
+      <noscript>
+        <style>
+          {
+            '.studio-stage{display:none!important}.studio-main{display:block!important}.studio-tour .studio-room{min-height:0;padding:2em;scroll-margin-top:var(--studio-header)}.studio-room-inner{width:min(100%,46rem);margin:1.5rem auto}.studio-static-photo{width:min(100%,70rem);margin:auto}.studio-chapters .studio-room{display:block}.studio-tour .studio-anchor{scroll-margin-top:var(--studio-header)}'
           }
-        }}
-      >
-        {panel && (
-          <>
-            <header className="drive-dialog-nav">
-              <button data-close-drive="" onClick={close}>
-                <Icon name="back" /> Back to drive
-              </button>
-              <a href="/contact/">
-                Contact <Icon name="out" />
-              </a>
-            </header>
-            {panel === 'map' ? (
-              <DriveMap onOpen={open} />
-            ) : panel === 'controls' ? (
-              <ControlsHelp />
-            ) : (
-              <Destination id={panel} />
-            )}
-          </>
-        )}
-      </dialog>
+        </style>
+      </noscript>
     </div>
   );
 }

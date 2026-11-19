@@ -1,25 +1,21 @@
-# Fazhere Drive
+# Fazhere Studio
 
-Muhammed Favas K’s React, Vite and Three.js portfolio. Drive the orange pickup through a miniature Kozhikode neighbourhood or use the regular project, service and contact links. The initial HTML contains the identity, offer, GymDrobe and WhatsApp links, and a clickable illustrated map. The shared project manifest supplies the storefront images in both modes.
+Muhammed Favas K’s React, Vite and Three.js portfolio. Visitors scroll from a shaded entrance through a virtual software studio in Kozhikode, ending at the founder’s desk. The people in the office illustrate how a project moves through development and review.
 
-## Development and review
+## Run and verify
 
-Use Node 22.12 or later. Run `npm ci`, `npm run dev` and `npm run verify`. Verification includes deterministic tests for steering, braking, prop impacts, suspension, ramp jumps and parking, plus the existing prerender, SEO, link and initial bundle checks.
+Use Node 22.12 or later. Run `npm ci`, then `npm run dev` for development. Run `npm run verify` for the unit tests, production build, prerendered routes, internal links, SEO and initial JavaScript budget. `npm run preview` serves that build.
 
-The PR’s **Fazhere Drive visual review** workflow runs Chromium with touch emulation and software WebGL. Its downloadable artifacts include a self-contained HTML preview, production-build ZIP, screenshots, a recording and review.json. To create the offline preview locally, build first and run `node scripts/build-fit-preview.mjs`. Use the Vite preview or extracted production build to test real routes and both standalone boutique demos. In the offline preview, live store, public demo, contact and source links need an internet connection.
+The **Fazhere Studio visual review** workflow runs the built site in desktop Chromium and phone-size WebKit. The artifact contains screenshots and lab measurements in `review.json`. Its workflow file lists the Playwright installation commands for reproducing the run locally. With the built preview running, run `node scripts/review-studio.mjs`. Set `PREVIEW_URL` or `REVIEW_OUTPUT` to choose a different origin or output directory.
 
-## Exploring and maintaining the neighbourhood
+## Explore and maintain the studio
 
-- Use WASD or arrow keys to drive and reverse, B to brake, Space to jump, Enter or E to inspect a nearby stop, M for the map, L for sound and R to recover. On a phone, steer and accelerate with one thumb. Hold Brake, then use the invitation to open a destination. The scene pauses while you read. Back or Escape returns to the same parking spot.
-- The starting street, vehicle and collision geometry are original. The high camera, direct vehicle control and destination discovery draw on [Bruno Simon’s portfolio](https://bruno-simon.com/) and its [published update sequence](https://github.com/brunosimon/folio-2025). The implementation uses Three.js, instanced scene details and local procedurally synthesized sound. The artwork, map and audio for this neighbourhood were created for this site. Existing fonts retain their licence files in `public/fonts`.
-- Change destination footprints, parking radii, spawn or delivery bay in `src/drive/layout.js`. Handling and collision response are in `simulation.js`, the pickup and moving prop meshes in `pickup.js`, the camera and optional audio in `engine.js`. The initial shop is built in `world.js`; scenery details load separately after the first frame. Keep the illustrated map and the collision bounds aligned when adding streets or landmarks.
-- On a software renderer, the fixed-bearing camera can reuse the colour and depth of the static street. The pickup, movable objects, shutters, awning and leaf still move live. The cache is rebuilt as project textures arrive. The ramp and rear camera turn use the live scene. Hardware rendering uses the full scene throughout.
-- Update the HTML introduction and overlays in `src/App.jsx`. Project descriptions and source links come from `src/data/portfolio.js`, services and contact destinations from `src/data/site.js`. The workshop carries the service into both the WhatsApp draft and the project enquiry. The checkout remains on the live store.
-- GymDrobe’s product detail saves the shopper’s colour in the link, selects its first image and restores a shared colour if the product still offers it. The pinned ProductPage implementation contains both the URL write and the initial selection check. Its product and pinned source links are in `src/data/product-evidence.js`. Verify the live behaviour and source before updating this claim. Everyday Luxvibe and FABEA remain labelled as concepts.
-
-## Phone acceptance test
-
-Show the opening on a silent phone for five seconds. Ask who the developer is, what he builds and how to contact him. Hand the phone to a first-time player without coaching. Count the attempts to park at GymDrobe, let the visitor open the shop, then ask them to return to the pickup and choose their next destination. Record actual answers and whether the visitor chooses another lap. Automated browser runs measure layout, controls and state; real-device play and a human response require a separate session.
+- Scroll in either direction, choose **Jump to a room**, or use a room’s direct link. The six anchors are `#entrance`, `#reception`, `#project-room`, `#development-studio`, `#client-review` and `#founder-office`. Essential content and contact links are prerendered. Reduced motion, disabled WebGL and paused animation use individual room stills. Ambient sound starts only on request.
+- GymDrobe’s product example uses the supplied black and red COITONIC photos. Case studies open in native dialogs and the Back button returns visitors to their place. Without JavaScript these links open the ordinary case-study pages. FABEA and Luxvibe remain independent storefront concepts.
+- The scroll layout, directory and legacy section aliases live in `src/App.jsx`; camera eye and target points are in `src/studio/cameraPath.js`. Update `buildOffice.js`, office geometry and `officePeople.js` together when moving a desk, actor or doorway. Inspect all six stops at desktop and phone aspect ratios for sightlines and clearance.
+- Update room copy, examples and exhibit links in `src/studio/RoomContent.jsx` and `studioContent.js`. Services and the WhatsApp destination come from `src/data/site.js`; project facts and email come from `src/data/portfolio.js`. Project exhibits use the shared preview manifest below.
+- The still images use the six room anchors as filenames under `public/studio/`. After a scene or camera change, use `node scripts/render-studio-stills.mjs` with the optional review browser tools installed. Set `CHROME_PATH` if using a custom Chromium executable. Check each resulting WebP with reduced motion enabled. Keep the reviewed desktop/mobile walkthrough evidence separate from these fallback assets.
+- For a phone acceptance check, ask a first-time visitor who Favas is, what he built, and how to discuss a project. Observe a forward and reverse scroll, a project close, and the handoff to WhatsApp. Browser emulation checks layout and interactions; a hands-on device session assesses comfort and clarity.
 
 ## Refresh project previews
 

@@ -35,6 +35,13 @@ const bundle = await build({
     createRoot(document.getElementById('root')).render(route === '/' ? <App/> : page.path === '/contact/' ? <ContactPage/> : <MarketingPages page={page}/>);
   ` },
   plugins: [{name: 'use-production-styles', setup(builder) {
+    builder.onResolve({filter: /\.bin\?url&inline$/}, args => ({
+      path: resolve(args.resolveDir, args.path.split('?')[0]), namespace: 'inline-binary',
+    }));
+    builder.onLoad({filter: /.*/, namespace: 'inline-binary'}, async args => ({
+      contents: 'export default ' + JSON.stringify('data:application/octet-stream;base64,' + (await readFile(args.path)).toString('base64')),
+      loader: 'js',
+    }));
     builder.onLoad({filter: /\.css$/}, () => ({contents: '', loader: 'js'}));
   }}],
 });
@@ -55,23 +62,19 @@ async function embed(text) {
   return text;
 }
 const icon = await embed('<link rel="icon" type="image/png" href="/favicon-32.png">');
-const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere Drive · Interactive review</title>' + icon + '<style>' +
+const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere Studio · Interactive tour</title>' + icon + '<style>' +
   (await embed(styles.join('\n'))).replace(/@import\s+[^;]*;/g,'') +
   '</style></head><body><div id="root"></div><script>' +
   (await embed(bundle.outputFiles[0].text)).replace(/<\/script/gi,'<\\/script') + '</script></body></html>';
-const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Drive-Preview.html');
+const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Studio-Preview.html');
 await mkdir(dirname(output), {recursive: true});
 await writeFile(output, html);
 if (!process.argv[2]) await writeFile(join(dirname(output), 'README.txt'), [
-  'Fazhere Drive review',
+  'Fazhere Studio review',
   '',
-  'Open Fazhere-Drive-Preview.html in a browser for an offline copy of the portfolio. Drive the pickup with the arrows or touch pad, then park beside GymDrobe and open the project. Its links to the public stores and WhatsApp need an internet connection.',
+  'Open Fazhere-Studio-Preview.html in a browser for an offline copy of the portfolio. Scroll to visit all six rooms or choose one from the directory. In the project room, switch the product colour or open a case study. Its links to the public stores and WhatsApp need an internet connection.',
   '',
-  'For the exact Vite production build, including both local boutique demos, extract Fazhere-Drive-production.zip from the review workflow. In the extracted folder run:',
-  'python3 -m http.server 8000 --bind 127.0.0.1 --directory dist',
-  'Open http://127.0.0.1:8000/ in your browser. Stop the server with Ctrl+C.',
-  '',
-  'The workflow also generates the opening MP4, viewport screenshots, and measured before/after results in review.json. Check the failure field if the workflow was interrupted.',
+  'External stores, demos, and contact links need an internet connection.',
   '',
 ].join('\n'));
 console.log('Standalone review:', output, '(' + Buffer.byteLength(html) + ' bytes)');

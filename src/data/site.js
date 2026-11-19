@@ -1,5 +1,6 @@
 // Updated by scripts/set-site-url.mjs. Never put credentials in this file.
 export const SITE_ORIGIN = 'https://fazhere.com';
+export const SITE_NAME = 'Fazhere Studio';
 export const WHATSAPP_NUMBER = '918156805806';
 export const PHONE_DISPLAY = '+91 8156805806';
 export const PHONE_HREF = 'tel:+918156805806';
