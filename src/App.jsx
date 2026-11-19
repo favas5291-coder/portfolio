@@ -115,6 +115,8 @@ export default function App() {
   const [room, setRoom] = useState(0);
   const [render, setRender] = useState('still');
   const [paused, setPaused] = useState(false);
+  const [limited, setLimited] = useState(false);
+  const explicitMotion = useRef(false);
   const [canToggle, setCanToggle] = useState(false);
   const stage = useRef(null),
     header = useRef(null),
@@ -191,6 +193,11 @@ export default function App() {
           if (ticket !== generation || !host.current) return;
           engine = startOffice(host.current, {
             readPosition: () => progress.current,
+            onSlow: () => {
+              if (ticket !== generation || explicitMotion.current) return;
+              setLimited(true);
+              setPaused(true);
+            },
             onReady: () => {
               if (ticket === generation) setRender('live');
             },
@@ -218,7 +225,12 @@ export default function App() {
   }, [paused]);
 
   return (
-    <div className="studio-tour" data-room={rooms[room][0]} data-render={render}>
+    <div
+      className="studio-tour"
+      data-room={rooms[room][0]}
+      data-render={render}
+      data-motion={limited ? 'limited' : paused ? 'paused' : 'auto'}
+    >
       <a href="#main" className="skip-link">
         Skip to the tour
       </a>
@@ -254,13 +266,17 @@ export default function App() {
               {canToggle && (
                 <button
                   type="button"
-                  className="studio-sound"
-                  aria-label="Pause 3D animation"
-                  aria-pressed={paused}
+                  className={'studio-sound' + (limited ? ' studio-retry' : '')}
+                  aria-label={paused ? 'Resume 3D animation' : 'Pause 3D animation'}
                   title={paused ? 'Resume 3D visit' : 'Use still room views'}
-                  onClick={() => setPaused((v) => !v)}
+                  onClick={() => {
+                    if (paused) explicitMotion.current = true;
+                    setLimited(false);
+                    setPaused(!paused);
+                  }}
                 >
-                  {paused ? <Play size={16} /> : <Pause size={16} />}
+                  {paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
+                  {limited && <span>Resume 3D</span>}
                 </button>
               )}
               <StudioSound />

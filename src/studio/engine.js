@@ -3,7 +3,7 @@ import { buildOffice } from './buildOffice.js';
 import { buildPeople } from './officePeople.js';
 import { positionCamera } from './cameraPath.js';
 
-export function startOffice(host, { readPosition, onReady, onFailure }) {
+export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) {
   const mobile = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
   const canvas = document.createElement('canvas');
   const renderer = new THREE.WebGLRenderer({
@@ -29,6 +29,9 @@ export function startOffice(host, { readPosition, onReady, onFailure }) {
     previousPosition = -1;
   let slowFrames = 0,
     sampleCount = 0;
+  const minimumDensity = mobile ? 0.7 : 0.55;
+  let verySlowFrames = 0;
+  let offeredStills = false;
   let observer;
 
   function resize() {
@@ -53,7 +56,7 @@ export function startOffice(host, { readPosition, onReady, onFailure }) {
   function draw(now) {
     if (disposed || document.hidden || caseOpen) return;
     frame = requestAnimationFrame(draw);
-    const interval = now - lastTime;
+    const interval = lastTime ? now - lastTime : 0;
     const target = readPosition();
     // Give the visitor full motion while travelling. At rest, the actors need
     // fewer samples. No timer runs while the page is in the background.
@@ -84,18 +87,32 @@ export function startOffice(host, { readPosition, onReady, onFailure }) {
       onFailure();
       return;
     }
+    // A single shader compile or tab switch should not change presentation.
+    // Reduce fill rate first. Only sustained low throughput at the smallest
+    // buffer changes the tour to its matching stills; the visitor can resume.
+    if (interval === 0) return;
     sampleCount++;
-    if (sampleCount > 3 && interval > (mobile ? 44 : 52)) slowFrames++;
-    if (slowFrames >= 4 && density > 0.65) {
-      density = Math.max(0.65, density * 0.78);
-      slowFrames = 0;
+    if (interval > (mobile ? 44 : 52)) slowFrames++;
+    if (interval > 100) verySlowFrames++;
+    if (sampleCount >= 9) {
+      if (slowFrames >= 4 && density > minimumDensity) {
+        density = Math.max(minimumDensity, density * (verySlowFrames >= 4 ? 0.57 : 0.78));
+        resize();
+      } else if (!offeredStills && density <= minimumDensity && verySlowFrames >= 6) {
+        offeredStills = true;
+        onSlow();
+      }
       sampleCount = 0;
-      resize();
+      slowFrames = 0;
+      verySlowFrames = 0;
     }
   }
   function visibility() {
     cancelAnimationFrame(frame);
     lastTime = 0;
+    slowFrames = 0;
+    sampleCount = 0;
+    verySlowFrames = 0;
     if (!document.hidden && !caseOpen) frame = requestAnimationFrame(draw);
   }
   function caseVisibility(event) {

@@ -444,3 +444,14 @@ html:has(.studio-tour) {
     transition: none;
   }
 }
+
+.studio-media-tools .studio-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 22px;
+  width: auto;
+  padding: 0 13px;
+  font-size: 0.8rem;
+}

@@ -37,6 +37,13 @@ function activeMode(page, target) {
   return page.waitForSelector(tour + '[data-render="' + target + '"]', { timeout: 65000 });
 }
 
+function waitForLiveOrLimited(page) {
+  return page.waitForSelector(
+    '.studio-tour[data-render="live"], .studio-tour[data-render="still"][data-motion="limited"]',
+    { timeout: 65000 },
+  );
+}
+
 function verifyContact(href) {
   const dest = new URL(href);
   assert.equal(dest.origin, 'https://wa.me');
@@ -48,6 +55,7 @@ async function state(page) {
   return page.locator(tour).evaluate((el) => ({
     room: el.dataset.room,
     renderer: el.dataset.render,
+    motion: el.dataset.motion,
     canvas: !!el.querySelector('canvas'),
     width: innerWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -150,8 +158,10 @@ async function exercise(page, session, name) {
   });
   if (name === 'desktop') {
     await page.mouse.move(90, 210);
+    const strideStart = performance.now();
     await page.mouse.wheel(0, 120);
-    await page.waitForFunction(() => document.querySelector('.studio-tour')?.dataset.room === 'reception', undefined, {timeout:1000});
+    await requiredRoom(page, 'reception');
+    session.entranceWheelToSelectionMs = Math.round(performance.now() - strideStart);
     await page.waitForTimeout(650);
     session.entranceWheelPixels = await page.evaluate(() => scrollY);
     assert.ok(Math.abs(session.entranceWheelPixels - 120) <= 2, 'one wheel notch enters reception');
@@ -163,10 +173,16 @@ async function exercise(page, session, name) {
   await testContact(page, 'entrance');
   await page.getByRole('link', { name: 'Scroll to enter' }).click();
   await requiredRoom(page, 'reception');
-  await activeMode(page, target);
+  if (supportsWebGL) await waitForLiveOrLimited(page);
+  else await activeMode(page, 'still');
   await capture(page, name + '-02-reception');
   assert.equal((await page.locator('#reception a[href^="/services/"]').count()) >= 4, true);
-  session.scrollAnimationFrameIntervals = await frameSample(page);
+  const sampleStart = await state(page);
+  session.scrollAnimationFrameIntervals = {
+    ...(await frameSample(page)),
+    initialRenderer: sampleStart.renderer,
+    finalRenderer: (await state(page)).renderer,
+  };
   await menuJump(page, 'project-room');
   const product = page.locator('#project-room .studio-product img');
   const initialPhoto = await product.getAttribute('src');
@@ -226,6 +242,11 @@ async function exercise(page, session, name) {
     await page.goBack();
   }
   if (name === 'desktop') {
+    await waitForLiveOrLimited(page);
+    // A heavily loaded CI renderer may already have selected stills. Explicitly
+    // opt back into live rendering before the pause and context-loss exercises.
+    const resume = page.getByRole('button', { name: 'Resume 3D animation', exact: true });
+    if (await resume.isVisible()) await resume.click();
     await activeMode(page, 'live');
     const sound = page.getByRole('button', { name: 'Ambient sound' });
     if (await sound.count()) assert.equal(await sound.getAttribute('aria-pressed'), 'false');
@@ -275,6 +296,63 @@ async function fallback(page, session, name) {
   await capture(page, name + '-project-room');
   await menuJump(page, 'founder-office');
   verifyContact(await page.locator('#founder-office [data-contact="whatsapp"]').getAttribute('href'));
+}
+
+async function lowFrameRate(page, session) {
+  await page.goto(url);
+  await activeMode(page, 'live');
+  await page.evaluate(() => {
+    // Delay only this browser page's animation callbacks; no busy loop, clock
+    // spoofing or instrumentation of the application's quality logic.
+    const canvas = document.querySelector('.studio-canvas canvas');
+    window.__studioReviewWidths = [canvas.width];
+    const sizes = new MutationObserver(() => window.__studioReviewWidths.push(canvas.width));
+    sizes.observe(canvas, { attributes: true, attributeFilter: ['width'] });
+    const request = window.requestAnimationFrame.bind(window);
+    const cancel = window.cancelAnimationFrame.bind(window);
+    const pending = new Map();
+    let token = 0;
+    window.requestAnimationFrame = (callback) => {
+      const key = --token;
+      const entry = {};
+      pending.set(key, entry);
+      entry.timer = setTimeout(() => {
+        entry.frame = request((now) => {
+          pending.delete(key);
+          callback(now);
+        });
+      }, 180);
+      return key;
+    };
+    window.cancelAnimationFrame = (key) => {
+      const entry = pending.get(key);
+      if (!entry) {
+        cancel(key);
+        return;
+      }
+      clearTimeout(entry.timer);
+      if (entry.frame !== undefined) cancel(entry.frame);
+      pending.delete(key);
+    };
+  });
+  const started = performance.now();
+  await page.locator(tour + '[data-render="still"][data-motion="limited"]').waitFor({ timeout: 40000 });
+  session.delayToLimitedMs = Math.round(performance.now() - started);
+  session.canvasResolutionWidths = await page.evaluate(() => window.__studioReviewWidths);
+  assert.ok(
+    Math.min(...session.canvasResolutionWidths) < session.canvasResolutionWidths[0],
+    'live pixel resolution falls before automatic still mode',
+  );
+  assert.equal((await state(page)).canvas, false, 'slow renderer released');
+  await menuJump(page, 'project-room');
+  await page.locator('.studio-poster').evaluate((img) => img.decode());
+  await menuJump(page, 'founder-office');
+  verifyContact(await page.locator('#founder-office [data-contact="whatsapp"]').getAttribute('href'));
+  await page.getByRole('button', { name: 'Resume 3D animation', exact: true }).click();
+  await activeMode(page, 'live');
+  // Frames remain intentionally delayed after the user explicitly opts in.
+  await page.waitForTimeout(session.delayToLimitedMs + 800);
+  assert.equal((await state(page)).renderer, 'live', 'explicit resume remains in effect');
 }
 
 async function noScript(page) {
@@ -334,6 +412,7 @@ async function run(browser, name, width, height, options = {}) {
   page.on('pageerror', (error) => session.errors.push(error.message));
   try {
     if (name === 'no-webgl' || name === 'reduced-motion') await fallback(page, session, name);
+    else if (name === 'limited-frame-rate') await lowFrameRate(page, session);
     else if (name === 'no-javascript') await noScript(page);
     else if (name === 'mobile-touch') await touchScroll(page, session);
     else await exercise(page, session, name);
@@ -368,6 +447,7 @@ if (!engineFilter || engineFilter === 'chromium') {
     await run(browser, 'no-webgl', 390, 844);
     await run(browser, 'no-javascript', 390, 844, { javaScriptEnabled: false });
     await run(browser, 'mobile-touch', 390, 844);
+    await run(browser, 'limited-frame-rate', 390, 844);
   } finally {
     await browser.close();
   }
