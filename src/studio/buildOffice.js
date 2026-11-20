@@ -8,7 +8,7 @@ import { buildLandscape } from './officeLandscape.js';
 
 // Dimensions and camera positions use metres. The centre gallery stays clear
 // from the public threshold all the way to the visitor's side of Favas's desk.
-export function buildOffice(T, scene, { mobile = false, loadingManager } = {}) {
+export function buildOffice(T, scene, { mobile = false, software = false, loadingManager } = {}) {
   const root = new T.Group();
   root.name = 'Fazhere Studio';
   scene.add(root);
@@ -25,7 +25,7 @@ export function buildOffice(T, scene, { mobile = false, loadingManager } = {}) {
   sun.target.position.set(0, 0, -13);
   root.add(sun, sun.target);
   sun.castShadow = true;
-  const shadowSize = mobile ? 1024 : 2048;
+  const shadowSize = mobile || software ? 1024 : 2048;
   sun.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(sun.shadow.camera, { left: -21, right: 21, top: 12, bottom: -12, near: 1, far: 58 });
   sun.shadow.camera.updateProjectionMatrix();

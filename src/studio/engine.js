@@ -12,6 +12,11 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     alpha: false,
     powerPreference: mobile ? 'low-power' : 'high-performance',
   });
+  const gl = renderer.getContext();
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  const software = info && /swiftshader|llvmpipe|softpipe|software rasterizer/i.test(
+    gl.getParameter(info.UNMASKED_RENDERER_WEBGL),
+  );
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.08, 85);
   const loadingManager = new THREE.LoadingManager();
@@ -24,11 +29,12 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     lastTime = 0,
     delivered = false,
     clock = 0;
-  let density = Math.min(devicePixelRatio || 1, mobile ? 1.25 : 1.5);
+  let density = Math.min(devicePixelRatio || 1, software ? 0.72 : mobile ? 1.25 : 1.5);
   let previousPosition = -1;
   let slowFrames = 0,
-    sampleCount = 0;
-  const minimumDensity = mobile ? 0.7 : 0.55;
+    sampleCount = 0,
+    sampleTime = 0;
+  const minimumDensity = software ? 0.45 : mobile ? 0.65 : 0.5;
   let verySlowFrames = 0;
   let offeredStills = false;
   let observer;
@@ -91,17 +97,22 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     // buffer changes the tour to its matching stills; the visitor can resume.
     if (interval === 0) return;
     sampleCount++;
+    sampleTime += interval;
     if (interval > (mobile ? 44 : 52)) slowFrames++;
     if (interval > 100) verySlowFrames++;
-    if (sampleCount >= 9) {
-      if (slowFrames >= 4 && density > minimumDensity) {
-        density = Math.max(minimumDensity, density * (verySlowFrames >= 4 ? 0.57 : 0.78));
+    // On a software renderer nine samples can take many seconds. Two large
+    // misses in the same window warrant trying the cheaper buffer immediately.
+    const stalled = verySlowFrames >= 2 && sampleTime >= 420;
+    if (sampleCount >= 9 || stalled) {
+      if ((stalled || slowFrames >= 4) && density > minimumDensity) {
+        density = stalled ? minimumDensity : Math.max(minimumDensity, density * 0.74);
         resize();
-      } else if (!offeredStills && density <= minimumDensity && verySlowFrames >= 6) {
+      } else if (!offeredStills && density <= minimumDensity && (stalled || sampleTime / sampleCount > 85)) {
         offeredStills = true;
         onSlow();
       }
       sampleCount = 0;
+      sampleTime = 0;
       slowFrames = 0;
       verySlowFrames = 0;
     }
@@ -111,6 +122,7 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     lastTime = 0;
     slowFrames = 0;
     sampleCount = 0;
+    sampleTime = 0;
     verySlowFrames = 0;
     if (!disposed && texturesReady && !document.hidden && !caseOpen) frame = requestAnimationFrame(draw);
   }
@@ -144,7 +156,7 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     // Bake the solar shadows once per visit. Moving hands and doors use the
     // room's contact shading instead of re-rendering a building-wide shadow map.
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = software ? THREE.BasicShadowMap : THREE.PCFShadowMap;
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
     // Keep the matched photograph visible until every material in the first
@@ -160,7 +172,7 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     loadingManager.onError = () => {
       if (!disposed) onFailure();
     };
-    parts.push(buildOffice(THREE, scene, { mobile, loadingManager }));
+    parts.push(buildOffice(THREE, scene, { mobile, software, loadingManager }));
     parts.push(buildPeople(THREE, scene, { mobile, loadingManager }));
     host.append(canvas);
     resize();

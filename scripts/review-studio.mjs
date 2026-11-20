@@ -314,9 +314,7 @@ async function fallback(page, session, name) {
 }
 
 async function lowFrameRate(page, session) {
-  // At the facade, a reader can leave the still composition indefinitely
-  // without spending GPU time. Exercise the adaptive tier in an occupied room.
-  await page.goto(new URL('#client-review', url).href);
+  await page.goto(url);
   await activeMode(page, 'live');
   await page.evaluate(() => {
     // Delay only this browser page's animation callbacks; no busy loop, clock
@@ -352,6 +350,8 @@ async function lowFrameRate(page, session) {
       pending.delete(key);
     };
   });
+  // Start the delayed frames while leaving the held entrance composition.
+  await page.locator('#client-review').evaluate((room) => room.scrollIntoView({ behavior: 'instant' }));
   const started = performance.now();
   await page.locator(tour + '[data-render="still"][data-motion="limited"]').waitFor({ timeout: 40000 });
   session.delayToLimitedMs = Math.round(performance.now() - started);
