@@ -1,25 +1,24 @@
-# Fazhere Studio
+# Fazhere Studio · Variable Width
 
-Muhammed Favas K’s React, Vite and Three.js portfolio. Visitors scroll from a shaded entrance through a virtual software studio in Kozhikode, ending at the founder’s desk. The people in the office illustrate how a project moves through development and review.
+A scroll-guided visit to Muhammed Favas K’s software practice in Kozhikode, Kerala. Scroll from the studio entrance to the GymDrobe projection, try the responsive storefront, compare two proposed mobile layouts, and start a project brief.
 
 ## Run and verify
 
-Use Node 22.12 or later. Run `npm ci`, then `npm run dev` for development. Run `npm run verify` for the unit tests, production build, prerendered routes, internal links, SEO and initial JavaScript budget. `npm run preview` serves that build.
+Use Node 22.12 or later. Install the locked dependencies with `npm ci`. Run `npm run dev` for development. Run `npm run verify` for the unit tests, production build, prerendered pages, internal links, metadata, and initial JavaScript budget. Run `npm run preview` to serve the generated site.
 
-The **Fazhere Studio visual review** workflow runs the built site in desktop Chromium and phone-size WebKit. The artifact contains screenshots and lab measurements in `review.json`. Its workflow file lists the Playwright installation commands for reproducing the run locally. With the built preview running, run `node scripts/review-studio.mjs`. Set `PREVIEW_URL` or `REVIEW_OUTPUT` to choose a different origin or output directory.
+The visual review workflow exercises the production build in Chromium and WebKit. For a portable preview, run `node scripts/build-fit-preview.mjs visual-checks/variable-width-preview.tar.gz` after building. Extract the archive and run `node serve.mjs` inside it.
 
-## Explore and maintain the studio
+## Maintain the visit
 
-- Scroll in either direction, choose **Jump to a room**, or use a room’s direct link. The six anchors are `#entrance`, `#reception`, `#project-room`, `#development-studio`, `#client-review` and `#founder-office`. Essential content and contact links are prerendered. Reduced motion, disabled WebGL and paused animation use individual room stills. If the renderer repeatedly exceeds 100 ms per frame after reducing resolution, the tour switches to those same stills. “Resume 3D” lets the visitor opt back in. Ambient sound starts only on request.
-- GymDrobe’s product example uses the supplied black and red COITONIC photos. Case studies open in native dialogs and the Back button returns visitors to their place. Without JavaScript these links open the ordinary case-study pages. FABEA and Luxvibe remain independent storefront concepts.
-- The scroll layout, directory and legacy section aliases live in `src/App.jsx`; camera eye and target points are in `src/studio/cameraPath.js`. Update `buildOffice.js`, office geometry and `officePeople.js` together when moving a desk, actor or doorway. Inspect all six stops at desktop and phone aspect ratios for sightlines and clearance.
-- Update room copy, examples and exhibit links in `src/studio/RoomContent.jsx` and `studioContent.js`. Services and the WhatsApp destination come from `src/data/site.js`; project facts and email come from `src/data/portfolio.js`. Project exhibits use the shared preview manifest below.
-- The still images use the six room anchors as filenames under `public/studio/`. After a scene or camera change, use `node scripts/render-studio-stills.mjs` with the optional review browser tools installed. Set `CHROME_PATH` if using a custom Chromium executable. Check each resulting WebP with reduced motion enabled. Keep the reviewed desktop/mobile walkthrough evidence separate from these fallback assets.
-- For a phone acceptance check, ask a first-time visitor who Favas is, what he built, and how to discuss a project. Observe a forward and reverse scroll, a project close, and the handoff to WhatsApp. Browser emulation checks layout and interactions; a hands-on device session assesses comfort and clarity.
+- The homepage and native scroll choreography live in `src/App.jsx`. The primary links are `/#work`, `/#process`, and `/#contact`. Production renders the opening image, title, offer, and direct contact links into HTML.
+- The instrument and its camera live in `src/variable/`. To regenerate its WebP stills, install the Playwright tooling named in the visual review workflow and run `node scripts/render-variable-views.mjs`. Set `CHROME_PATH` if using system Chromium.
+- The working storefront and design review live in `src/variable/Exhibit.jsx` and `Process.jsx`. The verified business and project facts, project imagery, and contact destinations come from `src/data/`.
+- Geometry and the HTML exhibit share a width value. Check both ends of travel, both viewports, and the vertical scroll gesture after changing the instrument. Also test the same tasks in still mode.
+- Public routes are prerendered into `dist`. The production site uses the existing Render service for https://fazhere.com. Run `node scripts/check-deployment.mjs https://fazhere.com` after a release to check public pages, redirects, and crawl information.
 
 ## Refresh project previews
 
-Project previews are registered in `src/data/project-previews.js`. The homepage, enlargement dialog, services pages and case study share the same screenshot. Capture dates remain separate from code-review dates.
+Project previews are registered in `src/data/project-previews.js`. The storefront capture appears on the case-study and service pages. The exhibit uses the registered product imagery. Capture dates remain separate from code-review dates.
 
 Inspect the actual public homepage, dismiss optional overlays, wait for visible images/fonts, and capture a clean desktop screenshot at 1348 × 926 or larger with the same aspect ratio. Confirm that it shows the current design rather than a login, error, popup or loading state.
 

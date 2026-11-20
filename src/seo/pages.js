@@ -2,7 +2,7 @@ import { SITE_NAME, SITE_ORIGIN, services } from '../data/site.js';
 import { profile } from '../data/portfolio.js';
 
 export const pages = [
-  { path: '/', label: 'Home', title: `Muhammed Favas K, Freelance Web Developer | ${SITE_NAME}`, description: 'Visit the virtual studio of Muhammed Favas K in Kozhikode, Kerala. Explore GymDrobe and discuss a business website, online store or web app with Favas.' },
+  { path: '/', label: 'Home', title: `Muhammed Favas K, Freelance Web Developer | ${SITE_NAME}`, description: 'Visit Muhammed Favas K’s software studio in Kozhikode. Try his GymDrobe storefront at two widths and discuss a website, online store or web app for your business.' },
   { path: '/services/', label: 'Services', title: 'Freelance Website Development Services | Favas, Kerala', description: 'Explore business websites, custom e-commerce development, landing pages and website redesign with Favas in Kozhikode, Kerala. Find the right scope and request a quote.' },
   ...services.map(service => ({ path: `/services/${service.slug}/`, label: service.name, title: service.title, description: service.description, service })),
   { path: '/projects/gymdrobe/', label: 'GymDrobe', title: 'GymDrobe Case Study — MERN E-commerce Project | Favas', description: 'Explore GymDrobe, Muhammed Favas K’s own fitness e-commerce project: the business problem, React storefront, purchase flow and full stack development contribution.' },

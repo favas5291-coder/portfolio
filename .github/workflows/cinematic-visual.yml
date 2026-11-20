@@ -1,14 +1,15 @@
-name: Fazhere Studio visual review
+name: Variable Width browser review
 
 on:
   pull_request:
     paths:
       - 'src/**'
       - 'public/**'
+      - 'demos/**'
       - 'package*.json'
       - 'index.html'
-      - 'scripts/review-studio.mjs'
-      - 'scripts/build-fit-preview.mjs'
+      - 'vite.config.js'
+      - 'scripts/**'
       - '.github/workflows/cinematic-visual.yml'
   workflow_dispatch:
 
@@ -29,24 +30,27 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci && npm run verify
-      - name: Package the standalone review preview
-        run: node scripts/build-fit-preview.mjs visual-checks/Fazhere-Studio-Preview.html
-      - name: Prepare visual test browsers
+      - name: Package the production review
+        run: node scripts/build-fit-preview.mjs visual-checks/variable-width-preview.tar.gz
+      - name: Prepare Chromium and WebKit
         run: |
-          npm install --prefix "$RUNNER_TEMP/studio-tools" --no-audit --no-fund playwright@1.62.1
-          ln -s "$RUNNER_TEMP/studio-tools/node_modules/playwright" node_modules/playwright
-          "$RUNNER_TEMP/studio-tools/node_modules/.bin/playwright" install --with-deps chromium webkit
-      - name: Test visitor journeys and record room views
+          npm install --prefix "$RUNNER_TEMP/browser-tools" --no-audit --no-fund playwright@1.62.1
+          ln -s "$RUNNER_TEMP/browser-tools/node_modules/playwright" node_modules/playwright
+          "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium webkit
+      - name: Exercise the packaged studio
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          npm run preview -- --host 127.0.0.1 --strictPort > "$RUNNER_TEMP/fazhere-studio.log" 2>&1 &
+          mkdir "$RUNNER_TEMP/variable-width"
+          tar -xzf visual-checks/variable-width-preview.tar.gz -C "$RUNNER_TEMP/variable-width"
+          node "$RUNNER_TEMP/variable-width/serve.mjs" > "$RUNNER_TEMP/review-server.log" 2>&1 &
           curl --retry 18 --retry-delay 1 --retry-connrefused --fail --silent --output /dev/null http://127.0.0.1:4173/
           node scripts/review-studio.mjs
-      - name: Upload screenshots and measured results
+      - name: Upload production preview and browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fazhere-studio-review
+          name: variable-width-review
           path: visual-checks/
+          compression-level: 0
           if-no-files-found: error

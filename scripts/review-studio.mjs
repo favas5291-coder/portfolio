@@ -1,464 +1,310 @@
-// Run against "npm run preview" after a production build. CI installs Playwright
-// separately to keep browser tooling out of the application's dependencies.
+// Run against the extracted production preview. Browser tooling is installed separately by CI.
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium, webkit } from 'playwright';
 import { WHATSAPP_NUMBER } from '../src/data/site.js';
+import { profile } from '../src/data/portfolio.js';
 
-const url = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/';
+const origin = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/';
 const output = process.env.REVIEW_OUTPUT || 'visual-checks';
-const rooms = [
-  'entrance',
-  'reception',
-  'project-room',
-  'development-studio',
-  'client-review',
-  'founder-office',
-];
-const tour = '.studio-tour';
-const message = 'Hi Favas, I visited your studio. I’d like to discuss a project.';
-const report = {
-  build: process.env.HEAD_SHA || null,
-  origin: url,
-  conditions:
-    'Fresh browser contexts, headless Linux, DPR 1, no CPU/network throttling. Chromium uses SwiftShader software rendering. Mobile WebKit uses an emulated touch viewport. Durations are lab samples, not physical-device results.',
-  sessions: [],
-  failures: [],
-};
+const engine = process.env.STUDIO_ENGINE;
+const report = { commit: process.env.HEAD_SHA || null, origin, sessions: [] };
 await mkdir(output, { recursive: true });
-const save = () => writeFile(join(output, 'review.json'), JSON.stringify(report, null, 2) + '\n');
-const requiredRoom = (page, id) =>
-  page.waitForFunction((expected) => document.querySelector('.studio-tour')?.dataset.room === expected, id, {
-    timeout: 25000,
+
+function button(page, name) {
+  return page.getByRole('button', { name, exact: true });
+}
+async function jump(page, id) {
+  const link = page.locator('header a[href="#' + id + '"]').first();
+  await link.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(stop => document.querySelector('.vw-visit')?.dataset.stop === stop, id);
+}
+async function layout(page) {
+  return page.locator('.vw-product').evaluate(product => {
+    const box = selector => product.querySelector(selector).getBoundingClientRect();
+    const photo = box('.vw-product-photo'), title = box('.vw-product-title'), action = box('.vw-product-action');
+    return {
+      width: product.closest('.vw-projection-inner').clientWidth,
+      columns: getComputedStyle(product).gridTemplateColumns.split(' ').length,
+      sideBySide: photo.right <= title.left + 1 && action.left >= photo.right - 1,
+      stacked: title.bottom <= photo.top + 1 && action.top >= photo.bottom - 1,
+      view: product.dataset.view, colour: product.dataset.colour,
+    };
   });
-
-function activeMode(page, target) {
-  return page.waitForSelector(tour + '[data-render="' + target + '"]', { timeout: 65000 });
 }
-
-function waitForLiveOrLimited(page) {
-  return page.waitForSelector(
-    '.studio-tour[data-render="live"], .studio-tour[data-render="still"][data-motion="limited"]',
-    { timeout: 65000 },
-  );
-}
-
-function verifyContact(href) {
-  const dest = new URL(href);
-  assert.equal(dest.origin, 'https://wa.me');
-  assert.equal(dest.pathname, '/' + WHATSAPP_NUMBER);
-  assert.equal(dest.searchParams.get('text'), message);
-}
-
-async function state(page) {
-  return page.locator(tour).evaluate((el) => ({
-    room: el.dataset.room,
-    renderer: el.dataset.render,
-    motion: el.dataset.motion,
-    canvas: !!el.querySelector('canvas'),
-    width: innerWidth,
-    documentWidth: document.documentElement.scrollWidth,
-  }));
-}
-
-async function menuJump(page, id) {
-  const summary = page.locator('summary').filter({ hasText: 'Jump to a room' });
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  const destination = summary.locator('..').locator('a[href="#' + id + '"]');
-  await destination.focus();
-  await page.keyboard.press('Enter');
-  await requiredRoom(page, id);
-}
-
 async function capture(page, name) {
-  await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: join(output, name + '.jpg'), type: 'jpeg', quality: 84, timeout: 45000 });
+  await page.screenshot({ path: join(output, name + '.jpg'), type: 'jpeg', quality: 87 });
+}
+async function caseRoundTrip(page, method) {
+  const link = page.getByRole('link', { name: 'View case study', exact: true });
+  const range = page.getByRole('slider', { name: 'Projection width' });
+  await link.focus();
+  const before = { scroll: await page.evaluate(() => scrollY), range: await range.inputValue(), layout: await layout(page) };
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor();
+  assert.equal(new URL(page.url()).searchParams.get('case'), 'gymdrobe');
+  if (method === 'back') await page.goBack();
+  else await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await dialog.waitFor({ state: 'hidden' });
+  await page.waitForFunction(top =>
+    document.activeElement?.textContent.trim() === 'View case study' && Math.abs(scrollY - top) < 3, before.scroll);
+  assert.equal(await range.inputValue(), before.range);
+  assert.deepEqual(await layout(page), before.layout);
 }
 
-async function frameSample(page) {
+async function checkContact(page, link, draft) {
+  const href = new URL(await link.getAttribute('href'));
+  assert.equal(href.origin, 'https://wa.me');
+  assert.equal(href.pathname, '/' + WHATSAPP_NUMBER);
+  assert.match(href.searchParams.get('text') || '', draft);
+  const context = page.context();
+  const request = context.waitForEvent('request', { predicate: req => req.url() === href.href });
+  await link.click({ noWaitAfter: true });
+  await request;
+  for (const tab of context.pages()) if (tab !== page) await tab.close();
+  return href.searchParams.get('text');
+}
+
+async function sampleFrames(page) {
   return page.evaluate(async () => {
-    const position = scrollY;
     const intervals = [];
     let first, previous;
-    await new Promise((resolve) => {
-      function move(now) {
-        if (first === undefined) first = now;
+    await new Promise(done => {
+      function frame(now) {
+        first ??= now;
         if (previous !== undefined) intervals.push(now - previous);
         previous = now;
-        const progress = Math.min(1, (now - first) / 1800);
-        scrollTo(0, position + Math.round(progress * (innerHeight * 0.7)));
-        if (progress < 1) requestAnimationFrame(move);
-        else resolve();
+        const t = Math.min(1, (now - first) / 1200);
+        scrollTo({ top: Math.round(95 * t), behavior: 'instant' });
+        if (t < 1) requestAnimationFrame(frame); else done();
       }
-      requestAnimationFrame(move);
+      requestAnimationFrame(frame);
     });
     intervals.sort((a, b) => a - b);
-    const quantile = (q) => Math.round(intervals[Math.floor((intervals.length - 1) * q)] * 10) / 10;
-    return { samples: intervals.length, medianMs: quantile(0.5), p95Ms: quantile(0.95) };
+    const quantile = q => Math.round(intervals[Math.floor(q * (intervals.length - 1))] * 10) / 10;
+    return { samples: intervals.length, medianMs: quantile(.5), p95Ms: quantile(.95), worstMs: quantile(1) };
   });
 }
 
-async function testContact(page, id) {
-  const contact = page.locator('#' + id + ' a[data-contact="whatsapp"]').first();
-  verifyContact(await contact.getAttribute('href'));
-  // Verify the activated URL but keep the browser local; no messages are sent.
-  await page.context().route(
-    'https://wa.me/**',
-    (route) =>
-      route.fulfill({
-        contentType: 'text/html',
-        body: '<title>WhatsApp destination checked</title>',
-      }),
-    { times: 1 },
-  );
-  const reached = page
-    .context()
-    .waitForEvent('request', { predicate: (req) => req.url().startsWith('https://wa.me/') });
-  const opensPopup = (await contact.getAttribute('target')) === '_blank';
-  const popupEvent = opensPopup ? page.waitForEvent('popup') : null;
-  await contact.click();
-  verifyContact((await reached).url());
-  if (popupEvent) await (await popupEvent).close();
-  else await page.goBack({ waitUntil: 'domcontentloaded' });
-  await requiredRoom(page, id);
-}
-
-async function exercise(page, session, name) {
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Muhammed Favas K' }).waitFor();
-  assert.equal(
-    await page.locator('section[data-office-room]').evaluateAll((nodes) => nodes.map((n) => n.id).join(' ')),
-    rooms.join(' '),
-  );
-  const supportsWebGL = await page.evaluate(() => {
-    const gl = document.createElement('canvas').getContext('webgl2');
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    return !!gl;
-  });
-  const target = supportsWebGL ? 'live' : 'still';
-  await activeMode(page, target);
-  session.opening = await state(page);
-  assert.ok(session.opening.width >= session.opening.documentWidth, 'no horizontal overflow');
-  if (name === 'desktop')
-    assert.equal(session.opening.renderer, 'live', 'at least desktop must exercise WebGL');
-  await capture(page, name + '-01-entrance');
-  session.navigation = await page.evaluate(() => {
-    const nav = performance.getEntriesByType('navigation')[0];
-    const resources = performance.getEntriesByType('resource');
+async function exercise(page, name, session) {
+  await page.goto(origin, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: /Muhammed Favas K/i }).first().waitFor();
+  await page.waitForSelector('.vw-projection-inner[style]');
+  await page.waitForFunction(() => performance.getEntriesByName('vw-interactive').length > 0);
+  session.hydratedInteractiveControlsMs = await page.evaluate(() => Math.round(performance.getEntriesByName('vw-interactive')[0].startTime));
+  await page.locator('.vw-scene-poster').evaluate(img => img.decode());
+  if (name.startsWith('chromium')) await page.waitForSelector('.vw-visit[data-render="live"]');
+  await capture(page, name + '-opening');
+  session.opening = await page.evaluate(() => {
+    const gl = document.querySelector('.vw-scene canvas')?.getContext('webgl2');
+    const info = gl?.getExtension('WEBGL_debug_renderer_info');
     return {
-      domContentLoadedMs: Math.round(nav.domContentLoadedEventEnd),
-      loadMs: Math.round(nav.loadEventEnd),
       firstContentfulPaintMs: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null,
-      resourceCountAtLiveFrame: resources.length,
-      decodedResourceKiBAtLiveFrame:
-        Math.round(resources.reduce((sum, res) => sum + res.decodedBodySize, 0) / 1024) || null,
+      renderer: info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : null,
+      mode: document.querySelector('.vw-visit').dataset.render,
+      scrollWidth: document.documentElement.scrollWidth, viewport: innerWidth,
     };
   });
-  if (name === 'desktop') {
-    await page.mouse.move(90, 210);
-    const strideStart = performance.now();
-    await page.mouse.wheel(0, 120);
-    await requiredRoom(page, 'reception');
-    session.entranceWheelToSelectionMs = Math.round(performance.now() - strideStart);
-    await page.waitForTimeout(650);
-    session.entranceWheelPixels = await page.evaluate(() => scrollY);
-    assert.ok(Math.abs(session.entranceWheelPixels - 120) <= 2, 'one wheel notch enters reception');
-    await capture(page, 'desktop-first-stride');
-    await page.mouse.wheel(0, -120);
-    await requiredRoom(page, 'entrance');
+  assert.ok(session.opening.scrollWidth <= session.opening.viewport + 1);
+  const opening = page.getByRole('link', { name: 'Talk to Favas', exact: true }).first();
+  session.initialWhatsApp = await checkContact(page, opening, /Favas/i);
+  session.scrollFrames = await sampleFrames(page);
+  await page.waitForFunction(() => Number(document.querySelector('.vw-scene').dataset.progress) > 0);
+  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+  await page.waitForFunction(() => Math.abs(Number(document.querySelector('.vw-scene').dataset.progress)) < .01);
+
+  await jump(page, 'work');
+  await button(page, 'Wide').click();
+  await button(page, 'View details').click();
+  await button(page, 'Red').click();
+  session.wide = await layout(page);
+  assert.ok(session.wide.width > 465 && session.wide.columns === 2 && session.wide.sideBySide);
+  await capture(page, name + '-wide');
+  await button(page, 'Compact').click();
+  session.compact = await layout(page);
+  assert.ok(session.compact.width <= 465 && session.compact.columns === 1 && session.compact.stacked);
+  assert.equal(session.compact.colour, 'Red');
+  assert.equal(session.compact.view, 'details');
+  assert.match(await page.locator('img[data-product-photo]').getAttribute('src'), /gymdrobe-shirt-red\.webp$/);
+  await capture(page, name + '-compact');
+  const range = page.getByRole('slider', { name: 'Projection width' });
+  await range.focus();
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await range.inputValue(), '1');
+  await page.keyboard.press('End');
+  assert.equal(await range.inputValue(), '100');
+  await caseRoundTrip(page, 'close');
+  await caseRoundTrip(page, 'back');
+
+  await jump(page, 'process');
+  assert.equal(await page.locator('.vw-proposal').count(), 2);
+  await button(page, 'Product details').click();
+  assert.equal(await page.locator('.vw-phone[data-inspect="details"]').count(), 2);
+  await capture(page, name + '-review');
+  await jump(page, 'contact');
+  const contact = page.getByRole('link', { name: 'Talk to Favas on WhatsApp', exact: true });
+  session.contactDrafts = { initial: await checkContact(page, contact, /Favas/i) };
+  for (const choice of ['Website', 'Online store', 'Web app']) {
+    await page.getByRole('radio', { name: choice, exact: true }).check();
+    session.contactDrafts[choice] = await checkContact(page, contact, new RegExp(choice, 'i'));
   }
-  verifyContact(await page.locator('#entrance a[data-contact="whatsapp"]').getAttribute('href'));
-  await testContact(page, 'entrance');
-  await page.getByRole('link', { name: 'Scroll to enter' }).click();
-  await requiredRoom(page, 'reception');
-  if (supportsWebGL) await waitForLiveOrLimited(page);
-  else await activeMode(page, 'still');
-  await capture(page, name + '-02-reception');
-  assert.equal((await page.locator('#reception a[href^="/services/"]').count()) >= 4, true);
-  const sampleStart = await state(page);
-  session.scrollAnimationFrameIntervals = {
-    ...(await frameSample(page)),
-    initialRenderer: sampleStart.renderer,
-    finalRenderer: (await state(page)).renderer,
-  };
-  await menuJump(page, 'project-room');
-  const product = page.locator('#project-room .studio-product img');
-  const initialPhoto = await product.getAttribute('src');
-  const swatch = page.getByRole('button', { name: 'Red', exact: true });
-  if (name === 'mobile-webkit') await swatch.tap();
-  else await swatch.click();
-  assert.notEqual(await product.getAttribute('src'), initialPhoto);
-  assert.equal(await swatch.getAttribute('aria-pressed'), 'true');
-  await capture(page, name + '-03-project-room');
-  const caseLink = page.getByRole('link', { name: 'View case study', exact: true });
-  await caseLink.focus();
-  const resting = await page.evaluate(() => scrollY);
-  await page.keyboard.press('Enter');
-  await page.getByRole('dialog').waitFor();
-  await page.getByRole('dialog').getByRole('heading', { name: 'GymDrobe', exact: true }).waitFor();
-  await capture(page, name + '-gymdrobe-case');
-  await page.goBack();
-  await page.getByRole('dialog').waitFor({ state: 'detached' });
-  assert.ok(
-    await caseLink.evaluate((el) => el === document.activeElement),
-    'Back restores case opener focus',
-  );
-  assert.ok(Math.abs((await page.evaluate(() => scrollY)) - resting) < 9, 'Back restores project position');
-  await caseLink.click();
-  await page.getByRole('button', { name: 'Close case study' }).click();
-  await page.getByRole('dialog').waitFor({ state: 'detached' });
-  await page.locator('a.studio-fabea').click();
-  await page.getByRole('dialog').getByRole('heading', { name: 'FABEA', exact: true }).waitFor();
-  await page.keyboard.press('Escape');
-  await page.getByRole('dialog').waitFor({ state: 'detached' });
-  for (const [offset, id] of rooms.slice(3).entries()) {
-    await menuJump(page, id);
-    await capture(page, name + '-0' + (offset + 4) + '-' + id);
-  }
-  await testContact(page, 'founder-office');
-  await page.mouse.move(2, 2);
-  if (name === 'mobile-webkit') await page.keyboard.press('Home');
-  else await page.mouse.wheel(0, -100000);
-  await requiredRoom(page, 'entrance');
-  assert.ok((await page.evaluate(() => scrollY)) < 10, 'native reverse scroll reaches entrance');
-  await page.goto(new URL('#client-review', url).href);
-  await requiredRoom(page, 'client-review');
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await requiredRoom(page, 'client-review');
-  const faq = page.locator('#client-review details').nth(1);
-  await faq.locator('summary').click();
-  assert.ok(await faq.evaluate((el) => el.open), 'client question opens');
-  for (const [href, heading] of [
-    ['?exhibit=gymdrobe', 'GymDrobe'],
-    ['#drive-fabea', 'FABEA'],
-  ]) {
-    await page.goto(new URL(href, url).href);
-    await page.getByRole('dialog').getByRole('heading', { name: heading, exact: true }).waitFor();
-    await page.keyboard.press('Escape');
-    await requiredRoom(page, 'project-room');
-    assert.equal(new URL(page.url()).hash, '#project-room', 'closing a shared case restores its room');
-    await page.goBack();
-  }
-  if (name === 'desktop') {
-    await waitForLiveOrLimited(page);
-    // A heavily loaded CI renderer may already have selected stills. Explicitly
-    // opt back into live rendering before the pause and context-loss exercises.
-    const resume = page.getByRole('button', { name: 'Resume 3D animation', exact: true });
-    if (await resume.isVisible()) await resume.click();
-    await activeMode(page, 'live');
-    const sound = page.getByRole('button', { name: 'Ambient sound' });
-    if (await sound.count()) assert.equal(await sound.getAttribute('aria-pressed'), 'false');
-    const motion = page.locator('.studio-media-tools button[title="Use still room views"]');
-    await motion.click();
-    await activeMode(page, 'still');
-    await page.locator('.studio-media-tools button[title="Resume 3D visit"]').click();
-    await page.waitForSelector(tour + '[data-render="live"] canvas');
-    const lost = await page
-      .locator(tour + ' canvas')
-      .first()
-      .evaluate((el) => {
-        const ext = el.getContext('webgl2')?.getExtension('WEBGL_lose_context');
-        ext?.loseContext();
-        return !!ext;
-      });
-    assert.ok(lost, 'WebGL context loss can be simulated');
-    await page.waitForSelector(tour + '[data-render="still"]');
-    await menuJump(page, 'founder-office');
-    verifyContact(await page.locator('#founder-office [data-contact="whatsapp"]').getAttribute('href'));
-  }
+  assert.equal(await page.locator('#contact a[href^="mailto:"]').getAttribute('href'), 'mailto:' + profile.email);
+  await capture(page, name + '-contact');
 }
 
-async function fallback(page, session, name) {
-  if (name === 'no-webgl')
-    await page.addInitScript(() => {
-      const original = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (type, ...options) {
-        if (type.includes('webgl')) {
-          window.__studioGPUAttempts = (window.__studioGPUAttempts || 0) + 1;
-          return null;
-        }
-        return original.call(this, type, ...options);
-      };
-    });
-  await page.goto(new URL('#project-room', url).href);
-  await requiredRoom(page, 'project-room');
-  await page.waitForSelector(tour + '[data-render="still"]');
-  await page.locator('.studio-poster').evaluate(async (img) => {
-    await img.decode();
-  });
-  if (name === 'no-webgl') {
-    await page.waitForFunction(() => window.__studioGPUAttempts > 0);
-  }
-  session.opening = await state(page);
-  assert.equal(session.opening.canvas, false);
-  await capture(page, name + '-project-room');
-  await menuJump(page, 'founder-office');
-  verifyContact(await page.locator('#founder-office [data-contact="whatsapp"]').getAttribute('href'));
-}
-
-async function lowFrameRate(page, session) {
-  await page.goto(url);
-  await activeMode(page, 'live');
-  await page.evaluate(() => {
-    // Delay only this browser page's animation callbacks; no busy loop, clock
-    // spoofing or instrumentation of the application's quality logic.
-    const canvas = document.querySelector('.studio-canvas canvas');
-    window.__studioReviewWidths = [canvas.width];
-    const sizes = new MutationObserver(() => window.__studioReviewWidths.push(canvas.width));
-    sizes.observe(canvas, { attributes: true, attributeFilter: ['width'] });
-    const request = window.requestAnimationFrame.bind(window);
-    const cancel = window.cancelAnimationFrame.bind(window);
-    const pending = new Map();
-    let token = 0;
-    window.requestAnimationFrame = (callback) => {
-      const key = --token;
-      const entry = {};
-      pending.set(key, entry);
-      entry.timer = setTimeout(() => {
-        entry.frame = request((now) => {
-          pending.delete(key);
-          callback(now);
-        });
-      }, 180);
-      return key;
-    };
-    window.cancelAnimationFrame = (key) => {
-      const entry = pending.get(key);
-      if (!entry) {
-        cancel(key);
-        return;
-      }
-      clearTimeout(entry.timer);
-      if (entry.frame !== undefined) cancel(entry.frame);
-      pending.delete(key);
-    };
-  });
-  const started = performance.now();
-  await page.locator(tour + '[data-render="still"][data-motion="limited"]').waitFor({ timeout: 40000 });
-  session.delayToLimitedMs = Math.round(performance.now() - started);
-  session.canvasResolutionWidths = await page.evaluate(() => window.__studioReviewWidths);
-  assert.ok(
-    Math.min(...session.canvasResolutionWidths) < session.canvasResolutionWidths[0],
-    'live pixel resolution falls before automatic still mode',
-  );
-  assert.equal((await state(page)).canvas, false, 'slow renderer released');
-  await menuJump(page, 'project-room');
-  await page.locator('.studio-poster').evaluate((img) => img.decode());
-  await menuJump(page, 'founder-office');
-  verifyContact(await page.locator('#founder-office [data-contact="whatsapp"]').getAttribute('href'));
-  await page.getByRole('button', { name: 'Resume 3D animation', exact: true }).click();
-  await activeMode(page, 'live');
-  // Frames remain intentionally delayed after the user explicitly opts in.
-  await page.waitForTimeout(session.delayToLimitedMs + 800);
-  assert.equal((await state(page)).renderer, 'live', 'explicit resume remains in effect');
-}
-
-async function noScript(page) {
-  await page.goto(url);
-  await page.getByRole('heading', { name: 'Muhammed Favas K' }).waitFor();
-  assert.equal(await page.locator('.studio-static-photo').count(), 6);
-  const enter = page.getByRole('link', { name: 'Scroll to enter' });
-  await enter.click();
-  assert.equal(new URL(page.url()).hash, '#reception');
-  const founder = page.locator('#founder-office a[data-contact="whatsapp"]');
-  verifyContact(await founder.getAttribute('href'));
-  const caseStudy = page.locator('#project-room a').filter({ hasText: 'View case study' });
-  assert.equal(await caseStudy.getAttribute('href'), '/projects/gymdrobe/');
-}
-
-async function touchScroll(page, session) {
-  await page.goto(url);
-  await activeMode(page, 'live');
+async function swipe(page, from, to) {
   const cdp = await page.context().newCDPSession(page);
   try {
-    async function swipe(from, to) {
-      const at = (y) => [{ x: 175, y, id: 1 }];
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from) });
-      for (let i = 1; i <= 6; i++) {
-        await cdp.send('Input.dispatchTouchEvent', {
-          type: 'touchMove',
-          touchPoints: at(from + ((to - from) * i) / 6),
-        });
-        await page.waitForTimeout(45);
-      }
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    const point = (x, y) => [{ x, y, id: 1 }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(from.x, from.y) });
+    for (let i = 1; i <= 8; i++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove',
+        touchPoints: point(from.x + (to.x - from.x) * i / 8, from.y + (to.y - from.y) * i / 8) });
+      await page.waitForTimeout(25);
     }
-    await swipe(720, 280);
-    await page.waitForFunction(() => scrollY > 160);
-    session.forwardPixels = await page.evaluate(() => scrollY);
-    for (let i = 0; i < 4 && (await page.evaluate(() => scrollY > 3)); i++) await swipe(260, 750);
-    await page.waitForFunction(() => scrollY < 4);
-    await requiredRoom(page, 'entrance');
-  } finally {
-    await cdp.detach();
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } finally { await cdp.detach(); }
+}
+async function touchRail(page) {
+  await page.goto(new URL('#work', origin).href);
+  await button(page, 'Compact').click();
+  const range = page.getByRole('slider', { name: 'Projection width' });
+  await range.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  const box = await range.boundingBox();
+  const start = { x: box.x + 12, y: box.y + box.height / 2 };
+  const previousY = await page.evaluate(() => scrollY);
+  await swipe(page, start, { x: box.x + box.width - 12, y: start.y + 2 });
+  assert.ok(Number(await range.inputValue()) >= 80, 'a horizontal thumb drag widens the aperture');
+  assert.ok(Math.abs((await page.evaluate(() => scrollY)) - previousY) < 10);
+  const width = Number(await range.inputValue());
+  await swipe(page, { x: box.x + box.width - 12, y: start.y }, { x: box.x + box.width - 12, y: start.y - 140 });
+  await page.waitForFunction(y => scrollY > y + 35, previousY);
+  assert.ok(Math.abs(Number(await range.inputValue()) - width) <= 2, 'a vertical swipe preserves the aperture');
+}
+async function stills(page, name) {
+  if (name === 'no-webgl') {
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        if (type.includes('webgl')) { window.__reviewWebGLAttempt = true; return null; }
+        return original.call(this, type, ...args);
+      };
+    });
   }
+  await page.goto(new URL('#work', origin).href);
+  await page.waitForSelector('.vw-visit[data-stop="work"]');
+  if (name === 'context-loss') {
+    await page.waitForSelector('.vw-visit[data-render="live"] canvas');
+    const supported = await page.locator('.vw-scene canvas').evaluate(canvas => {
+      const ext = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+      ext?.loseContext(); return Boolean(ext);
+    });
+    assert.ok(supported, 'a real WebGL context was lost');
+  }
+  if (name === 'no-webgl') await page.waitForFunction(() => window.__reviewWebGLAttempt === true);
+  await page.waitForSelector('.vw-visit[data-render="still"]');
+  assert.equal(await page.locator('.vw-scene canvas').count(), 0);
+  await page.locator('.vw-scene-poster').evaluate(img => img.decode());
+  await button(page, 'View details').click();
+  await button(page, 'Compact').click();
+  assert.equal((await layout(page)).columns, 1);
+  await jump(page, 'contact');
+  await checkContact(page, page.getByRole('link', { name: 'Talk to Favas on WhatsApp', exact: true }), /Favas/i);
 }
 
-async function run(browser, name, width, height, options = {}) {
-  const mobile = width < 600;
+async function slowRenderer(page, name, session) {
+  await page.goto(origin);
+  const canvas = page.locator('.vw-visit[data-render="live"] .vw-scene canvas');
+  await canvas.waitFor();
+  await canvas.evaluate(el => {
+    window.__reviewBufferWidths = [el.width];
+    new MutationObserver(() => window.__reviewBufferWidths.push(el.width)).observe(el, {
+      attributes: true, attributeFilter: ['width'],
+    });
+    // Keep walking while spacing animation callbacks, so idle reading time is excluded.
+    const raf = window.requestAnimationFrame.bind(window);
+    const cancel = window.cancelAnimationFrame.bind(window);
+    let token = 0;
+    const scheduled = new Map();
+    window.requestAnimationFrame = callback => {
+      const id = --token;
+      const entry = {};
+      scheduled.set(id, entry);
+      entry.timer = setTimeout(() => {
+        entry.frame = raf(time => { scheduled.delete(id); callback(time); });
+      }, 160);
+      return id;
+    };
+    window.cancelAnimationFrame = id => {
+      const entry = scheduled.get(id);
+      if (!entry) return cancel(id);
+      clearTimeout(entry.timer);
+      if (entry.frame !== undefined) cancel(entry.frame);
+      scheduled.delete(id);
+    };
+    window.__reviewWalk = setInterval(() => scrollTo({ top: 140 + 100 * Math.sin(performance.now() / 900), behavior: 'instant' }), 80);
+  });
+  await page.locator('.vw-visit[data-render="still"]').waitFor({ timeout: 50000 });
+  session.bufferWidths = await page.evaluate(() => { clearInterval(window.__reviewWalk); return [...new Set(window.__reviewBufferWidths)]; });
+  assert.ok(Math.min(...session.bufferWidths) < session.bufferWidths[0], 'lowered render resolution before switching to stills');
+  await jump(page, 'work');
+  await button(page, 'Compact').click();
+  assert.equal((await layout(page)).columns, 1);
+}
+
+async function run(browser, name, width, height, task, options = {}) {
+  const recording = task === exercise;
   const context = await browser.newContext({
-    viewport: { width, height },
-    deviceScaleFactor: 1,
-    isMobile: mobile,
-    hasTouch: mobile,
+    viewport: { width, height }, deviceScaleFactor: 1, isMobile: width < 600, hasTouch: width < 600,
+    ...(recording ? { recordVideo: { dir: output, size: { width, height } } } : {}),
     ...options,
   });
   const page = await context.newPage();
-  page.setDefaultTimeout(16000);
+  page.setDefaultTimeout(20000);
   const session = { name, browser: browser.version(), width, height, errors: [] };
   report.sessions.push(session);
-  page.on('pageerror', (error) => session.errors.push(error.message));
+  page.on('pageerror', error => session.errors.push(error.message));
+  // Check the URL requested by the real link without contacting WhatsApp.
+  await context.route('https://wa.me/**', route => route.fulfill({ status: 204, headers: { 'cache-control': 'no-store' } }));
+  const video = page.video();
   try {
-    if (name === 'no-webgl' || name === 'reduced-motion') await fallback(page, session, name);
-    else if (name === 'limited-frame-rate') await lowFrameRate(page, session);
-    else if (name === 'no-javascript') await noScript(page);
-    else if (name === 'mobile-touch') await touchScroll(page, session);
-    else await exercise(page, session, name);
-    assert.deepEqual(session.errors, [], 'no uncaught page errors');
+    await task(page, name, session);
+    assert.deepEqual(session.errors, []);
     session.result = 'pass';
   } catch (error) {
     session.result = 'fail';
-    report.failures.push({ name, message: String(error.stack || error) });
+    session.failure = String(error.stack || error);
+    console.error(name, session.failure);
     await capture(page, name + '-failure').catch(() => {});
-    console.error(name, String(error));
+    process.exitCode = 1;
   } finally {
     await context.close();
-    await save();
+    if (video) {
+      await video.saveAs(join(output, name + '-walkthrough.webm'));
+      await video.delete();
+    }
+    await writeFile(join(output, 'review.json'), JSON.stringify(report, null, 2) + '\n');
   }
 }
 
-const engineFilter = process.env.STUDIO_ENGINE;
-if (!engineFilter || engineFilter === 'chromium') {
-  const browser = await chromium.launch({
-    executablePath: process.env.CHROME_PATH || undefined,
-    args: [
-      '--enable-webgl',
-      '--use-gl=angle',
-      '--use-angle=swiftshader',
-      '--enable-unsafe-swiftshader',
-      '--disable-dev-shm-usage',
-    ],
-  });
+report.conditions = 'Headless Linux, fresh contexts, DPR 1, no simulated network or CPU throttling. Video recording enabled for journey sessions. Frame samples include the first 95 CSS pixels of scrolling. The vw-interactive mark records hydrated HTML controls. A missing paint entry is reported as null. Mobile viewports are emulated.';
+if (!engine || engine === 'chromium') {
+  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'] });
   try {
-    await run(browser, 'desktop', 1440, 900);
-    await run(browser, 'reduced-motion', 390, 844, { reducedMotion: 'reduce' });
-    await run(browser, 'no-webgl', 390, 844);
-    await run(browser, 'no-javascript', 390, 844, { javaScriptEnabled: false });
-    await run(browser, 'mobile-touch', 390, 844);
-    await run(browser, 'limited-frame-rate', 390, 844);
-  } finally {
-    await browser.close();
-  }
+    await run(browser, 'chromium-desktop', 1440, 900, exercise);
+    await run(browser, 'touch-rail', 390, 844, touchRail, { reducedMotion: 'reduce' });
+    await run(browser, 'context-loss', 1440, 900, stills);
+    await run(browser, 'no-webgl', 390, 844, stills);
+    await run(browser, 'slow-renderer', 390, 844, slowRenderer);
+  } finally { await browser.close(); }
 }
-if (!engineFilter || engineFilter === 'webkit') {
-  const browser = await webkit.launch({ executablePath: process.env.WEBKIT_PATH || undefined });
+if (!engine || engine === 'webkit') {
+  const browser = await webkit.launch({ executablePath: process.env.WEBKIT_PATH });
   try {
-    await run(browser, 'mobile-webkit', 390, 844);
-  } finally {
-    await browser.close();
-  }
+    await run(browser, 'webkit-mobile-emulation', 390, 844, exercise);
+    await run(browser, 'reduced-motion', 390, 844, stills, { reducedMotion: 'reduce' });
+  } finally { await browser.close(); }
 }
-await save();
-if (report.failures.length) process.exitCode = 1;
