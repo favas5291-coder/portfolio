@@ -267,6 +267,10 @@
   font-size: 14px;
   cursor: pointer;
 }
+.vw-rail > button {
+  background: #f8f6ec;
+  border-color: #c9c7ba;
+}
 .vw-rail > button[aria-pressed='true'] {
   color: var(--proof-blue);
   text-decoration: underline;

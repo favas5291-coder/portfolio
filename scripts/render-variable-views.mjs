@@ -25,16 +25,24 @@ const harness = `<!doctype html><html><head><meta charset="utf-8"><link rel="ico
     onSlow() {},
     onFailure(error) { throw error || new Error('Could not render a studio plate'); }
   });
-  // Match the live sleeve around the HTML exhibit at either width. The
-  // placeholder is invisible in the plate but its edges register the 3D fins.
-  const sleeve = document.createElement('div');
-  sleeve.className = 'vw-projection';
-  sleeve.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none';
-  document.body.append(sleeve);
-  window.showPlate = async (progress, width, rect) => {
-    sleeve.style.display = rect ? 'block' : 'none';
-    if (rect) {
-      for (const key of ['left','top','width','height']) sleeve.style[key] = rect[key] + 'px';
+  // The invisible targets carry the measured layout into the render-only page.
+  function target(className) {
+    const node = document.createElement('div');
+    node.className = className;
+    node.style.cssText = 'display:none;position:fixed;visibility:hidden;pointer-events:none';
+    document.body.append(node);
+    return node;
+  }
+  const projection = target('vw-projection');
+  const rail = target('vw-rail');
+  const grip = target('vw-width-grip');
+  rail.append(grip);
+  window.showPlate = async (progress, width, rects) => {
+    for (const [node, rect] of [[projection, rects?.projection], [rail, rects?.rail], [grip, rects?.grip]]) {
+      node.style.display = rect ? 'block' : 'none';
+      if (rect) {
+        for (const key of ['left','top','width','height']) node.style[key] = rect[key] + 'px';
+      }
     }
     state = {progress, width};
     await engine.render(state);
@@ -88,16 +96,20 @@ try {
       if (selected.length && !selected.includes(name)) continue;
       const widths = name === 'work' ? [1, 0] : [mobile ? 0 : 1];
       for (const width of widths) {
-        let rect;
+        let rects;
         if (name === 'work') {
           await layout.getByRole('button', { name: width ? 'Wide' : 'Compact', exact: true }).click();
           await layout.locator('#work').evaluate(section => section.scrollIntoView({ behavior: 'instant' }));
-          rect = await layout.locator('.vw-projection').evaluate(async panel => {
+          rects = await layout.locator('.vw-projection').evaluate(async panel => {
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-            return panel.getBoundingClientRect().toJSON();
+            return {
+              projection: panel.getBoundingClientRect().toJSON(),
+              rail: document.querySelector('.vw-rail').getBoundingClientRect().toJSON(),
+              grip: document.querySelector('.vw-width-grip').getBoundingClientRect().toJSON(),
+            };
           });
         }
-        await page.evaluate(args => window.showPlate(...args), [progress, width, rect]);
+        await page.evaluate(args => window.showPlate(...args), [progress, width, rects]);
         const png = await page.locator('#stage canvas').screenshot();
         if (errors.length) throw new Error(errors.join('\n'));
         let variant = '';

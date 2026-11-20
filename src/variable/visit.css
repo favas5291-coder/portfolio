@@ -274,6 +274,7 @@ a.vw-button {
   line-height: 1.38;
   max-width: 34ch;
 }
+.vw-compact-task { display: none; }
 .vw-exhibit-slot {
   min-width: 0;
 }
@@ -303,6 +304,7 @@ a.vw-button {
   border-block: 1px solid var(--vw-rule);
   padding: clamp(52px, 8vw, 115px) var(--vw-inset);
 }
+.vw-directory [id] { scroll-margin-top: calc(var(--vw-header) + 20px); }
 .vw-directory h3 {
   margin-bottom: 20px;
   font-size: clamp(1.8rem, 3.2vw, 3.45rem);
@@ -456,6 +458,8 @@ a.vw-button {
   }
 }
 @media (max-width: 740px) {
+  .vw-wide-task { display: none; }
+  .vw-compact-task { display: block; }
   .vw-visit {
     --vw-header: 56px;
     --vw-inset: clamp(17px, 5.5vw, 29px);
@@ -489,7 +493,7 @@ a.vw-button {
     padding: max(calc(var(--vw-header) + 23px), 12svh) var(--vw-inset) 90px;
   }
   .vw-home::before {
-    background: linear-gradient(150deg, #f5f4ecd8, #f5f4ec86 29%, transparent 56%);
+    background: radial-gradient(ellipse 96% 35% at 24% 15%, #f5f4eceb 25%, #f5f4ecc7 62%, transparent 100%);
   }
   .vw-opening-copy {
     width: min(89%, 29rem);

@@ -168,23 +168,37 @@ async function swipe(page, from, to) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   } finally { await cdp.detach(); }
 }
-async function touchRail(page) {
+async function touchRail(page, name, session) {
   await page.goto(new URL('#work', origin).href);
+  await page.waitForFunction(() => performance.getEntriesByName('vw-interactive').length > 0);
+  await page.evaluate(() => document.fonts.ready);
   await button(page, 'Compact').click();
   const range = page.getByRole('slider', { name: 'Projection width' });
-  await range.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
-  const box = await range.boundingBox();
-  const start = { x: box.x + 12, y: box.y + box.height / 2 };
-  const previousY = await page.evaluate(() => scrollY);
-  await swipe(page, start, { x: box.x + box.width - 12, y: start.y + 2 });
-  assert.ok(Number(await range.inputValue()) >= 80, 'a horizontal thumb drag widens the aperture');
-  assert.ok(Math.abs((await page.evaluate(() => scrollY)) - previousY) < 10);
-  const width = Number(await range.inputValue());
-  await swipe(page, { x: box.x + box.width - 12, y: start.y }, { x: box.x + box.width - 12, y: start.y - 140 });
-  await page.waitForFunction(y => scrollY > y + 35, previousY);
-  assert.ok(Math.abs(Number(await range.inputValue()) - width) <= 2, 'a vertical swipe preserves the aperture');
+  const grip = page.locator('.vw-touch-grip');
+  // The styled range provides keyboard access; the transparent overlay receives
+  // touch pointers. Sample its viewport coordinates after layout is stable.
+  await grip.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await grip.scrollIntoViewIfNeeded();
+  const route = await grip.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    const y = box.top + box.height / 2;
+    const start = { x: box.left + 14, y }, end = { x: box.right - 14, y };
+    return { start, end, startTarget: document.elementFromPoint(start.x, y)?.className,
+      endTarget: document.elementFromPoint(end.x, y)?.className, scroll: scrollY };
+  });
+  session.touchHit = route;
+  assert.equal(route.startTarget, 'vw-touch-grip');
+  assert.equal(route.endTarget, 'vw-touch-grip');
+  assert.equal(await range.inputValue(), '0');
+  await swipe(page, route.start, { ...route.end, y: route.end.y + 2 });
+  await page.waitForFunction(() => Number(document.querySelector('.vw-width-grip').value) >= 80);
+  session.draggedValue = Number(await range.inputValue());
+  assert.ok(Math.abs((await page.evaluate(() => scrollY)) - route.scroll) < 10);
+  await swipe(page, route.end, { x: route.end.x, y: route.end.y - 140 });
+  await page.waitForFunction(y => scrollY > y + 35, route.scroll);
+  assert.ok(Math.abs(Number(await range.inputValue()) - session.draggedValue) <= 2, 'a vertical swipe preserves the aperture');
 }
-async function stills(page, name) {
+async function stills(page, name, session) {
   if (name === 'no-webgl') {
     await page.addInitScript(() => {
       const original = HTMLCanvasElement.prototype.getContext;
@@ -198,6 +212,12 @@ async function stills(page, name) {
   await page.waitForSelector('.vw-visit[data-stop="work"]');
   if (name === 'context-loss') {
     await page.waitForSelector('.vw-visit[data-render="live"] canvas');
+    const scene = page.locator('.vw-scene');
+    const wide = Number(await scene.getAttribute('data-aperture'));
+    await button(page, 'Compact').click();
+    await page.waitForFunction(previous =>
+      Number(document.querySelector('.vw-scene').dataset.aperture) < previous - 0.05, wide);
+    session.liveAperture = { wide, compact: Number(await scene.getAttribute('data-aperture')) };
     const supported = await page.locator('.vw-scene canvas').evaluate(canvas => {
       const ext = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
       ext?.loseContext(); return Boolean(ext);

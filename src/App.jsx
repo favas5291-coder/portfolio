@@ -34,10 +34,9 @@ const contactURL = (choice) =>
   );
 const aliases = {
   home: ['entrance', 'about'],
-  work: ['projects', 'project-room', 'demonstration', 'drive-gymdrobe', 'drive-fabea', 'drive-luxvibe'],
+  work: ['projects', 'project-room', 'demonstration', 'drive-gymdrobe'],
   process: [
     'skills',
-    'services',
     'reception',
     'development-studio',
     'client-review',
@@ -61,6 +60,38 @@ function Still({ stop, width, first = false }) {
       />
     </picture>
   );
+}
+
+// Let the selected poster and text settle before the optional renderer competes
+// for the main thread. A stalled image or font cannot prevent a live visit.
+function afterPosterPaint(poster, start) {
+  let pending = true;
+  let frame, idle, timer;
+  function paint() {
+    if (!pending) return;
+    pending = false;
+    clearTimeout(timer);
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        // Leave a short input window for a visitor arriving directly at an exhibit.
+        timer = setTimeout(() => {
+          if ('requestIdleCallback' in window) {
+            idle = window.requestIdleCallback(start, { timeout: 1000 });
+          } else {
+            start();
+          }
+        }, 400);
+      });
+    });
+  }
+  timer = setTimeout(paint, 1000);
+  Promise.allSettled([poster?.decode?.(), document.fonts?.ready]).then(paint);
+  return () => {
+    pending = false;
+    clearTimeout(timer);
+    cancelAnimationFrame(frame);
+    if (idle !== undefined) window.cancelIdleCallback(idle);
+  };
 }
 
 function Signature() {
@@ -113,7 +144,7 @@ function Offerings() {
   return (
     <div className="vw-directory">
       <div>
-        <h3>Services</h3>
+        <h3 id="services">Services</h3>
         <ul>
           {services.map(({ name, slug, short }) => (
             <li key={slug}>
@@ -132,7 +163,7 @@ function Offerings() {
         <h3>Other projects</h3>
         <ul>
           {[fabea, luxvibe].map((item, i) => (
-            <li key={item.name}>
+            <li key={item.name} id={'drive-' + item.name.toLowerCase()}>
               <a href={item.caseStudy}>
                 <span>
                   <strong>{item.name}</strong>
@@ -220,6 +251,12 @@ export default function App() {
   const explicitMotion = useRef(false);
 
   useEffect(() => {
+    const oldExhibit = new URLSearchParams(location.search).get('exhibit');
+    const legacyProject = [fabea, luxvibe].find((item) => item.name.toLowerCase() === oldExhibit);
+    if (legacyProject) {
+      location.replace(legacyProject.caseStudy);
+      return;
+    }
     performance.mark('vw-interactive');
     const restored = history.state?.variableProof?.width;
     setWidth(Number.isFinite(restored) ? restored : matchMedia('(max-width:740px)').matches ? 0 : 1);
@@ -263,13 +300,19 @@ export default function App() {
     sections.forEach((el) => observer.observe(el));
     measure();
     const linked = location.hash && document.getElementById(location.hash.slice(1));
-    if (linked && !window.scrollY) linked.scrollIntoView({ behavior: 'instant' });
+    if (linked && !window.scrollY) {
+      linked.scrollIntoView({ behavior: 'instant' });
+      schedule();
+    }
     window.addEventListener('scroll', schedule, { passive: true });
+    // WebKit can scroll to a keyboard-activated fragment without dispatching scroll.
+    window.addEventListener('hashchange', schedule);
     window.addEventListener('pageshow', measure);
     return () => {
       observer.disconnect();
       cancelAnimationFrame(frame);
       window.removeEventListener('scroll', schedule);
+      window.removeEventListener('hashchange', schedule);
       window.removeEventListener('pageshow', measure);
     };
   }, []);
@@ -278,10 +321,10 @@ export default function App() {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     let engine,
       generation = 0,
-      timer;
+      cancelStartup;
     function stopScene() {
       generation++;
-      clearTimeout(timer);
+      cancelStartup?.();
       engine?.dispose();
       engine = null;
       setRender('still');
@@ -292,7 +335,7 @@ export default function App() {
       setCanToggle(allowed);
       if (!allowed || paused) return;
       const ticket = generation;
-      timer = setTimeout(async () => {
+      async function start() {
         try {
           const { mountScene } = await import('./variable/scene.js');
           if (ticket !== generation || !host.current) return;
@@ -316,7 +359,13 @@ export default function App() {
             setCanToggle(false);
           }
         }
-      }, 120);
+      }
+      if (explicitMotion.current) {
+        start();
+      } else {
+        const poster = host.current?.parentElement.querySelector('.vw-scene-poster');
+        cancelStartup = afterPosterPaint(poster, start);
+      }
     }
     connect();
     preference.addEventListener('change', connect);
@@ -371,9 +420,12 @@ export default function App() {
                 GymDrobe<span>.</span>
               </h2>
               <p>I founded GymDrobe and built its storefront, product selection and checkout.</p>
-              <p>
+              <p className="vw-wide-task">
                 Find the compression shirt and open its details. Narrow the projection to see how the same
                 product fits a phone.
+              </p>
+              <p className="vw-compact-task">
+                Open the compression shirt to inspect its details. Choose Wide to compare the desktop layout.
               </p>
             </div>
             <div className="vw-exhibit-slot">

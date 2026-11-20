@@ -15,7 +15,10 @@ const tee = {
   },
 };
 const casePage = '/projects/gymdrobe/';
-const caseIsOpen = () => new URLSearchParams(location.search).get('case') === 'gymdrobe';
+function caseIsOpen() {
+  const search = new URLSearchParams(location.search);
+  return (search.get('case') || search.get('exhibit')) === 'gymdrobe' || location.hash === '#drive-gymdrobe';
+}
 const useClientLayout = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 const variantLink = (colour) => productURL + '?colour=' + colour.toUpperCase();
 
@@ -35,7 +38,7 @@ function ProductPhoto({ colour }) {
 
 function CaseStudy({ dismiss }) {
   const dialog = useRef(null);
-  useEffect(() => {
+  useClientLayout(() => {
     const el = dialog.current;
     el.showModal();
     const originalOverflow = document.documentElement.style.overflow;
@@ -57,7 +60,7 @@ function CaseStudy({ dismiss }) {
     >
       <header>
         <span>Case study</span>
-        <button type="button" autoFocus onClick={dismiss}>
+        <button type="button" onClick={dismiss}>
           Close
         </button>
       </header>
@@ -95,6 +98,9 @@ export default function Exhibit({ width, onWidthChange }) {
   const slot = useRef(null),
     caseLink = useRef(null),
     wasCase = useRef(false),
+    pendingReturn = useRef(null),
+    closeFrame = useRef(0),
+    dismissing = useRef(false),
     productHeading = useRef(null);
   const touchDrag = useRef(null);
   const compact = Math.min(available, 304);
@@ -112,18 +118,27 @@ export default function Exhibit({ width, onWidthChange }) {
     return () => observer.disconnect();
   }, []);
 
-  function restore(mark, restoreFocus = false) {
+  function restore(mark) {
     if (!mark) return;
     setColour(Object.hasOwn(tee.photos, mark.colour) ? mark.colour : 'Black');
     setDetails(Boolean(mark.details));
     if (Number.isFinite(mark.width)) onWidthChange(Math.max(0, Math.min(1, mark.width)));
-    if (restoreFocus) {
-      requestAnimationFrame(() => {
-        caseLink.current?.focus({ preventScroll: true });
-        window.scrollTo({ top: mark.scroll, behavior: 'instant' });
-      });
-    }
   }
+
+  function focusOpener(mark) {
+    caseLink.current?.focus({ preventScroll: true });
+    if (Number.isFinite(mark?.scroll)) window.scrollTo({ top: mark.scroll, behavior: 'instant' });
+  }
+
+  // Native dialog cleanup releases its focus trap during the same commit.
+  // Restore here before paint so the next navigation can take focus immediately.
+  useClientLayout(() => {
+    if (open || !pendingReturn.current) return;
+    const mark = pendingReturn.current;
+    pendingReturn.current = null;
+    focusOpener(mark);
+  }, [open]);
+
   useEffect(() => {
     function sync(initial = false) {
       const show = caseIsOpen();
@@ -132,15 +147,33 @@ export default function Exhibit({ width, onWidthChange }) {
       // (or a restored document) should move focus or restore the operator.
       const returningDocument =
         initial && performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
-      if (show || wasCase.current || returningDocument)
-        restore(snapshot, !show && Boolean(snapshot?.returnToCaseLink));
+      const leavingCase = wasCase.current && !show;
       wasCase.current = show;
-      setOpen(show);
+      cancelAnimationFrame(closeFrame.current);
+      closeFrame.current = 0;
+      dismissing.current = false;
+      if (show || leavingCase || returningDocument) restore(snapshot);
+      if (leavingCase) {
+        // A same-document traversal can focus its fragment after popstate.
+        // Keep the dialog modal until that traversal finishes, then unmount
+        // and restore in one commit before the next control can be used.
+        closeFrame.current = requestAnimationFrame(() => {
+          closeFrame.current = 0;
+          pendingReturn.current = snapshot?.returnToCaseLink ? snapshot : {};
+          setOpen(false);
+        });
+      } else {
+        if (!show && returningDocument && snapshot?.returnToCaseLink) focusOpener(snapshot);
+        setOpen(show);
+      }
     }
     const pop = () => sync();
     sync(true);
     window.addEventListener('popstate', pop);
-    return () => window.removeEventListener('popstate', pop);
+    return () => {
+      cancelAnimationFrame(closeFrame.current);
+      window.removeEventListener('popstate', pop);
+    };
   }, [onWidthChange]);
 
   function openCase(event) {
@@ -156,17 +189,20 @@ export default function Exhibit({ width, onWidthChange }) {
     setOpen(true);
   }
   function closeCase() {
+    if (dismissing.current || closeFrame.current) return;
     if (history.state?.variableCaseEntry) {
+      dismissing.current = true;
       history.back();
       return;
     }
     const url = new URL(location.href);
     url.searchParams.delete('case');
+    url.searchParams.delete('exhibit');
     url.hash = 'work';
     history.replaceState(history.state, '', url);
+    pendingReturn.current = {};
     wasCase.current = false;
     setOpen(false);
-    requestAnimationFrame(() => caseLink.current?.focus({ preventScroll: true }));
   }
   function changeView(next) {
     setDetails(next);
