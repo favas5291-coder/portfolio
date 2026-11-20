@@ -1,0 +1,20 @@
+{
+  "renderer": "Chromium live WebGL canvas; HTML omitted",
+  "capture": {
+    "format": "raw",
+    "width": 987,
+    "height": 770,
+    "channels": 3,
+    "depth": "uchar",
+    "premultiplied": false,
+    "size": 2279970
+  },
+  "gainedRedPixels": 2690,
+  "lostRedPixels": 43,
+  "positiveBounds": [
+    637,
+    317,
+    701,
+    400
+  ]
+}

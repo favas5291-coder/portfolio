@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/favas5291-coder/portfolio",
+  "sourceCommit": "d072a268df34811859e2e897720ea0b37cd50bd1",
+  "sha256": {
+    "index.html": "5aee36ddc21a27d6a319a984efdac4a818446d0d018c127c9bfb6f05d3a37f90",
+    "assets/engine-eRb_CO9L.js": "fac39095d3e8b1e5e0a1245243c9c268ab2ae3644ff8f9eafb2542622f3d1649"
+  },
+  "localOrigin": "http://127.0.0.1:4189",
+  "host": "Debian 13 x86_64 KVM, Intel Xeon Platinum 8573C, 4 vCPU quota, 16 GiB memory limit. No /dev/dri."
+}

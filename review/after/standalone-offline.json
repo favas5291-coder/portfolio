@@ -1,0 +1,176 @@
+{
+  "source": "Fazhere-Studio-Preview.html",
+  "sessions": [
+    {
+      "name": "desktop-stills",
+      "width": 1440,
+      "height": 900,
+      "browser": "26.5",
+      "network": "All HTTP(S) requests abort as internetdisconnected",
+      "unexpectedRequests": [],
+      "errors": [],
+      "views": [
+        "entrance",
+        "reception",
+        "project-room",
+        "project-room-red",
+        "project-room",
+        "development-studio",
+        "client-review",
+        "founder-office"
+      ],
+      "arrival": {
+        "render": "still",
+        "stage": "sticky",
+        "paper": 1440,
+        "styles": 3,
+        "fonts": [
+          "IBM Plex Mono",
+          "IBM Plex Mono",
+          "Studio Cormorant",
+          "Studio Cormorant",
+          "Studio Manrope"
+        ]
+      },
+      "keyboardRooms": [
+        "entrance",
+        "reception",
+        "project-room",
+        "development-studio",
+        "client-review",
+        "founder-office"
+      ],
+      "caseBack": true,
+      "services": "A website that works for your business.",
+      "fullCase": "GymDrobe.\nOne connected store.",
+      "contact": "What are you planning to build?"
+    },
+    {
+      "name": "mobile-stills",
+      "width": 390,
+      "height": 844,
+      "browser": "26.5",
+      "network": "All HTTP(S) requests abort as internetdisconnected",
+      "unexpectedRequests": [],
+      "errors": [],
+      "views": [
+        "entrance",
+        "reception",
+        "project-room",
+        "project-room-red",
+        "project-room",
+        "development-studio",
+        "client-review",
+        "founder-office"
+      ],
+      "arrival": {
+        "render": "still",
+        "stage": "sticky",
+        "paper": 390,
+        "styles": 3,
+        "fonts": [
+          "IBM Plex Mono",
+          "IBM Plex Mono",
+          "Studio Cormorant",
+          "Studio Cormorant",
+          "Studio Manrope"
+        ]
+      },
+      "keyboardRooms": [
+        "entrance",
+        "reception",
+        "project-room",
+        "development-studio",
+        "client-review",
+        "founder-office"
+      ],
+      "caseBack": true,
+      "services": "A website that works for your business.",
+      "fullCase": "GymDrobe.\nOne connected store.",
+      "contact": "What are you planning to build?"
+    },
+    {
+      "name": "desktop-default",
+      "width": 1440,
+      "height": 900,
+      "browser": "26.5",
+      "network": "All HTTP(S) requests abort as internetdisconnected",
+      "unexpectedRequests": [],
+      "errors": [],
+      "views": [],
+      "arrival": {
+        "render": "still",
+        "stage": "sticky",
+        "paper": 1440,
+        "styles": 3,
+        "fonts": [
+          "IBM Plex Mono",
+          "IBM Plex Mono",
+          "Studio Cormorant",
+          "Studio Cormorant",
+          "Studio Manrope"
+        ]
+      },
+      "defaultMode": {
+        "room": "entrance",
+        "render": "live",
+        "motion": "auto",
+        "canvas": true
+      },
+      "loadedTextureFiles": [
+        "finishes/gallery-stone.webp",
+        "finishes/timber.webp",
+        "finishes/honed-stone.webp",
+        "finishes/masonry.webp",
+        "garden-floor.webp",
+        "garden-horizon.webp",
+        "undergrowth.webp"
+      ],
+      "contextLoss": true
+    },
+    {
+      "name": "mobile-low-frame-rate",
+      "width": 390,
+      "height": 844,
+      "browser": "26.5",
+      "network": "All HTTP(S) requests abort as internetdisconnected",
+      "unexpectedRequests": [],
+      "errors": [],
+      "views": [],
+      "arrival": {
+        "render": "still",
+        "stage": "sticky",
+        "paper": 390,
+        "styles": 3,
+        "fonts": [
+          "IBM Plex Mono",
+          "IBM Plex Mono",
+          "Studio Cormorant",
+          "Studio Cormorant",
+          "Studio Manrope"
+        ]
+      },
+      "defaultMode": {
+        "room": "entrance",
+        "render": "live",
+        "motion": "auto",
+        "canvas": true
+      },
+      "loadedTextureFiles": [
+        "finishes/gallery-stone.webp",
+        "finishes/timber.webp",
+        "finishes/honed-stone.webp",
+        "finishes/masonry.webp",
+        "garden-floor.webp",
+        "garden-horizon.webp",
+        "undergrowth.webp"
+      ],
+      "limitedRedDisplay": true
+    }
+  ],
+  "build": "e5ca84bb9dfd31c54f055becd68fad39e1c69d44",
+  "bytes": 4589373,
+  "sha256": "f5fb3122a984d03f2acaefaeabe355a4135f06e931446c8c432661fd51bb021a",
+  "embeddedMediaFiles": 42,
+  "conditions": "Native file:// document in emulated Linux WebKit 26.5. All HTTP and HTTPS requests were blocked; image decoding was checked by content hash. Mobile used a 390 \u00d7 844 touch viewport at DPR 1. The simulated low-frame-rate session added 170ms delays to animation callbacks in reception."
+}

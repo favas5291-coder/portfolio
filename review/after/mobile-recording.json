@@ -1,0 +1,73 @@
+{
+  "browser": "WebKit 26.5",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "explicitResume": true,
+  "states": [
+    {
+      "time": 0.001,
+      "state": [
+        "entrance",
+        "live",
+        "auto",
+        0
+      ]
+    },
+    {
+      "time": 3.018,
+      "state": [
+        "reception",
+        "live",
+        "auto",
+        130
+      ]
+    },
+    {
+      "time": 5.771,
+      "state": [
+        "reception",
+        "live",
+        "auto",
+        384
+      ]
+    },
+    {
+      "time": 9.887,
+      "state": [
+        "project-room",
+        "live",
+        "auto",
+        870
+      ]
+    },
+    {
+      "time": 12.876,
+      "state": [
+        "development-studio",
+        "live",
+        "auto",
+        1439
+      ]
+    },
+    {
+      "time": 21.203,
+      "state": [
+        "client-review",
+        "live",
+        "auto",
+        1977
+      ]
+    },
+    {
+      "time": 24.513,
+      "state": [
+        "founder-office",
+        "live",
+        "auto",
+        2423
+      ]
+    }
+  ]
+}

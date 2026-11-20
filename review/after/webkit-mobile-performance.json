@@ -1,0 +1,74 @@
+{
+  "engine": "webkit-mobile",
+  "version": "26.5",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "dpr": 1,
+  "gpu": "Apple GPU",
+  "gpuSetup": "WPE Linux, forced Mesa software (llvmpipe). WebKit may mask its renderer string.",
+  "network": "Fresh browser context against a local production HTTP server. No network shaping or CPU throttling. Non-recorded cold-cache navigation. Scroll from entrance through the project room over 6.5 seconds.",
+  "transitions": [
+    [
+      658,
+      "still",
+      "auto"
+    ],
+    [
+      3754,
+      "live",
+      "auto"
+    ],
+    [
+      4983,
+      "still",
+      "limited"
+    ]
+  ],
+  "buffers": [
+    [
+      1995,
+      390,
+      361
+    ],
+    [
+      4450,
+      253,
+      234
+    ]
+  ],
+  "htmlFrameMs": 658,
+  "posterFrameMs": 955,
+  "firstLiveMs": 3754,
+  "nav": {
+    "fcpMs": 660,
+    "domCompleteMs": 1009,
+    "loadMs": 1054,
+    "requestsAtFirstLiveFrame": 29,
+    "networkKiBAtFirstLive": 2295
+  },
+  "scrollMs": 6511,
+  "endRoom": "project-room",
+  "frameIntervals": {
+    "live": {
+      "intervalCount": 12,
+      "p50Ms": 122,
+      "p95Ms": 185,
+      "maxMs": 211,
+      "above50ms": 8
+    },
+    "still": {
+      "intervalCount": 322,
+      "p50Ms": 16,
+      "p95Ms": 22,
+      "maxMs": 36,
+      "above50ms": 0
+    }
+  },
+  "webglSubmissionIntervals": {
+    "count": 7,
+    "p50Ms": 122,
+    "p95Ms": 211
+  }
+}
