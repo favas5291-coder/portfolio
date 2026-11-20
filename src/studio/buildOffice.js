@@ -8,24 +8,24 @@ import { buildLandscape } from './officeLandscape.js';
 
 // Dimensions and camera positions use metres. The centre gallery stays clear
 // from the public threshold all the way to the visitor's side of Favas's desk.
-export function buildOffice(T, scene, { mobile = false } = {}) {
+export function buildOffice(T, scene, { mobile = false, software = false, loadingManager } = {}) {
   const root = new T.Group();
   root.name = 'Fazhere Studio';
   scene.add(root);
   scene.background = new T.Color('#d7e1d6');
-  const materials = officeMaterials(T);
+  const materials = officeMaterials(T, loadingManager);
   const geometry = officeGeometry(T, materials);
   const plants = officePlants(T, materials, geometry);
-  const furniture = officeFurniture(T, materials, geometry);
-  const { fixedGroups, doorLeaves } = makeEnvelope(T, root, materials, geometry, plants, mobile);
+  const furniture = officeFurniture(T, materials, geometry, loadingManager);
+  const { fixedGroups, doorLeaves } = makeEnvelope(T, root, materials, geometry, plants);
   const rooms = furnishRooms(T, root, materials, geometry, furniture, plants);
-  root.add(new T.HemisphereLight('#eaf1ee', '#807367', 1.45));
-  const sun = new T.DirectionalLight('#ffe5b9', 2.65);
-  sun.position.set(-21, 10.4, -1);
+  root.add(new T.HemisphereLight('#edf2f2', '#d9cbb4', 1.72));
+  const sun = new T.DirectionalLight('#fff0d6', 3.10);
+  sun.position.set(-20, 9.15, 1.3);
   sun.target.position.set(0, 0, -13);
   root.add(sun, sun.target);
   sun.castShadow = true;
-  const shadowSize = mobile ? 1024 : 2048;
+  const shadowSize = mobile || software ? 1024 : 2048;
   sun.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(sun.shadow.camera, { left: -21, right: 21, top: 12, bottom: -12, near: 1, far: 58 });
   sun.shadow.camera.updateProjectionMatrix();
@@ -42,7 +42,7 @@ export function buildOffice(T, scene, { mobile = false } = {}) {
     part.castShadow = true;
     part.receiveShadow = true;
   }
-  const landscape = buildLandscape(T, root);
+  const landscape = buildLandscape(T, root, loadingManager);
   materials.glass.uniforms.panorama.value = landscape.horizonMap;
   const selected = document.querySelector('.studio-colours button[aria-pressed="true"]');
   if (selected) rooms.colour(selected.textContent.trim());
@@ -51,10 +51,10 @@ export function buildOffice(T, scene, { mobile = false } = {}) {
   }
   window.addEventListener('studio:product-colour', selectProduct);
   return {
-    update({ progress, room }) {
-      const open = T.MathUtils.smoothstep(progress, 0, 0.54);
+    update({ progress, room, time }) {
+      const open = T.MathUtils.smoothstep(progress, 0, 0.43);
       for (const { door, sign } of doorLeaves) door.position.x = sign * (0.621 + 1.24 * open);
-      rooms.update(progress, Number.isInteger(room) ? room : Math.round(progress));
+      rooms.update(progress, Number.isInteger(room) ? room : Math.round(progress), time);
     },
     dispose() {
       window.removeEventListener('studio:product-colour', selectProduct);

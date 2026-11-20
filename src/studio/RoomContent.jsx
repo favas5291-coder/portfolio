@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { DoorOpen, MessageCircle } from 'lucide-react';
 import { profile, project } from '../data/portfolio.js';
 import { evidenceRoot, productURL } from '../data/product-evidence.js';
 import { PHONE_DISPLAY, PHONE_HREF, services } from '../data/site.js';
@@ -25,6 +26,7 @@ function Intro() {
       <p className="studio-lead">I build websites, online stores, and web apps for businesses.</p>
       <div className="studio-actions">
         <a className="studio-button" href="#reception">
+          <DoorOpen size={17} aria-hidden="true" />
           Scroll to enter
         </a>
         <a className="studio-link" href={tourWhatsapp} data-contact="whatsapp">
@@ -42,8 +44,8 @@ function Reception() {
         What brings <em>you in?</em>
       </h2>
       <p className="studio-lead">
-        Welcome to my virtual freelance studio in Kozhikode. The people you’ll meet illustrate how a project
-        takes shape.
+        Welcome to my virtual studio in Kozhikode. Here’s what I build. Along the corridor, an
+        illustrative team shows how we’d take your project from an idea to a working site.
       </p>
       <ul className="studio-service-list">
         {services.map(({ name, slug }) => (
@@ -65,7 +67,7 @@ function readExhibit() {
   return Object.hasOwn(exhibits, id) ? id : null;
 }
 
-function ExhibitDialog({ id, onClose }) {
+function ExhibitDialog({ id, colour, onClose }) {
   const dialog = useRef(null);
   useEffect(() => {
     const element = dialog.current;
@@ -129,7 +131,7 @@ function ExhibitDialog({ id, onClose }) {
               visitor opening that link sees the same colour when the store still offers it.
             </p>
             <div className="studio-case-links">
-              <a href={productURL}>Open the product</a>
+              <a href={productURL + '?colour=' + colour.name.toUpperCase()}>Open the product in {colour.name.toLowerCase()}</a>
               <a href={evidenceRoot + 'src/pages/ProductPage.jsx'}>Inspect the implementation</a>
             </div>
           </>
@@ -153,22 +155,15 @@ function ExhibitDialog({ id, onClose }) {
   );
 }
 
-function ProductSample() {
-  const [colour, setColour] = useState(shopColours[0]);
-  const choose = (item) => {
-    setColour(item);
-    window.dispatchEvent(
-      new CustomEvent('studio:product-colour', { detail: { colour: item.name, photo: item.photo } }),
-    );
-  };
+function ProductSample({ colour, onSelectColour }) {
   return (
     <div className="studio-product">
       <img
         src={colour.photo}
         alt={colour.name + ' COITONIC compression shirt'}
         loading="lazy"
-        width="82"
-        height="90"
+        width="84"
+        height="96"
       />
       <div>
         <p className="studio-product-title">Compression training tee</p>
@@ -178,7 +173,8 @@ function ProductSample() {
               type="button"
               key={item.name}
               aria-pressed={colour.name === item.name}
-              onClick={() => choose(item)}
+              data-photo={item.photo}
+              onClick={() => onSelectColour(item)}
             >
               <i style={{ background: item.tone }} aria-hidden="true" />
               {item.name}
@@ -196,13 +192,15 @@ function ProductSample() {
   );
 }
 
-function ProjectRoom() {
+function ProjectRoom({ colour, onSelectColour }) {
   const [exhibit, setExhibit] = useState(null);
   const returnPlace = useRef(null);
   const wasOpen = useRef(false);
   const closing = useRef(false);
   useEffect(() => {
+    let closeFrame;
     const sync = () => {
+      cancelAnimationFrame(closeFrame);
       if (typeof HTMLDialogElement === 'undefined' || !HTMLDialogElement.prototype.showModal) return;
       const next = readExhibit();
       closing.current = false;
@@ -215,17 +213,24 @@ function ProjectRoom() {
         }
         returnPlace.current = { target, top: Number.isFinite(savedTop) ? savedTop : window.scrollY };
       }
-      setExhibit(next);
+      // Chromium restores fragment focus and scroll after firing popstate.
+      // Keep the dialog modal until that traversal finishes, then restore the reader.
+      if (!next && returnPlace.current) {
+        closeFrame = requestAnimationFrame(() => setExhibit(null));
+      } else {
+        setExhibit(next);
+      }
     };
     sync();
     window.addEventListener('popstate', sync);
     window.addEventListener('hashchange', sync);
     return () => {
+      cancelAnimationFrame(closeFrame);
       window.removeEventListener('popstate', sync);
       window.removeEventListener('hashchange', sync);
     };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (exhibit) {
       wasOpen.current = true;
     } else if (wasOpen.current && returnPlace.current) {
@@ -249,7 +254,9 @@ function ProjectRoom() {
       return;
     event.preventDefault();
     const url = new URL(window.location.href);
-    url.searchParams.set('exhibit', id);
+    // A local HTML preview can change its fragment even in browsers that restrict file URL queries.
+    if (url.protocol === 'file:') url.hash = 'drive-' + id;
+    else url.searchParams.set('exhibit', id);
     returnPlace.current = { target: event.currentTarget, top: window.scrollY };
     window.history.pushState(
       { ...window.history.state, studioExhibit: id, studioReturnY: window.scrollY },
@@ -274,12 +281,16 @@ function ProjectRoom() {
   }
   return (
     <>
-      <h2 className="studio-room-title">GymDrobe.</h2>
+      <h2 className="studio-room-title">GymDrobe</h2>
       <p className="studio-lead">
-        I founded this fitness store and built its shopping flow. Pick a colour to see how a shopper’s choice
-        changes the product photo.
+        I founded GymDrobe and built its storefront, cart and checkout for workout clothing and equipment.
+        Try a colour on the display.
       </p>
-      <ProductSample />
+      <ProductSample colour={colour} onSelectColour={onSelectColour} />
+      <p className="studio-engineering-note">
+        The product link remembers the colour, so a shared link opens the matching gallery.{' '}
+        <a href={evidenceRoot + 'src/pages/ProductPage.jsx'}>See the source</a>
+      </p>
       <div className="studio-actions">
         <a
           className="studio-button"
@@ -315,7 +326,7 @@ function ProjectRoom() {
           Luxvibe boutique concept
         </a>
       </div>
-      {exhibit && <ExhibitDialog key={exhibit} id={exhibit} onClose={close} />}
+      {exhibit && <ExhibitDialog key={exhibit} id={exhibit} colour={colour} onClose={close} />}
     </>
   );
 }
@@ -375,6 +386,7 @@ function Founder() {
       </p>
       <div className="studio-actions">
         <a className="studio-button" href={tourWhatsapp} data-contact="whatsapp">
+          <MessageCircle size={17} aria-hidden="true" />
           Talk to Favas on WhatsApp
         </a>
         <a className="studio-link" href={tourEmail} data-contact="email">
@@ -398,11 +410,11 @@ function Founder() {
 }
 
 const contentByRoom = [Intro, Reception, ProjectRoom, Development, Review, Founder];
-export function RoomContent({ index }) {
+export function RoomContent({ index, colour, onSelectColour }) {
   const Content = contentByRoom[index];
   return Content ? (
     <div className="studio-copy">
-      <Content />
+      <Content colour={colour} onSelectColour={onSelectColour} />
     </div>
   ) : null;
 }

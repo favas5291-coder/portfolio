@@ -1,9 +1,10 @@
 // Original courtyard planting. Each stand shares one coloured mesh, so the trees
 // outside the glass do not add draw calls per leaf or per frond.
-export function buildLandscape(T, root) {
+export function buildLandscape(T, root, loadingManager) {
   const garden = new T.Group();
   garden.name = 'Courtyard garden';
   root.add(garden);
+  const loader = new T.TextureLoader(loadingManager);
   const materials = [],
     geometries = [];
   let seed = 72451;
@@ -36,7 +37,7 @@ export function buildLandscape(T, root) {
       rings = 18,
       sides = 8,
       angle = random() * Math.PI * 2;
-    const stem = (t) => [x + leanX * t * t, height * t, z + leanZ * t * t];
+    const stem = (t) => [x + leanX * t * t, height * t - 0.27, z + leanZ * t * t];
     function ring(t, offset) {
       const center = stem(t),
         r = radius * (1 - 0.48 * t + 0.36 * Math.exp(-t * 12));
@@ -127,7 +128,7 @@ export function buildLandscape(T, root) {
     for (let i = 0; i < 9; i++) {
       const a = offset + i * 2.39996,
         d = [Math.cos(a), Math.sin(a)];
-      const len = h * (0.68 + random() * 0.38),
+      const len = h * (0.57 + random() * 0.43),
         reach = len * (0.45 + random() * 0.32);
       const fold = new T.Color(palms[(i + 1) % palms.length]);
       function point(t, side) {
@@ -169,27 +170,37 @@ export function buildLandscape(T, root) {
     coconut(x, z, h, dx, dz);
   for (const side of [-1, 1])
     for (let z = 1; z > -30; z -= 2.45 + random() * 2.25) {
-      banana(side * (8.8 + random() * 1.85), z, 2.1 + random() * 1.4);
+      banana(side * (8.8 + random() * 1.85), z, 1.55 + random() * 1.2);
     }
   const leaves = new T.BufferGeometry();
   leaves.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
   leaves.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
   leaves.computeVertexNormals();
   const foliage = new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide });
-  garden.add(new T.Mesh(leaves, foliage));
+  const trees = new T.Mesh(leaves, foliage);
+  trees.castShadow = true;
+  garden.add(trees);
   geometries.push(leaves);
   materials.push(foliage);
 
-  const soil = new T.PlaneGeometry(110, 110);
-  const grass = new T.MeshLambertMaterial({ color: '#89945e' });
+  // A planted verge at the sill creates near parallax before the distant trees.
+  // Leafy Grass, CC0, https://polyhaven.com/a/leafy_grass
+  const soil = new T.PlaneGeometry(78, 78);
+  const groundMap = loader.load('/studio/garden-floor.webp');
+  groundMap.colorSpace = T.SRGBColorSpace;
+  groundMap.wrapS = groundMap.wrapT = T.RepeatWrapping;
+  groundMap.repeat.set(22, 22);
+  groundMap.anisotropy = 2;
+  const grass = new T.MeshLambertMaterial({ map: groundMap, color: '#c2caac' });
   const lawn = new T.Mesh(soil, grass);
+  lawn.receiveShadow = true;
   lawn.rotation.x = -Math.PI / 2;
   lawn.position.set(0, -0.3, -13);
   garden.add(lawn);
   geometries.push(soil);
   materials.push(grass);
 
-  const shrubMap = new T.TextureLoader().load('/studio/undergrowth.webp');
+  const shrubMap = loader.load('/studio/undergrowth.webp');
   shrubMap.colorSpace = T.SRGBColorSpace;
   const shrubGeometry = new T.PlaneGeometry(1, 1);
   const shrubMaterial = new T.MeshBasicMaterial({
@@ -216,8 +227,8 @@ export function buildLandscape(T, root) {
   geometries.push(shrubGeometry);
 
   // A tonemapped local derivative keeps the distant sky and tree line inexpensive.
-  // Rooitou Park by Greg Zaal, CC0: https://polyhaven.com/a/rooitou_park
-  const map = new T.TextureLoader().load('/studio/garden-horizon.webp');
+  // Pond by Greg Zaal, CC0: https://polyhaven.com/a/pond
+  const map = loader.load('/studio/garden-horizon.webp');
   map.colorSpace = T.SRGBColorSpace;
   const dome = new T.SphereGeometry(52, 40, 20);
   const skyline = new T.MeshBasicMaterial({
@@ -228,8 +239,9 @@ export function buildLandscape(T, root) {
     depthWrite: false,
   });
   const horizon = new T.Mesh(dome, skyline);
-  horizon.position.set(0, 0, -13);
-  horizon.rotation.y = 2.15;
+  horizon.position.set(0, 1, -13);
+  horizon.scale.y = 0.7;
+  horizon.rotation.y = 0.80;
   horizon.renderOrder = -2;
   garden.add(horizon);
   geometries.push(dome);
@@ -239,6 +251,7 @@ export function buildLandscape(T, root) {
     dispose() {
       garden.removeFromParent();
       map.dispose();
+      groundMap.dispose();
       shrubMap.dispose();
       for (const geometry of geometries) geometry.dispose();
       for (const material of materials) material.dispose();

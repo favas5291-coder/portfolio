@@ -1,3 +1,5 @@
+import { bench, benchSeat, meeting, reviewPerformance } from './sceneBlocking.js';
+import { projectPreviews } from '../data/project-previews.js';
 import facialSurface from './assets/cast-face.bin?url&inline';
 
 // Each figure has four batched draws: body, head and two independently posed
@@ -19,8 +21,8 @@ const cast = [
   },
   {
     role: 'developer',
-    position: [-3.65, -13.7],
-    yaw: 0.08,
+    position: benchSeat(0.9),
+    yaw: bench.yaw + 0.08,
     skin: '#996a52',
     top: '#567c84',
     trousers: '#384145',
@@ -31,8 +33,8 @@ const cast = [
   },
   {
     role: 'designer',
-    position: [-5.5, -13.7],
-    yaw: 0.14,
+    position: benchSeat(-0.9),
+    yaw: bench.yaw + 0.08,
     feminine: true,
     skin: '#bb866c',
     top: '#bd7863',
@@ -44,8 +46,8 @@ const cast = [
   },
   {
     role: 'studio-manager',
-    position: [-4.8, -11.8],
-    yaw: Math.PI - 0.17,
+    position: [-5.34, -12.13],
+    yaw: -0.7,
     standing: true,
     skin: '#93654b',
     top: '#79765e',
@@ -56,9 +58,23 @@ const cast = [
     height: 1.01,
   },
   {
+    role: 'colleague',
+    position: [-5.98, -11.52],
+    yaw: 2.29,
+    standing: true,
+    skin: '#a27a64',
+    top: '#77685e',
+    trousers: '#303e41',
+    trim: '#d8c1a1',
+    style: 'blouse',
+    hair: 'bob',
+    feminine: true,
+    height: 0.97,
+  },
+  {
     role: 'client',
-    position: [3.9, -19],
-    yaw: -0.26,
+    position: meeting.client,
+    yaw: meeting.clientYaw,
     feminine: true,
     skin: '#bd8b6d',
     top: '#b98748',
@@ -70,8 +86,8 @@ const cast = [
   },
   {
     role: 'review-manager',
-    position: [2.6, -17.1],
-    yaw: Math.PI - 0.39,
+    position: meeting.manager,
+    yaw: meeting.managerYaw,
     skin: '#916653',
     top: '#475b72',
     trousers: '#313941',
@@ -82,13 +98,13 @@ const cast = [
   },
   {
     role: 'founder',
-    position: [0.35, -26.75],
-    yaw: -1.2,
+    position: [0.35, -26.68],
+    yaw: -0.98,
     skin: '#a8755c',
     top: '#353e42',
     trousers: '#363a39',
     trim: '#e7d8ba',
-    style: 'jacket',
+    style: 'shirt',
     hair: 'crop',
     height: 1.01,
   },
@@ -491,11 +507,11 @@ function poseFor(role, side) {
       return left
         ? [
             [-0.037, -0.271, 0.075],
-            [0.024, -0.352, 0.316],
+            [0.024, -0.338, 0.365],
           ]
         : [
             [0.045, -0.267, 0.078],
-            [-0.075, -0.354, 0.294],
+            [-0.075, -0.335, 0.354],
           ];
     case 'developer':
       return left
@@ -527,6 +543,17 @@ function poseFor(role, side) {
             [0.032, -0.24, 0.086],
             [-0.065, -0.19, 0.285],
           ];
+    case 'colleague':
+      // One relaxed arm and one open palm toward the milestone on the clipboard.
+      return left
+        ? [
+            [-0.042, -0.27, 0.012],
+            [-0.012, -0.48, 0.057],
+          ]
+        : [
+            [0.049, -0.22, 0.077],
+            [-0.052, -0.18, 0.27],
+          ];
     case 'client':
       return left
         ? [
@@ -535,13 +562,13 @@ function poseFor(role, side) {
           ]
         : [
             [0.004, -0.187, 0.197],
-            [-0.111, -0.181, 0.419],
+            [-0.11, -0.16, 0.408],
           ];
     case 'review-manager':
       return left
         ? [
             [-0.035, -0.209, 0.12],
-            [0.052, -0.171, 0.338],
+            [0.032, -0.029, 0.407],
           ]
         : [
             [0.031, -0.205, 0.122],
@@ -615,19 +642,35 @@ function buildArm(THREE, common, person, side) {
     -0.42 * side,
     0,
   ]);
+  let device;
   if (phone) {
-    box([x + 0.025, y + 0.06, z + 0.088], [0.074, 0.142, 0.009], '#383938', [-0.3, -0.18, 0.035]);
-    box([x + 0.025, y + 0.061, z + 0.082], [0.064, 0.128, 0.003], '#93a9a4', [-0.3, -0.18, 0.035]);
+    device = {
+      x: x + 0.025,
+      y: y + 0.06,
+      z: z + 0.088,
+      size: [0.074, 0.142],
+      tilt: [-0.3, -0.18, 0.035],
+      screen: projectPreviews.gymdrobe.mobile.screenshot,
+    };
   }
   if (person.role === 'designer' && side === -1) {
-    box([x + 0.086, y + 0.059, z + 0.098], [0.19, 0.136, 0.009], '#403e39', [-0.71, -0.11, -0.04]);
-    box([x + 0.086, y + 0.063, z + 0.093], [0.173, 0.119, 0.003], '#bfaaa1', [-0.71, -0.11, -0.04]);
+    device = {
+      x: x + 0.086,
+      y: y + 0.059,
+      z: z + 0.098,
+      size: [0.19, 0.136],
+      tilt: [-0.71, -0.11, -0.04],
+      screen: projectPreviews.fabea.screenshot,
+    };
+  }
+  if (device) {
+    box([device.x, device.y, device.z], [...device.size, 0.01], '#383938', device.tilt);
   }
   if (person.role === 'studio-manager' && side === -1) {
-    box([x + 0.065, y + 0.031, z + 0.098], [0.187, 0.246, 0.014], '#653f32', [-0.81, 0.08, -0.06]);
-    box([x + 0.065, y + 0.041, z + 0.096], [0.167, 0.222, 0.003], '#ded3b9', [-0.81, 0.08, -0.06]);
+    device = { x: x + 0.065, y: y + 0.031, z: z + 0.098, size: [0.187, 0.246], tilt: [-0.81, 0.08, -0.06] };
+    box([device.x, device.y, device.z], [...device.size, 0.014], '#694e3a', device.tilt);
   }
-  if (person.role === 'founder' && side === 1) {
+  if ((person.role === 'founder' || person.role === 'reception') && side === 1) {
     stroke(
       [
         [x - 0.039, y + 0.068, z + 0.052],
@@ -638,16 +681,66 @@ function buildArm(THREE, common, person, side) {
       '#302d29',
     );
   }
-  return batch.finish();
+  const arm = batch.finish();
+  if (device) {
+    const frame = new THREE.Group();
+    frame.position.set(device.x, device.y, device.z);
+    frame.rotation.set(...device.tilt);
+    const [width, height] = device.size;
+    const screen = new THREE.Mesh(
+      new THREE.PlaneGeometry(width - 0.01, height - 0.011),
+      common.deviceMaterial(device.screen),
+    );
+    screen.rotation.y = Math.PI;
+    screen.position.z = -0.008;
+    frame.add(screen);
+    arm.add(frame);
+  }
+  return arm;
 }
 
-export function buildPeople(THREE, scene, { mobile = false } = {}) {
+export function buildPeople(THREE, scene, { mobile = false, loadingManager } = {}) {
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0 });
+  const screens = new Map();
+  const loader = new THREE.TextureLoader(loadingManager);
+  function deviceMaterial(url) {
+    if (screens.has(url)) return screens.get(url);
+    let map;
+    if (url) {
+      map = loader.load(url);
+    } else {
+      const sheet = document.createElement('canvas');
+      sheet.width = 256;
+      sheet.height = 340;
+      const ctx = sheet.getContext('2d');
+      ctx.fillStyle = '#ede7d6';
+      ctx.fillRect(0, 0, 256, 340);
+      ctx.fillStyle = '#2a4339';
+      ctx.font = '19px Arial';
+      ctx.fillText('Product preview', 19, 40);
+      ctx.font = '13px Arial';
+      ['Brief', 'Design', 'Working preview', 'Testing', 'Handover'].forEach((label, i) => {
+        const y = 71 + i * 44;
+        ctx.fillStyle = i < 2 ? '#568370' : '#b9b5a2';
+        ctx.fillRect(20, y, 10, 10);
+        ctx.fillStyle = '#38443b';
+        ctx.fillText(label, 46, y + 10);
+        ctx.fillStyle = '#bfb8a4';
+        ctx.fillRect(20, y + 23, 213, 1);
+      });
+      map = new THREE.CanvasTexture(sheet);
+    }
+    map.colorSpace = THREE.SRGBColorSpace;
+    const finish = new THREE.MeshBasicMaterial({ map, toneMapped: false });
+    screens.set(url, finish);
+    return finish;
+  }
   const common = {
     material,
     sphere: new THREE.SphereGeometry(1, 12, 9),
     box: new THREE.BoxGeometry(),
     faces: readFaceGeometry(THREE),
+    deviceMaterial,
   };
   const group = new THREE.Group();
   group.name = 'Studio occupants';
@@ -668,15 +761,30 @@ export function buildPeople(THREE, scene, { mobile = false } = {}) {
     });
     root.add(body, head, ...arms);
     group.add(root);
-    return { root, head, arms, person, phase: i * 1.893, stop: [1, 3, 3, 3, 4, 4, 5][i] };
+    return {
+      root,
+      head,
+      arms,
+      person,
+      phase: i * 1.893,
+      stop:
+        person.role === 'reception'
+          ? 1
+          : person.role === 'founder'
+            ? 5
+            : person.role === 'client' || person.role === 'review-manager'
+              ? 4
+              : 3,
+    };
   });
   scene.add(group);
   for (const geometry of [common.sphere, common.box, ...common.faces]) geometry.dispose();
 
   const smooth = THREE.MathUtils.smoothstep;
+  const reviewCue = reviewPerformance();
   function update({ progress, time }) {
-    const arrival = smooth(progress, 0.36, 0.93),
-      exchange = smooth(progress, 3.73, 4.02),
+    const arrival = smooth(progress, 0.27, 0.86),
+      cue = reviewCue(progress, time),
       greeting = smooth(progress, 4.7, 4.98);
     for (const { root, head, arms, person, phase, stop } of figures) {
       // Preserve the reception sightline; freeze distant actions to reduce work.
@@ -693,8 +801,10 @@ export function buildPeople(THREE, scene, { mobile = false } = {}) {
       arms[1].rotation.x = Math.sin(t * 0.78) * 0.012;
       switch (person.role) {
         case 'reception':
-          head.rotation.y -= 0.34 * arrival;
-          head.rotation.x += 0.1 - 0.23 * arrival;
+          head.rotation.y = -0.08 - 0.36 * arrival + glance;
+          head.rotation.x = 0.54 * (1 - arrival) + 0.018 + breath;
+          arms[1].rotation.y = 0.034 * Math.sin(t * 3.6) * (1 - arrival);
+          arms[1].rotation.x = -0.025 - 0.04 * arrival;
           break;
         case 'developer':
           head.rotation.y -= 0.2 + 0.17 * Math.sin(t * 0.61);
@@ -702,25 +812,39 @@ export function buildPeople(THREE, scene, { mobile = false } = {}) {
           arms[0].rotation.x += 0.06 * Math.sin(t * 0.61);
           break;
         case 'designer':
-          head.rotation.y += 0.2 * Math.sin(t * 0.59);
-          head.rotation.x += 0.1 * (1 + Math.sin(t * 0.59));
+          head.rotation.y += 0.22 * Math.tanh(2 * Math.sin(t * 0.53));
+          head.rotation.x += 0.18 * (1 + Math.sin(t * 0.53));
+          arms[1].rotation.y = -0.07 + 0.05 * Math.sin(t * 0.86);
           break;
         case 'studio-manager':
-          head.rotation.y += 0.32 + 0.08 * Math.sin(t * 0.43);
-          arms[1].rotation.x += 0.055 * Math.sin(t * 0.79);
+          head.rotation.x += 0.2 * (1 + Math.sin(t * 0.74));
+          arms[1].rotation.y = -0.09 - 0.12 * Math.sin(t * 0.74);
+          break;
+        case 'colleague':
+          head.rotation.x += 0.18 + 0.06 * Math.sin(t * 0.83);
+          head.rotation.y -= 0.1;
+          arms[1].rotation.z = 0.07 + 0.036 * Math.sin(t * 0.54);
           break;
         case 'client':
-          head.rotation.y -= 0.15 * exchange;
-          arms[1].rotation.x -= exchange * 0.095;
+          head.rotation.y = 0.05 + 0.44 * cue.turn;
+          head.rotation.x = 0.42 - 0.29 * cue.turn + breath;
+          arms[1].rotation.x = -0.23 + 0.26 * cue.point;
+          arms[1].rotation.y = -0.08 + 0.12 * cue.point;
           break;
         case 'review-manager':
-          head.rotation.y -= 0.19 * exchange;
-          arms[0].rotation.y += exchange * 0.14;
+          head.rotation.y = 0.08 + 0.18 * cue.follow - 0.5 * cue.turn;
+          head.rotation.x = 0.08 + 0.32 * cue.follow - 0.29 * cue.turn;
+          // The left fingers slide along the lower bezel as it sweeps around
+          // its stand. The client’s fingertip lands on the phone across the table.
+          arms[0].rotation.x = .32 * (1 - cue.reach) + .034;
+          const bezel = -.196 + .52 * cue.turn - .197 * cue.turn * cue.turn;
+          arms[0].rotation.y = .22 * (1 - cue.reach) + bezel * cue.reach;
           break;
         case 'founder':
           head.rotation.x += 0.16 - greeting * 0.26;
-          head.rotation.y -= 0.24;
-          arms[1].rotation.x += greeting * 0.1;
+          // Greet the visitor in profile, with the laptop inside the eye line.
+          head.rotation.y = -0.76 + 0.26 * greeting;
+          arms[1].rotation.x = -0.035 - 0.055 * greeting;
           break;
       }
     }
@@ -731,6 +855,10 @@ export function buildPeople(THREE, scene, { mobile = false } = {}) {
     dispose() {
       scene.remove(group);
       group.traverse((object) => object.geometry?.dispose());
+      for (const screen of screens.values()) {
+        screen.map.dispose();
+        screen.dispose();
+      }
       material.dispose();
     },
   };

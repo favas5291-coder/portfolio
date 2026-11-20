@@ -17,7 +17,18 @@ const rooms = [
   'client-review',
   'founder-office',
 ];
-const poseTimes = [0, 5.8, 3.4, 4.6, 4.3, 3.7];
+// Optional room slugs allow the entrance and desk to be reviewed together.
+const requestedRooms = process.argv.slice(2);
+for (const slug of requestedRooms) {
+  if (!rooms.includes(slug)) throw new Error('Unknown room ' + slug);
+}
+const poseTimes = [0, 5.8, 3.4, 4.6, 2.7, 3.7];
+// The image fills the stage, which is a column on desktop and a short
+// near-square view above the text on phones. Render both lenses directly.
+const profiles = [
+  { suffix: '', width: 1400, height: 1080, mobile: false },
+  { suffix: '-mobile', width: 780, height: 720, mobile: true },
+];
 const entry = 'office-still-authoring';
 const sceneModule = `
   import * as T from 'three';
@@ -35,12 +46,22 @@ const sceneModule = `
   renderer.setSize(innerWidth, innerHeight);
   const scene = new T.Scene();
   const camera = new T.PerspectiveCamera(55, innerWidth/innerHeight, .08, 85);
-  const texturesReady = new Promise(resolve => { T.DefaultLoadingManager.onLoad = resolve; });
-  const office = buildOffice(T, scene, {mobile:false});
-  const cast = buildPeople(T, scene, {mobile:false});
+  let texturesReady = Promise.resolve();
+  T.DefaultLoadingManager.onStart = () => {
+    texturesReady = new Promise(resolve => { T.DefaultLoadingManager.onLoad = resolve; });
+  };
+  const mobile = new URL(location.href).searchParams.has('mobile');
+  const office = buildOffice(T, scene, {mobile});
+  const cast = buildPeople(T, scene, {mobile});
 
-  window.renderStill = async (room, time) => {
+  window.renderStill = async (room, time, colour) => {
+    if (room === 2) {
+      window.dispatchEvent(new CustomEvent('studio:product-colour', {detail: {colour}}));
+    }
     await texturesReady;
+    const arrival = {progress:room, room, time:0};
+    office.update(arrival);
+    cast.update(arrival);
     const pose = {progress:room, room, time};
     positionCamera(camera, room);
     office.update(pose);
@@ -89,9 +110,9 @@ const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1080 }, deviceScaleFactor: 1 });
   const missing = [];
-  await page.route('**/*', async (request) => {
+  const context = await browser.newContext({ deviceScaleFactor: 1 });
+  await context.route('**/*', async (request) => {
     const url = new URL(request.request().url());
     if (url.origin !== origin) return request.abort();
     if (url.pathname === '/')
@@ -109,19 +130,36 @@ try {
       return request.fulfill({ status: 404, body: 'Missing local scene asset' });
     }
   });
-  await page.goto(origin);
-  await page.waitForFunction(() => typeof window.renderStill === 'function');
-  for (const [room, slug] of rooms.entries()) {
-    const url = await page.evaluate(
-      ([room, time]) => window.renderStill(room, time),
-      [room, poseTimes[room]],
-    );
-    if (missing.length) throw new Error('Missing local scene resources: ' + missing.join(', '));
-    const bytes = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
-    const output = await sharp(bytes)
-      .webp({ quality: 83, effort: 6 })
-      .toFile(resolve(destination, slug + '.webp'));
-    console.log(slug, Math.ceil(output.size / 1024) + ' KiB');
+  for (const { suffix, width, height, mobile } of profiles) {
+    const page = await context.newPage();
+    await page.setViewportSize({ width, height });
+    const renderErrors = [];
+    page.on('pageerror', error => renderErrors.push(error.message));
+    page.on('console', message => {
+      if (message.type() === 'error' || /THREE.WebGLProgram: Shader Error/.test(message.text())) {
+        renderErrors.push(message.text());
+      }
+    });
+    await page.goto(origin + (mobile ? '/?mobile' : '/'));
+    await page.waitForFunction(() => typeof window.renderStill === 'function');
+    for (const [room, slug] of rooms.entries()) {
+      if (requestedRooms.length && !requestedRooms.includes(slug)) continue;
+      for (const colour of room === 2 ? ['Black', 'Red'] : ['Black']) {
+        const url = await page.evaluate(
+          ([room, time, colour]) => window.renderStill(room, time, colour),
+          [room, poseTimes[room], colour],
+        );
+        if (renderErrors.length) throw new Error(renderErrors.join('\n'));
+        if (missing.length) throw new Error('Missing local scene resources: ' + missing.join(', '));
+        const fileName = slug + (colour === 'Red' ? '-red' : '') + suffix + '.webp';
+        const bytes = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
+        const output = await sharp(bytes)
+          .webp({ quality: 85, effort: 5 })
+          .toFile(resolve(destination, fileName));
+        console.log(fileName, Math.ceil(output.size / 1024) + ' KiB');
+      }
+    }
+    await page.close();
   }
 } finally {
   await browser.close();

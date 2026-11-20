@@ -1,3 +1,5 @@
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
 // Work in metres. Batch identical geometry/finish pairs in each room or moving
 // assembly; separate room batches let Three cull the wings as the visitor turns.
 export function officeGeometry(T, m) {
@@ -7,6 +9,20 @@ export function officeGeometry(T, m) {
     return g;
   };
   const boxGeometry = register(new T.BoxGeometry(1, 1, 1));
+  // The first texture coordinate follows the length of each sawn piece. Share
+  // these three UV layouts so battens still instance by geometry and finish.
+  const timberBoxes = [0, 1, 2].map((axis) => {
+    const geometry = register(boxGeometry.clone());
+    const { position, normal, uv } = geometry.attributes;
+    for (let i = 0; i < uv.count; i++) {
+      const face = [normal.getX(i), normal.getY(i), normal.getZ(i)].findIndex(n => Math.abs(n) > 0.5);
+      if (face === axis) continue;
+      const coords = [position.getX(i), position.getY(i), position.getZ(i)];
+      uv.setXY(i, coords[axis] + 0.5, coords[3 - face - axis] + 0.5);
+    }
+    return geometry;
+  });
+  const rounded = new Map();
   const planeGeometry = register(new T.PlaneGeometry(1, 1));
   const cylinderGeometry = register(new T.CylinderGeometry(1, 1, 1, 16));
   const planterGeometry = register(new T.CylinderGeometry(1, 0.77, 1, 18));
@@ -18,7 +34,17 @@ export function officeGeometry(T, m) {
     parent.add(mesh);
     return mesh;
   };
-  const box = (p, mat, x, y, z, w, h, d) => primitive(p, boxGeometry, mat, x, y, z, w, h, d);
+  function box(p, mat, x, y, z, w, h, d) {
+    const geometry = mat === m.wood || mat === m.walnut
+      ? timberBoxes[h > w && h > d ? 1 : d > w ? 2 : 0]
+      : boxGeometry;
+    return primitive(p, geometry, mat, x, y, z, w, h, d);
+  }
+  function softBox(p, mat, x, y, z, w, h, d, radius = 0.012) {
+    const key = [w, h, d, radius].join('/');
+    if (!rounded.has(key)) rounded.set(key, register(new RoundedBoxGeometry(w, h, d, 1, radius)));
+    return primitive(p, rounded.get(key), mat, x, y, z, 1, 1, 1);
+  }
   const panel = (p, mat, x, y, z, w, h, yaw = 0) => {
     const mesh = primitive(p, planeGeometry, mat, x, y, z, w, h, 1);
     mesh.rotation.y = yaw;
@@ -126,6 +152,7 @@ export function officeGeometry(T, m) {
   }
   return {
     box,
+    softBox,
     panel,
     cyl,
     ball,

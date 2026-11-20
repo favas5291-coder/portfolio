@@ -1,6 +1,6 @@
 // Small, seeded finish maps keep the entire building self-contained. All colours
 // are authored in sRGB; the renderer handles lighting in linear space.
-export function officeMaterials(T) {
+export function officeMaterials(T, loadingManager) {
   let seed = 17553;
   function random() {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -10,6 +10,31 @@ export function officeMaterials(T) {
     materials = new Set();
   function surface(parameters) {
     const material = new T.MeshStandardMaterial(parameters);
+    // A room-wide skylight approximation supplements the direct solar shadow.
+    // Near each window the hemisphere is visible; the deep canopy and gallery
+    // receive less indirect light. This only attenuates diffuse bounce, leaving
+    // the directional sunlight, screen images and glass reflections independent.
+    material.onBeforeCompile = shader => {
+      shader.vertexShader = 'varying vec3 studioPosition;\n' + shader.vertexShader.replace(
+        '#include <project_vertex>', `#include <project_vertex>
+          vec4 studioLocal = vec4(transformed, 1.0);
+          #ifdef USE_INSTANCING
+            studioLocal = instanceMatrix * studioLocal;
+          #endif
+          studioPosition = (modelMatrix * studioLocal).xyz;`);
+      shader.fragmentShader = 'varying vec3 studioPosition;\n' + shader.fragmentShader.replace(
+        '#include <lights_fragment_end>', `#include <lights_fragment_end>
+          vec3 pRoom = studioPosition;
+          float underRoof = (1.0-smoothstep(0.1, 1.8, pRoom.z)) *
+            (1.0-smoothstep(6.9, 7.2, abs(pRoom.x)));
+          float daylight = smoothstep(1.1, 6.9, abs(pRoom.x));
+          float floorJoint = (1.0-smoothstep(0.0, 0.32, pRoom.y)) *
+            smoothstep(6.4, 7.05, abs(pRoom.x));
+          float ceilingJoint = smoothstep(3.10, 3.55, pRoom.y) *
+            smoothstep(5.95, 7.05, abs(pRoom.x));
+          float skyAccess = mix(0.74, 1.08, daylight) - 0.18*(floorJoint+ceilingJoint);
+          reflectedLight.indirectDiffuse *= mix(1.0, skyAccess, underRoof);`);
+    };
     materials.add(material);
     return material;
   }
@@ -29,53 +54,25 @@ export function officeMaterials(T) {
     maps.add(map);
     return map;
   }
-  const woodMap = canvasMap(256, 256, (ctx, w, h) => {
-    ctx.fillStyle = '#b68d65';
-    ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 430; i++) {
-      const y = random() * h;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.bezierCurveTo(w * 0.3, y + (random() - 0.5) * 11, w * 0.69, y + (random() - 0.5) * 7, w, y);
-      ctx.strokeStyle = random() > 0.35 ? 'rgba(69,39,25,.12)' : 'rgba(255,230,185,.21)';
-      ctx.lineWidth = 0.3 + random() * 1.5;
-      ctx.stroke();
-    }
-  });
-  function granular(color, grain, veins = false) {
-    return canvasMap(256, 256, (ctx, w, h) => {
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, w, h);
-      for (let i = 0; i < 11000; i++) {
-        const size = random() * grain;
-        ctx.fillStyle = random() > 0.45 ? 'rgba(71,59,44,.12)' : 'rgba(255,251,222,.18)';
-        ctx.fillRect(random() * w, random() * h, size * (veins ? 2.7 : 1), size);
-      }
-      if (veins)
-        for (let i = 0; i < 63; i++) {
-          const x = random() * w,
-            y = random() * h;
-          ctx.beginPath();
-          ctx.moveTo(x, y);
-          ctx.bezierCurveTo(x + 18, y + 4, x + 25, y - 3, x + 54, y + 2);
-          ctx.strokeStyle = 'rgba(118,99,78,.1)';
-          ctx.lineWidth = random() + 0.3;
-          ctx.stroke();
-        }
-    });
+  const loader = new T.TextureLoader(loadingManager);
+  function imageMap(url) {
+    const map = loader.load(url);
+    map.colorSpace = T.SRGBColorSpace;
+    map.anisotropy = 4;
+    maps.add(map);
+    return map;
   }
-  const stoneMap = granular('#cabcaa', 2, true);
-  const plasterMap = granular('#dfd6bf', 1.5);
-  const brickMap = granular('#a2684a', 3);
-  const wood = surface({ map: woodMap, roughness: 0.7 });
-  const walnut = surface({ color: '#937357', map: woodMap, roughness: 0.62 });
-  const stone = surface({ map: stoneMap, roughness: 0.82 });
-  const plaster = surface({ map: plasterMap, roughness: 0.91 });
-  const laterite = surface({ map: brickMap, roughness: 0.95 });
+  const woodMap = imageMap('/studio/finishes/timber.webp');
+  const stoneMap = imageMap('/studio/finishes/honed-stone.webp');
+  const wood = surface({ map: woodMap, roughness: 0.61 });
+  const walnut = surface({ color: '#ac8d70', map: woodMap, roughness: 0.52 });
+  const stone = surface({ map: stoneMap, roughness: 0.66 });
+  const plaster = surface({ color: '#eee7d9', roughness: 0.91 });
+  const laterite = surface({ map: imageMap('/studio/finishes/masonry.webp'), roughness: 0.93 });
   const bronze = surface({ color: '#665544', roughness: 0.5, metalness: 0.28 });
-  const frame = surface({ color: '#303b36', roughness: 0.55, metalness: 0.12 });
+  const frame = surface({ color: '#55605b', roughness: 0.55, metalness: 0.12 });
   const charcoal = surface({ color: '#26332f', roughness: 0.78 });
-  const brass = surface({ color: '#bd9862', roughness: 0.43, metalness: 0.36 });
+  const brass = surface({ color: '#c29b60', roughness: 0.43, metalness: 0.36 });
   const leather = surface({ color: '#645846', roughness: 0.82 });
   const linen = surface({ color: '#d4c6a8', roughness: 0.95 });
   const jade = surface({ color: '#466557', roughness: 0.88 });
@@ -113,9 +110,10 @@ export function officeMaterials(T) {
         vec3 v=normalize(toEye), n=normalize(viewNormal);
         vec3 r=inverseTransformDirection(reflect(-v,n),viewMatrix);
         float angle=pow(1.0-abs(dot(n,v)),3.0);
-        vec2 uv=vec2(atan(r.z,r.x)/6.2831853+.842,asin(clamp(r.y,-1.,1.))/3.14159265+.5);
+        vec3 q=normalize(vec3(r.x,r.y/.7,r.z));
+        vec2 uv=vec2(.5-(atan(q.z,q.x)+.8)/6.2831853, .5+asin(clamp(q.y,-1.,1.))/3.14159265);
         vec3 sky=texture2D(panorama,vec2(fract(uv.x),uv.y)).rgb;
-        gl_FragColor=vec4(mix(vec3(.43,.58,.54),sky,.72),.052+.27*angle);
+        gl_FragColor=vec4(mix(vec3(.42,.57,.54),sky,.79),.13+.33*angle);
         #include <colorspace_fragment>
       }
     `,
@@ -139,6 +137,7 @@ export function officeMaterials(T) {
     surface,
     ink,
     canvasMap,
+    imageMap,
     random,
     maps,
     dispose,
