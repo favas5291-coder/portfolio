@@ -14,19 +14,18 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
   });
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.08, 85);
+  const loadingManager = new THREE.LoadingManager();
   const parts = [];
   let disposed = false;
+  let texturesReady = false;
+  let redraw = true;
   let caseOpen = Boolean(document.querySelector('.studio-case-dialog[open]'));
   let frame = 0,
     lastTime = 0,
     delivered = false,
     clock = 0;
   let density = Math.min(devicePixelRatio || 1, mobile ? 1.25 : 1.5);
-  let pointerX = 0,
-    pointerY = 0,
-    lookX = 0,
-    lookY = 0,
-    previousPosition = -1;
+  let previousPosition = -1;
   let slowFrames = 0,
     sampleCount = 0;
   const minimumDensity = mobile ? 0.7 : 0.55;
@@ -42,25 +41,26 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    redraw = true;
   }
-  function move(e) {
-    if (e.pointerType !== 'mouse') return;
-    const bounds = host.getBoundingClientRect();
-    pointerX = (2 * (e.clientX - bounds.left)) / bounds.width - 1;
-    pointerY = 1 - (2 * (e.clientY - bounds.top)) / bounds.height;
-  }
-  function leave() {
-    pointerX = 0;
-    pointerY = 0;
+  function invalidate() {
+    redraw = true;
   }
   function draw(now) {
-    if (disposed || document.hidden || caseOpen) return;
+    if (disposed || document.hidden || caseOpen || !texturesReady) return;
     frame = requestAnimationFrame(draw);
     const interval = lastTime ? now - lastTime : 0;
     const target = readPosition();
     // Give the visitor full motion while travelling. At rest, the actors need
     // fewer samples. No timer runs while the page is in the background.
     const moving = Math.abs(target - previousPosition) > 0.002;
+    // The facade and exhibit hold their reading positions. A scroll, resize
+    // or swatch change wakes the renderer immediately. Idle reading time is
+    // excluded from the throughput sample.
+    if ((target === 0 || target === 2) && target === previousPosition && !redraw) {
+      lastTime = 0;
+      return;
+    }
     if (lastTime && interval < (moving ? 15 : 32)) return;
     // Ease the short entrance stride even for a mouse that sends a whole wheel
     // notch at once. Direct room links and restored positions settle immediately.
@@ -69,12 +69,11 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
       const blend = 1 - Math.exp(-Math.min(interval, 100) / 160);
       progress = previousPosition + (target - previousPosition) * blend;
     }
-    if (lastTime) clock += Math.min(0.08, interval / 1000);
+    if (lastTime) clock += Math.min(0.35, interval / 1000);
     lastTime = now;
     previousPosition = progress;
-    lookX += ((moving ? 0 : pointerX) - lookX) * 0.12;
-    lookY += ((moving ? 0 : pointerY) - lookY) * 0.12;
-    positionCamera(camera, progress, lookX, lookY);
+    redraw = false;
+    positionCamera(camera, progress);
     const pose = { progress, room: Math.round(progress), time: clock };
     try {
       for (const part of parts) part.update(pose);
@@ -113,7 +112,7 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     slowFrames = 0;
     sampleCount = 0;
     verySlowFrames = 0;
-    if (!document.hidden && !caseOpen) frame = requestAnimationFrame(draw);
+    if (!disposed && texturesReady && !document.hidden && !caseOpen) frame = requestAnimationFrame(draw);
   }
   function caseVisibility(event) {
     caseOpen = Boolean(event.detail?.open);
@@ -128,8 +127,7 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     disposed = true;
     cancelAnimationFrame(frame);
     observer?.disconnect();
-    host.removeEventListener('pointermove', move);
-    host.removeEventListener('pointerleave', leave);
+    window.removeEventListener('studio:product-colour', invalidate);
     canvas.removeEventListener('webglcontextlost', contextLost);
     document.removeEventListener('visibilitychange', visibility);
     window.removeEventListener('studio:case-visibility', caseVisibility);
@@ -149,18 +147,29 @@ export function startOffice(host, { readPosition, onReady, onFailure, onSlow }) 
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
-    parts.push(buildOffice(THREE, scene, { mobile }));
-    parts.push(buildPeople(THREE, scene, { mobile }));
+    // Keep the matched photograph visible until every material in the first
+    // view is ready, including the storefronts. Later swatch loads invalidate
+    // the held exhibit without borrowing another scene's loading callbacks.
+    loadingManager.onLoad = () => {
+      if (disposed) return;
+      redraw = true;
+      if (texturesReady) return;
+      texturesReady = true;
+      visibility();
+    };
+    loadingManager.onError = () => {
+      if (!disposed) onFailure();
+    };
+    parts.push(buildOffice(THREE, scene, { mobile, loadingManager }));
+    parts.push(buildPeople(THREE, scene, { mobile, loadingManager }));
     host.append(canvas);
     resize();
     observer = new ResizeObserver(resize);
     observer.observe(host);
-    host.addEventListener('pointermove', move);
-    host.addEventListener('pointerleave', leave);
+    window.addEventListener('studio:product-colour', invalidate);
     canvas.addEventListener('webglcontextlost', contextLost);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('studio:case-visibility', caseVisibility);
-    frame = requestAnimationFrame(draw);
     return { dispose };
   } catch (error) {
     dispose();

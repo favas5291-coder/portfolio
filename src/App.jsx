@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, MapPin, Map, MessageCircle, Pause, Play } from 'lucide-react';
 import RoomContent from './studio/RoomContent.jsx';
-import { tourWhatsapp } from './studio/studioContent.js';
+import { shopColours, tourWhatsapp } from './studio/studioContent.js';
 import { StudioSound } from './studio/StudioSound.jsx';
 import AnalyticsPreference from './components/AnalyticsPreference.jsx';
 import './studio/tour.css';
@@ -41,14 +41,48 @@ const rooms = [
 ];
 // Literal asset paths also allow the self-contained review build to embed them.
 const roomViews = [
-  '/studio/entrance.webp',
-  '/studio/reception.webp',
-  '/studio/project-room.webp',
-  '/studio/development-studio.webp',
-  '/studio/client-review.webp',
-  '/studio/founder-office.webp',
+  ['/studio/entrance.webp', '/studio/entrance-mobile.webp'],
+  ['/studio/reception.webp', '/studio/reception-mobile.webp'],
+  ['/studio/project-room.webp', '/studio/project-room-mobile.webp'],
+  ['/studio/development-studio.webp', '/studio/development-studio-mobile.webp'],
+  ['/studio/client-review.webp', '/studio/client-review-mobile.webp'],
+  ['/studio/founder-office.webp', '/studio/founder-office-mobile.webp'],
 ];
-const poster = (index) => roomViews[index];
+const redProjectViews = ['/studio/project-room-red.webp', '/studio/project-room-red-mobile.webp'];
+
+function RoomView({ index, colour, staticPhoto = false }) {
+  const views = index === 2 && colour?.name === 'Red' ? redProjectViews : roomViews[index];
+  return (
+    <picture>
+      <source media="(max-width:760px)" srcSet={views[1]} />
+      <img
+        className={staticPhoto ? 'studio-static-photo' : 'studio-poster'}
+        src={views[0]}
+        alt={rooms[index][2]}
+        loading={staticPhoto && index > 0 ? 'lazy' : 'eager'}
+        fetchPriority={index === 0 ? 'high' : 'auto'}
+      />
+    </picture>
+  );
+}
+
+// The entrance is at the left. The central gallery runs between the work rooms
+// and finishes at the founder’s desk. Numerals correspond to the directory links.
+const planStops = [[12, 42], [63, 54], [110, 54], [161, 25], [211, 54], [262, 40]];
+function FloorPlan({ active }) {
+  return (
+    <svg className="studio-plan" viewBox="0 0 291 80" aria-hidden="true">
+      <path className="plan-footprint" d="M32 33V8H282V71H32V48 M82 8V28 M82 48V71 M133 8V28 M133 48V71 M184 8V28 M184 48V71 M235 8V28 M235 48V71" />
+      <path className="plan-route" d="M12 42H48L63 54L78 40H95L110 54L125 40H145L161 25L177 40H196L211 54L227 40H262" />
+      {planStops.map(([x, y], i) => (
+        <g key={i} className={i === active ? 'plan-current' : 'plan-stop'}>
+          <circle cx={x} cy={y} r="8.3" />
+          <text x={x} y={y} dy=".34em" textAnchor="middle">{i + 1}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
 
 function StudioMark() {
   return (
@@ -91,6 +125,7 @@ function RoomMenu({ active }) {
         <ChevronDown size={14} aria-hidden="true" />
       </summary>
       <nav aria-label="Room directory">
+        <FloorPlan active={active} />
         {rooms.map(([id, label], i) => (
           <a
             key={id}
@@ -113,6 +148,7 @@ function RoomMenu({ active }) {
 
 export default function App() {
   const [room, setRoom] = useState(0);
+  const [colour, setColour] = useState(shopColours[0]);
   const [render, setRender] = useState('still');
   const [paused, setPaused] = useState(false);
   const [limited, setLimited] = useState(false);
@@ -125,12 +161,26 @@ export default function App() {
     progress = useRef(0);
 
   useEffect(() => {
+    const restored = shopColours.find((choice) => choice.name === history.state?.studioColour);
+    if (restored) setColour(restored);
+  }, []);
+  function selectColour(choice) {
+    setColour(choice);
+    history.replaceState({ ...history.state, studioColour: choice.name }, '');
+    window.dispatchEvent(new CustomEvent('studio:product-colour', {
+      detail: { colour: choice.name, photo: choice.photo },
+    }));
+  }
+
+  useEffect(() => {
     const sections = [...chapters.current.querySelectorAll('[data-office-room]')];
     let anchors = [],
+      readingHeight = 0,
       tick = 0;
     function measure() {
       const mobile = matchMedia('(max-width:760px)').matches;
       const top = header.current.offsetHeight + (mobile ? stage.current.offsetHeight : 0);
+      readingHeight = Math.max(1, innerHeight - top);
       anchors = sections.map((el) => el.getBoundingClientRect().top + scrollY - top);
       update();
     }
@@ -138,17 +188,17 @@ export default function App() {
       tick = 0;
       const y = scrollY + 1;
       let i = 0;
-      while (i < 5 && y >= anchors[i + 1]) i++;
-      const t = i < 5 ? Math.max(0, Math.min(1, (y - anchors[i]) / (anchors[i + 1] - anchors[i]))) : 0;
-      // Hold the composition while the current brief is being read.
-      // A short wheel stroke or thumb gesture opens the door and crosses the threshold.
-      // Scale the rest of the tour by content height, including expanded brief details.
-      const travel =
-        i === 0
-          ? Math.max(0, Math.min(1, (scrollY - anchors[0]) / 130))
-          : Math.min(1, Math.max(0, (t - 0.46) / 0.54));
+      while (i + 1 < anchors.length && y >= anchors[i + 1]) i++;
+      // A short first stride opens the door. Later turns start as the last
+      // half-screen of the current room’s reading panel leaves the viewport.
+      let travel = 0;
+      if (i + 1 < anchors.length) {
+        const stride = i === 0 ? 130 : readingHeight * 0.56;
+        const start = i === 0 ? anchors[0] : anchors[i + 1] - stride;
+        travel = Math.max(0, Math.min(1, (scrollY - start) / stride));
+      }
       progress.current = i + travel;
-      setRoom(Math.min(5, Math.round(progress.current)));
+      setRoom(Math.round(progress.current));
     }
     function scroll() {
       if (!tick) tick = requestAnimationFrame(update);
@@ -238,6 +288,7 @@ export default function App() {
         <a href="#entrance" aria-label="Fazhere Studio, entrance">
           <StudioMark />
         </a>
+        <span className="studio-address"><MapPin size={15} aria-hidden="true" /> Kozhikode, Kerala</span>
         <div className="studio-header-tools">
           <RoomMenu active={room} />
           <a
@@ -255,12 +306,7 @@ export default function App() {
       <main className="studio-main" id="main" tabIndex={-1}>
         <figure className="studio-stage" ref={stage} aria-label={'Office view: ' + rooms[room][1]}>
           <div className="studio-viewport">
-            <img
-              className="studio-poster"
-              src={poster(room)}
-              alt={rooms[room][2]}
-              fetchPriority={room === 0 ? 'high' : 'auto'}
-            />
+            <RoomView index={room} colour={colour} />
             <div className="studio-canvas" ref={host} aria-hidden="true" />
             <div className="studio-media-tools">
               {canToggle && (
@@ -294,15 +340,17 @@ export default function App() {
                   aria-label={'Go to ' + label}
                   aria-current={room === i ? 'location' : undefined}
                   href={'#' + id}
+                  title={label}
                 >
                   <i />
+                  <span>{label}</span>
                 </a>
               ))}
             </nav>
           </figcaption>
         </figure>
         <div className="studio-chapters" ref={chapters}>
-          {rooms.map(([id, label, alt, aliases], i) => (
+          {rooms.map(([id, label, , aliases], i) => (
             <section
               key={id}
               id={id}
@@ -315,19 +363,15 @@ export default function App() {
                 <span key={alias} id={alias} className="studio-anchor" aria-hidden="true" />
               ))}
               <noscript>
-                <img
-                  className="studio-static-photo"
-                  src={poster(i)}
-                  alt={alt}
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                />
+                <RoomView index={i} staticPhoto />
               </noscript>
               <div className="studio-room-inner">
                 <div className="studio-place">
-                  <span />
-                  {i === 0 ? 'Kozhikode, Kerala' : label}
+                  <span aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                  <b>{label}</b>
+                  {i === 0 && <small>Kozhikode, Kerala</small>}
                 </div>
-                <RoomContent index={i} />
+                <RoomContent index={i} colour={colour} onSelectColour={selectColour} />
               </div>
             </section>
           ))}

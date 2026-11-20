@@ -52,11 +52,11 @@ export const projectStages = [
     'Review the product page on a phone. Check where the colour choices sit and how the image changes before I build the flow.',
   ],
   [
-    'Build',
+    'Working preview',
     'Try a working preview. Pick red, choose a size and add the shirt to the bag. Read the selection back from the bag.',
   ],
   [
-    'Test',
+    'Testing',
     'Check the agreed journeys together, including switching colours and trying an unavailable size. Record anything that needs a fix.',
   ],
   [

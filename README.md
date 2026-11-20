@@ -6,7 +6,7 @@ Muhammed Favas K’s React, Vite and Three.js portfolio. Visitors scroll from a 
 
 Use Node 22.12 or later. Run `npm ci`, then `npm run dev` for development. Run `npm run verify` for the unit tests, production build, prerendered routes, internal links, SEO and initial JavaScript budget. `npm run preview` serves that build.
 
-The **Fazhere Studio visual review** workflow runs the built site in desktop Chromium and phone-size WebKit. The artifact contains screenshots and lab measurements in `review.json`. Its workflow file lists the Playwright installation commands for reproducing the run locally. With the built preview running, run `node scripts/review-studio.mjs`. Set `PREVIEW_URL` or `REVIEW_OUTPUT` to choose a different origin or output directory.
+The **Fazhere Studio visual review** workflow runs the production build in desktop Chromium and in WebKit at desktop and phone sizes. Its artifact includes the interactive offline preview, screenshots and lab measurements in `review.json`. Its workflow file lists the Playwright installation commands. With the built preview running, run `node scripts/review-studio.mjs`. Set `PREVIEW_URL` or `REVIEW_OUTPUT` to choose a different origin or output directory.
 
 ## Explore and maintain the studio
 
@@ -14,7 +14,7 @@ The **Fazhere Studio visual review** workflow runs the built site in desktop Chr
 - GymDrobe’s product example uses the supplied black and red COITONIC photos. Case studies open in native dialogs and the Back button returns visitors to their place. Without JavaScript these links open the ordinary case-study pages. FABEA and Luxvibe remain independent storefront concepts.
 - The scroll layout, directory and legacy section aliases live in `src/App.jsx`; camera eye and target points are in `src/studio/cameraPath.js`. Update `buildOffice.js`, office geometry and `officePeople.js` together when moving a desk, actor or doorway. Inspect all six stops at desktop and phone aspect ratios for sightlines and clearance.
 - Update room copy, examples and exhibit links in `src/studio/RoomContent.jsx` and `studioContent.js`. Services and the WhatsApp destination come from `src/data/site.js`; project facts and email come from `src/data/portfolio.js`. Project exhibits use the shared preview manifest below.
-- The still images use the six room anchors as filenames under `public/studio/`. After a scene or camera change, use `node scripts/render-studio-stills.mjs` with the optional review browser tools installed. Set `CHROME_PATH` if using a custom Chromium executable. Check each resulting WebP with reduced motion enabled. Keep the reviewed desktop/mobile walkthrough evidence separate from these fallback assets.
+- The still images use the six room anchors as filenames under `public/studio/`. Each has a phone composition, and the GymDrobe exhibit also has red-shirt views. After a scene or camera change, run `node scripts/render-studio-stills.mjs` with the optional review browser tools installed. Set `CHROME_PATH` for a custom Chromium executable. Check the resulting WebPs with reduced motion enabled.
 - For a phone acceptance check, ask a first-time visitor who Favas is, what he built, and how to discuss a project. Observe a forward and reverse scroll, a project close, and the handoff to WhatsApp. Browser emulation checks layout and interactions; a hands-on device session assesses comfort and clarity.
 
 ## Refresh project previews

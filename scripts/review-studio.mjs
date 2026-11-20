@@ -132,11 +132,15 @@ async function exercise(page, session, name) {
     await page.locator('section[data-office-room]').evaluateAll((nodes) => nodes.map((n) => n.id).join(' ')),
     rooms.join(' '),
   );
-  const supportsWebGL = await page.evaluate(() => {
+  session.graphics = await page.evaluate(() => {
     const gl = document.createElement('canvas').getContext('webgl2');
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    return !!gl;
+    if (!gl) return null;
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER);
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return renderer;
   });
+  const supportsWebGL = session.graphics !== null;
   const target = supportsWebGL ? 'live' : 'still';
   await activeMode(page, target);
   session.opening = await state(page);
@@ -206,9 +210,12 @@ async function exercise(page, session, name) {
     'Back restores case opener focus',
   );
   assert.ok(Math.abs((await page.evaluate(() => scrollY)) - resting) < 9, 'Back restores project position');
+  assert.equal(await swatch.getAttribute('aria-pressed'), 'true', 'Back preserves the selected colour');
+  assert.notEqual(await product.getAttribute('src'), initialPhoto);
   await caseLink.click();
   await page.getByRole('button', { name: 'Close case study' }).click();
   await page.getByRole('dialog').waitFor({ state: 'detached' });
+  assert.equal(await swatch.getAttribute('aria-pressed'), 'true', 'closing preserves the selected colour');
   await page.locator('a.studio-fabea').click();
   await page.getByRole('dialog').getByRole('heading', { name: 'FABEA', exact: true }).waitFor();
   await page.keyboard.press('Escape');
@@ -219,7 +226,7 @@ async function exercise(page, session, name) {
   }
   await testContact(page, 'founder-office');
   await page.mouse.move(2, 2);
-  if (name === 'mobile-webkit') await page.keyboard.press('Home');
+  if (name.endsWith('webkit')) await page.keyboard.press('Home');
   else await page.mouse.wheel(0, -100000);
   await requiredRoom(page, 'entrance');
   assert.ok((await page.evaluate(() => scrollY)) < 10, 'native reverse scroll reaches entrance');
@@ -293,13 +300,23 @@ async function fallback(page, session, name) {
   }
   session.opening = await state(page);
   assert.equal(session.opening.canvas, false);
+  const poster = page.locator('.studio-poster');
+  const black = await poster.evaluate((img) => img.currentSrc);
+  await page.getByRole('button', { name: 'Red', exact: true }).click();
+  await page.waitForFunction((black) => {
+    const img = document.querySelector('.studio-poster');
+    return img.currentSrc !== black && img.complete && img.naturalWidth > 0;
+  }, black);
+  assert.equal((await state(page)).room, 'project-room');
   await capture(page, name + '-project-room');
   await menuJump(page, 'founder-office');
   verifyContact(await page.locator('#founder-office [data-contact="whatsapp"]').getAttribute('href'));
 }
 
 async function lowFrameRate(page, session) {
-  await page.goto(url);
+  // At the facade, a reader can leave the still composition indefinitely
+  // without spending GPU time. Exercise the adaptive tier in an occupied room.
+  await page.goto(new URL('#client-review', url).href);
   await activeMode(page, 'live');
   await page.evaluate(() => {
     // Delay only this browser page's animation callbacks; no busy loop, clock
@@ -455,6 +472,7 @@ if (!engineFilter || engineFilter === 'chromium') {
 if (!engineFilter || engineFilter === 'webkit') {
   const browser = await webkit.launch({ executablePath: process.env.WEBKIT_PATH || undefined });
   try {
+    await run(browser, 'desktop-webkit', 1440, 900);
     await run(browser, 'mobile-webkit', 390, 844);
   } finally {
     await browser.close();
