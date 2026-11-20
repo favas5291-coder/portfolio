@@ -1,0 +1,635 @@
+html:has(.vw-visit) {
+  scroll-padding: 0;
+  background: #f4f2e9;
+  color-scheme: light;
+}
+.vw-visit {
+  --vw-ink: #181a1e;
+  --vw-blue: #183fc3;
+  --vw-orange: #df571d;
+  --vw-paper: #f4f2e9;
+  --vw-rule: #bcbdb4;
+  --vw-header: 70px;
+  --vw-inset: clamp(24px, 5.2vw, 96px);
+  position: relative;
+  isolation: isolate;
+  color: var(--vw-ink);
+  background: var(--vw-paper);
+  font-family: 'Source Sans 3', Arial, sans-serif;
+  font-size: 1.075rem;
+  line-height: 1.4;
+}
+:where(.vw-header, .vw-button, .vw-footer, .vw-directory) a,
+a.vw-button {
+  text-decoration: none;
+}
+.vw-visit :where(a, button, summary):focus-visible,
+.vw-visit label:has(input:focus-visible) {
+  outline: 3px solid var(--vw-blue);
+  outline-offset: 4px;
+}
+.vw-visit ::selection {
+  background: #ffbc93;
+  color: var(--vw-ink);
+}
+.vw-header,
+.vw-signature,
+.vw-button,
+.vw-kicker,
+.vw-header-contact,
+.vw-visit h1,
+.vw-visit h2,
+.vw-visit h3,
+.vw-motion,
+.vw-location,
+.vw-text-action {
+  font-family: 'Geist', Arial, sans-serif;
+}
+.vw-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 12;
+  height: var(--vw-header);
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 3.2vw, 52px);
+  padding: 0 var(--vw-inset);
+  background: #f6f5ed;
+  border-bottom: 1px solid #22251d2c;
+}
+.vw-header > a:first-child {
+  margin-right: auto;
+}
+.vw-signature {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(1.18rem, 1.48vw, 1.67rem);
+  font-weight: 685;
+  line-height: 1;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+.vw-signature img {
+  width: 1.43em;
+  height: 1.43em;
+}
+.vw-header nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 2.6vw, 42px);
+  font-size: 0.875rem;
+  font-weight: 560;
+}
+.vw-header nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-transform: capitalize;
+}
+.vw-header nav a[aria-current],
+.vw-header nav a:hover,
+.vw-footer a:hover {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.vw-header-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 0 14px;
+  border: 1px solid #6c7169;
+  font-weight: 590;
+  font-size: 0.84rem;
+}
+.vw-header-contact:hover {
+  background: #e6e6db;
+}
+.vw-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #deded1;
+}
+.vw-scene-poster,
+.vw-scene,
+.vw-scene canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.vw-scene-poster {
+  object-fit: cover;
+}
+.vw-scene {
+  opacity: 0;
+}
+.vw-visit[data-render='live'] .vw-scene {
+  opacity: 1;
+}
+.vw-main {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+.vw-chapter {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  scroll-margin-top: 0;
+}
+.vw-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.vw-home {
+  padding: max(calc(var(--vw-header) + 38px), 17svh) var(--vw-inset) 95px;
+}
+.vw-home::before {
+  content: '';
+  position: absolute;
+  inset: var(--vw-header) 0 0;
+  pointer-events: none;
+  z-index: -1;
+  background: linear-gradient(90deg, #f5f4eced, #f5f4ecba 31%, transparent 56%);
+}
+.vw-opening-copy {
+  width: min(48%, 650px);
+}
+.vw-kicker,
+.vw-location {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.79rem;
+  font-weight: 570;
+  letter-spacing: 0.01em;
+}
+.vw-stud {
+  display: inline-block;
+  width: 15px;
+  height: 7px;
+  background: var(--vw-blue);
+}
+.vw-home h1 {
+  margin: 24px 0 18px -0.062em;
+  font-size: clamp(4.5rem, 6.95vw, 8.15rem);
+  line-height: 0.86;
+  font-weight: 630;
+  letter-spacing: -0.065em;
+}
+.vw-home h1 span,
+.vw-work-intro h2 span,
+.vw-process-intro h2 span,
+.vw-brief h2 span {
+  color: var(--vw-blue);
+}
+.vw-offer {
+  max-width: 29ch;
+  font-size: clamp(1.19rem, 1.45vw, 1.56rem);
+  line-height: 1.3;
+  letter-spacing: -0.022em;
+}
+.vw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 22px;
+  margin-top: 24px;
+}
+.vw-button,
+.vw-text-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  font-size: 0.88rem;
+  font-weight: 580;
+}
+.vw-button {
+  padding: 12px 20px;
+  border: 1px solid var(--vw-ink);
+  background: var(--vw-ink);
+  color: #fffef8;
+}
+.vw-button:hover {
+  background: var(--vw-blue);
+  border-color: var(--vw-blue);
+}
+.vw-text-action,
+.vw-email {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.vw-location {
+  position: absolute;
+  left: var(--vw-inset);
+  bottom: 28px;
+  gap: 7px;
+  font-size: 0.82rem;
+}
+.vw-work {
+  display: grid;
+  align-items: center;
+  padding: calc(var(--vw-header) + 26px) var(--vw-inset) 46px;
+}
+.vw-work-layout,
+.vw-process-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.73fr) minmax(0, 1.85fr);
+  align-items: center;
+  gap: clamp(28px, 4.4vw, 76px);
+}
+.vw-work-intro,
+.vw-process-intro {
+  position: relative;
+  padding: clamp(16px, 1.55vw, 28px) 0;
+  max-width: 26rem;
+  align-self: center;
+}
+.vw-work-intro {
+  padding: clamp(17px, 1.75vw, 30px);
+  background: #f7f5edfa;
+}
+.vw-work-intro h2,
+.vw-process-intro h2,
+.vw-brief h2 {
+  margin: 12px 0 18px -0.055em;
+  font-size: clamp(3rem, 4.5vw, 5.4rem);
+  font-weight: 600;
+  line-height: 0.96;
+  letter-spacing: -0.066em;
+}
+.vw-work-intro p:not(.vw-kicker),
+.vw-process-intro p:not(.vw-kicker) {
+  margin-top: 0.8rem;
+  font-size: clamp(1rem, 1.18vw, 1.2rem);
+  line-height: 1.38;
+  max-width: 34ch;
+}
+.vw-compact-task { display: none; }
+.vw-exhibit-slot {
+  min-width: 0;
+}
+.vw-process {
+  padding: 0;
+}
+.vw-process-layout {
+  min-height: 100svh;
+  padding: calc(var(--vw-header) + 27px) var(--vw-inset) 48px;
+}
+.vw-process-layout > .vw-review {
+  justify-self: center;
+  width: min(100%, 612px);
+  background: #f6f4ecf7;
+  border: 1px solid #b9bab1;
+  padding: clamp(16px, 1.5vw, 24px);
+}
+.vw-process-intro {
+  padding: clamp(18px, 2vw, 32px);
+  background: #f5f3eaf5;
+}
+.vw-directory {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: clamp(50px, 9vw, 160px);
+  background: var(--vw-paper);
+  border-block: 1px solid var(--vw-rule);
+  padding: clamp(52px, 8vw, 115px) var(--vw-inset);
+}
+.vw-directory [id] { scroll-margin-top: calc(var(--vw-header) + 20px); }
+.vw-directory h3 {
+  margin-bottom: 20px;
+  font-size: clamp(1.8rem, 3.2vw, 3.45rem);
+  font-weight: 550;
+  line-height: 1;
+  letter-spacing: -0.07em;
+}
+.vw-directory ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vw-directory a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  border-block-start: 1px solid var(--vw-rule);
+}
+.vw-directory li:last-child {
+  border-block-end: 1px solid var(--vw-rule);
+}
+.vw-directory a:hover strong {
+  color: var(--vw-blue);
+}
+.vw-directory a svg {
+  flex: none;
+}
+.vw-directory strong {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.vw-directory small {
+  display: block;
+  padding-top: 3px;
+  color: #50534e;
+  font-size: 1rem;
+}
+.vw-contact {
+  display: grid;
+  align-items: center;
+  padding: calc(var(--vw-header) + 30px) var(--vw-inset) 54px;
+}
+.vw-brief {
+  width: min(100%, 31rem);
+  margin-left: clamp(0px, calc(63% - 15.5rem), 100%);
+  padding: clamp(24px, 3vw, 48px);
+  border: 1px solid #c4c2b6;
+  background: #f8f7f0;
+  box-shadow: 0 9px 28px #22222212;
+}
+.vw-question {
+  max-width: 27ch;
+  font-size: clamp(1.25rem, 1.55vw, 1.55rem);
+  line-height: 1.25;
+}
+.vw-brief fieldset {
+  margin: 24px 0;
+  padding: 0;
+  border: none;
+}
+.vw-brief legend {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.vw-brief legend span {
+  font-weight: 400;
+}
+.vw-brief label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin: 2px 4px 2px 0;
+  padding: 4px 9px;
+  border: 1px solid #a2a499;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.vw-brief input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--vw-blue);
+}
+.vw-brief label:has(:checked) {
+  border-color: var(--vw-blue);
+  background: #e3e8fd;
+}
+.vw-email {
+  display: table;
+  margin-top: 15px;
+  font-size: 1rem;
+}
+.vw-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 27px var(--vw-inset) 50px;
+  border-top: 1px solid #bcbdb4;
+  background: #f6f5ed;
+}
+.vw-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+.vw-footer > div a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  font-size: 0.94rem;
+}
+.vw-footer .analytics-choice {
+  flex-basis: 100%;
+}
+.vw-motion {
+  position: fixed;
+  z-index: 5;
+  right: 18px;
+  bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 40px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid #83847c;
+  background: #f8f6edeb;
+  color: var(--vw-ink);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+@media (min-width: 741px) and (max-width: 1000px) {
+  .vw-work-layout,
+  .vw-process-layout {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.6fr);
+    gap: 18px;
+  }
+  .vw-work-intro h2,
+  .vw-process-intro h2 {
+    font-size: 3rem;
+  }
+}
+@media (max-width: 740px) {
+  .vw-wide-task { display: none; }
+  .vw-compact-task { display: block; }
+  .vw-visit {
+    --vw-header: 56px;
+    --vw-inset: clamp(17px, 5.5vw, 29px);
+  }
+  .vw-header {
+    gap: 12px;
+    padding: 0 min(4.3vw, 19px);
+  }
+  .vw-signature {
+    gap: 6px;
+    font-size: 1.08rem;
+  }
+  .vw-header nav {
+    gap: clamp(10px, 3.4vw, 21px);
+    font-size: 0.8rem;
+  }
+  .vw-header-contact {
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+    padding: 0;
+  }
+  .vw-header-contact span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+  }
+  .vw-home {
+    padding: max(calc(var(--vw-header) + 23px), 12svh) var(--vw-inset) 90px;
+  }
+  .vw-home::before {
+    background: radial-gradient(ellipse 96% 35% at 24% 15%, #f5f4eceb 25%, #f5f4ecc7 62%, transparent 100%);
+  }
+  .vw-opening-copy {
+    width: min(89%, 29rem);
+  }
+  .vw-kicker {
+    font-size: 0.73rem;
+  }
+  .vw-home h1 {
+    font-size: clamp(3.65rem, 14.9vw, 6rem);
+    margin: 16px 0 13px -0.045em;
+  }
+  .vw-offer {
+    max-width: 26ch;
+    font-size: 1.125rem;
+    line-height: 1.26;
+  }
+  .vw-actions {
+    margin-top: 15px;
+    column-gap: 17px;
+  }
+  .vw-button {
+    padding: 10px 14px;
+  }
+  .vw-button,
+  .vw-text-action {
+    font-size: 0.83rem;
+  }
+  .vw-location {
+    bottom: 26px;
+  }
+  .vw-work {
+    display: block;
+    padding: max(17svh, calc(var(--vw-header) + 42px)) var(--vw-inset) 10svh;
+  }
+  .vw-work-layout,
+  .vw-process-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .vw-work-intro,
+  .vw-process-layout > .vw-review {
+    justify-self: center;
+    width: min(100%, 612px);
+    background: #f6f4ecf7;
+    border: 1px solid #b9bab1;
+    padding: clamp(16px, 1.5vw, 24px);
+  }
+  .vw-process-intro {
+    padding: 16px;
+    background: #f7f5edfa;
+    align-self: stretch;
+    max-width: none;
+  }
+
+  .vw-work-intro h2,
+  .vw-process-intro h2 {
+    font-size: clamp(2.6rem, 11vw, 4.2rem);
+    margin: 7px 0 10px;
+  }
+  .vw-work-intro p:not(.vw-kicker),
+  .vw-process-intro p:not(.vw-kicker) {
+    margin-top: 6px;
+    line-height: 1.3;
+    max-width: none;
+  }
+  .vw-process-layout {
+    min-height: auto;
+    padding: max(26svh, calc(var(--vw-header) + 70px)) var(--vw-inset) 10svh;
+  }
+  .vw-directory {
+    grid-template-columns: 1fr;
+    gap: 35px;
+    padding-block: 42px;
+  }
+  .vw-directory h3 {
+    font-size: 2.3rem;
+    margin-bottom: 14px;
+  }
+  .vw-contact {
+    align-items: end;
+    padding: max(31svh, calc(var(--vw-header) + 75px)) var(--vw-inset) 40px;
+  }
+  .vw-brief {
+    margin-left: 0;
+    padding: clamp(19px, 5.6vw, 28px);
+  }
+  .vw-process-layout > .vw-review {
+    padding: 13px;
+  }
+  .vw-brief h2 {
+    font-size: clamp(3rem, 13vw, 4.5rem);
+  }
+  .vw-footer {
+    padding-bottom: 62px;
+  }
+  .vw-motion {
+    right: 10px;
+    bottom: 10px;
+    justify-content: center;
+    min-width: 36px;
+    padding: 0 8px;
+  }
+  .vw-motion span {
+    display: none;
+  }
+}
+@media (max-width: 355px) {
+  .vw-header {
+    gap: 8px;
+  }
+  .vw-signature {
+    font-size: 0.98rem;
+  }
+  .vw-header nav {
+    gap: 9px;
+  }
+}
+@media (max-height: 550px) and (orientation: landscape) {
+  .vw-visit {
+    --vw-header: 46px;
+  }
+  .vw-home {
+    padding-top: calc(var(--vw-header) + 18px);
+    padding-bottom: 40px;
+  }
+  .vw-home h1 {
+    font-size: clamp(3.1rem, 7.2vw, 4.8rem);
+    margin-block: 12px;
+  }
+  .vw-actions {
+    margin-top: 10px;
+  }
+  .vw-location {
+    position: static;
+    margin-top: 16px;
+  }
+}

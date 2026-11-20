@@ -1,80 +1,34 @@
-// Package a review-only copy that also works when opened from file://.
-import { build } from 'esbuild';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { dirname, extname, join, resolve } from 'node:path';
+// Package the verified Vite output itself, including prerendered pages and lazy scene modules.
+import { execFileSync } from 'node:child_process';
+import { copyFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve('.');
-const bundle = await build({
-  bundle: true, minify: true, write: false, format: 'iife', jsx: 'automatic',
-  define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' },
-  stdin: { loader: 'jsx', resolveDir: root, contents: `
-    import { createRoot } from 'react-dom/client';
-    import App from './src/App.jsx';
-    import MarketingPages from './src/MarketingPages.jsx';
-    import ContactPage from './src/fit/ContactPage.jsx';
-    import { pageForPath } from './src/seo/pages.js';
-
-    // Ordinary navigations retain Back, reload, fragments and the enquiry selection.
-    document.addEventListener('click', event => {
-      const anchor = event.target.closest('a[href]');
-      const href = anchor?.getAttribute('href');
-      if (!href?.startsWith('/') || href.startsWith('//')) return;
-      const route = new URL(href, 'https://fazhere.com');
-      if (route.pathname.startsWith('/demos/')) {
-        anchor.href = route.href;
-        return;
-      }
-      const destination = new URL(location.href);
-      destination.search = route.search;
-      if (route.pathname !== '/') destination.searchParams.set('reviewPath', route.pathname);
-      destination.hash = route.hash;
-      anchor.href = destination.href;
-    }, true);
-    const route = new URLSearchParams(location.search).get('reviewPath') || '/';
-    const page = pageForPath(route);
-    createRoot(document.getElementById('root')).render(route === '/' ? <App/> : page.path === '/contact/' ? <ContactPage/> : <MarketingPages page={page}/>);
-  ` },
-  plugins: [{name: 'use-production-styles', setup(builder) {
-    builder.onResolve({filter: /\.bin\?url&inline$/}, args => ({
-      path: resolve(args.resolveDir, args.path.split('?')[0]), namespace: 'inline-binary',
-    }));
-    builder.onLoad({filter: /.*/, namespace: 'inline-binary'}, async args => ({
-      contents: 'export default ' + JSON.stringify('data:application/octet-stream;base64,' + (await readFile(args.path)).toString('base64')),
-      loader: 'js',
-    }));
-    builder.onLoad({filter: /\.css$/}, () => ({contents: '', loader: 'js'}));
-  }}],
-});
-const home = await readFile('dist/index.html', 'utf8');
-const marketing = await readFile('dist/projects/gymdrobe/index.html', 'utf8');
-const contact = await readFile('dist/contact/index.html', 'utf8');
-const stylePaths = new Set([...(home + marketing + contact).matchAll(/<link\b[^>]*href="(\/[^"]+\.css)"[^>]*>/g)].map(match => match[1]));
-const styles = await Promise.all([...stylePaths].map(file => readFile(join(root, 'dist', file), 'utf8')));
-const types = {'.webp':'image/webp', '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.woff2':'font/woff2', '.mp3':'audio/mpeg', '.ogg':'audio/ogg'};
-const dataURIs = new Map();
-async function embed(text) {
-  // Only rooted local assets can match. External links and embedded shaders stay untouched.
-  const files = new Set([...text.matchAll(/(?:["'(])(\/[a-zA-Z0-9_./-]+\.(?:webp|png|jpg|svg|woff2|mp3|ogg))(?=["')])/g)].map(match => match[1]));
-  for (const file of files) {
-    if (!dataURIs.has(file)) dataURIs.set(file, 'data:' + types[extname(file)] + ';base64,' + (await readFile(join(root, 'dist', file))).toString('base64'));
-    text = text.replaceAll(file, dataURIs.get(file));
-  }
-  return text;
+const root = fileURLToPath(new URL('../', import.meta.url));
+const archive = resolve(process.argv[2] || 'visual-checks/variable-width-preview.tar.gz');
+if (!archive.endsWith('.tar.gz') || archive.startsWith(join(root, 'dist') + sep)) {
+  throw new Error('Choose an output .tar.gz file outside dist.');
 }
-const icon = await embed('<link rel="icon" type="image/png" href="/favicon-32.png">');
-const html = '<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Fazhere Studio · Interactive tour</title>' + icon + '<style>' +
-  (await embed(styles.join('\n'))).replace(/@import\s+[^;]*;/g,'') +
-  '</style></head><body><div id="root"></div><script>' +
-  (await embed(bundle.outputFiles[0].text)).replace(/<\/script/gi,'<\\/script') + '</script></body></html>';
-const output = resolve(process.argv[2] || 'visual-checks/Fazhere-Studio-Preview.html');
-await mkdir(dirname(output), {recursive: true});
-await writeFile(output, html);
-if (!process.argv[2]) await writeFile(join(dirname(output), 'README.txt'), [
-  'Fazhere Studio review',
-  '',
-  'Open Fazhere-Studio-Preview.html in a browser for an offline copy of the portfolio. Scroll to visit all six rooms or choose one from the directory. In the project room, switch the product colour or open a case study. Its links to the public stores and WhatsApp need an internet connection.',
-  '',
-  'External stores, demos, and contact links need an internet connection.',
-  '',
-].join('\n'));
-console.log('Standalone review:', output, '(' + Buffer.byteLength(html) + ' bytes)');
+const home = await readFile(join(root, 'dist/index.html'), 'utf8');
+if (!home.includes('id="work"') || !home.includes('id="contact"')) {
+  throw new Error('Run npm run build first to produce the prerendered Variable Width visit.');
+}
+await mkdir(dirname(archive), { recursive: true });
+const staging = await mkdtemp(join(dirname(archive), '.variable-width-'));
+try {
+  await copyFile(new URL('./serve-review.mjs', import.meta.url), join(staging, 'serve.mjs'));
+  await writeFile(join(staging, 'README.txt'), [
+    'Fazhere Studio — Variable Width', '',
+    'Extract the archive. With Node.js 22 installed, open a terminal in the extracted directory and run:',
+    '    node serve.mjs', 'Open http://127.0.0.1:4173/ in your browser. Press Ctrl+C to stop.',
+    'To choose another port, pass its number after serve.mjs.', '',
+    'The dist directory contains the production website. The local tour and project exhibits work without internet.',
+    'Links to the live store, project source, and WhatsApp open their usual destinations.', '',
+  ].join('\n'));
+  const temporaryArchive = join(staging, 'preview.tar.gz');
+  execFileSync('tar', ['-czf', temporaryArchive, '-C', root, 'dist', '-C', staging, 'serve.mjs', 'README.txt']);
+  await rename(temporaryArchive, archive);
+  console.log('Packaged production preview at ' + archive);
+} finally {
+  await rm(staging, { recursive: true, force: true });
+}

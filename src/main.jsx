@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { pageForPath } from './seo/pages.js';
 import { initAnalytics } from './seo/analytics.js';
-import './styles.css';
+import './variable/base.css';
 
 async function start() {
   const page = pageForPath(location.pathname);

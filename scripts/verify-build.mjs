@@ -12,9 +12,11 @@ import { pageEntry } from './page-entry.mjs';
 const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
 const preview = isPreview(env);
 const home = await readFile('dist/index.html', 'utf8');
-for (const chapter of chapters) assert.ok(home.includes(`id="${chapter.id}"`), `Missing chapter ${chapter.id}`);
+for (const id of new Set([...chapters.map(chapter => chapter.id), 'work', 'process'])) {
+  assert.ok(home.includes(`id="${id}"`), `Missing visit anchor ${id}`);
+}
 for (const url of [`mailto:${profile.email}`, profile.github, profile.linkedin, project.website, project.repository, 'tel:+918156805806', 'https://wa.me/918156805806']) assert.ok(home.includes(url), `Missing contact/project link: ${url}`);
-for (const asset of [project.screenshot, '/environment/forge-studio.hdr', '/social-card.png', '/favicon.svg']) assert.ok((await stat(`dist${asset}`)).size > 0);
+for (const asset of [project.screenshot, '/variable/arrival.webp', '/variable/arrival-mobile.webp', '/variable/studio-mark.svg', '/social-card.png', '/favicon.svg']) assert.ok((await stat(`dist${asset}`)).size > 0);
 const rendered = new Map();
 for (const page of pages) {
   const file = page.path === '/' ? 'dist/index.html' : `dist${page.path}index.html`;
