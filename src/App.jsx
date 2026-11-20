@@ -134,7 +134,7 @@ function RoomMenu({ active }) {
             onClick={(event) => {
               if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
               menu.current.open = false;
-              requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
+              document.getElementById(id)?.focus({ preventScroll: true });
             }}
           >
             <small>{String(i + 1).padStart(2, '0')}</small>
