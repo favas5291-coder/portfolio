@@ -1,0 +1,20 @@
+HTTP 200, release content and correct canonical /
+HTTP 200, release content and correct canonical /services/
+HTTP 200, release content and correct canonical /services/business-websites/
+HTTP 200, release content and correct canonical /services/ecommerce-development/
+HTTP 200, release content and correct canonical /services/landing-pages/
+HTTP 200, release content and correct canonical /services/website-redesign/
+HTTP 200, release content and correct canonical /projects/gymdrobe/
+HTTP 200, release content and correct canonical /projects/luxvibe/
+HTTP 200, release content and correct canonical /projects/fabea/
+HTTP 200, release content and correct canonical /contact/
+HTTP 200, release content and correct canonical /privacy/
+Clean URL resolves with canonical /services
+Clean URL resolves with canonical /services/business-websites
+Clean URL resolves with canonical /contact
+Missing public URL returns HTTP 404
+Verified /robots.txt
+Verified /sitemap.xml
+Verified /services/?utm_source=verification
+Verified redirect http://fazhere.com/ to https://fazhere.com/
+Verified redirect https://www.fazhere.com/ to https://fazhere.com/

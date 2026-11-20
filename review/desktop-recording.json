@@ -1,0 +1,116 @@
+{
+  "revision": "335c284",
+  "engine": "WebKit 26.5",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "manualResume": true,
+  "steps": [
+    {
+      "step": "Opening",
+      "at": 0.8780000000000001,
+      "state": {
+        "stop": "home",
+        "mode": "live",
+        "progress": "0.000",
+        "aperture": "1.400",
+        "range": "100",
+        "tier": "0",
+        "scroll": 0,
+        "stagePicture": "http://127.0.0.1:4207/variable/arrival.webp",
+        "hash": ""
+      }
+    },
+    {
+      "step": "First 120px",
+      "at": 3.458,
+      "state": {
+        "stop": "home",
+        "mode": "live",
+        "progress": "0.252",
+        "aperture": "1.699",
+        "range": "100",
+        "tier": "2",
+        "scroll": 120,
+        "stagePicture": "http://127.0.0.1:4207/variable/arrival.webp",
+        "hash": ""
+      }
+    },
+    {
+      "step": "Wide collection",
+      "at": 7.051000000000001,
+      "state": {
+        "stop": "work",
+        "mode": "live",
+        "progress": "1.000",
+        "aperture": "5.205",
+        "range": "100",
+        "tier": "2",
+        "scroll": 861,
+        "stagePicture": "http://127.0.0.1:4207/variable/work.webp",
+        "hash": ""
+      }
+    },
+    {
+      "step": "Wide details",
+      "at": 8.646999999999998,
+      "state": {
+        "stop": "work",
+        "mode": "live",
+        "progress": "1.000",
+        "aperture": "5.205",
+        "range": "100",
+        "tier": "2",
+        "scroll": 861,
+        "stagePicture": "http://127.0.0.1:4207/variable/work.webp",
+        "hash": ""
+      }
+    },
+    {
+      "step": "Compact details",
+      "at": 11.803999999999998,
+      "state": {
+        "stop": "work",
+        "mode": "live",
+        "progress": "1.000",
+        "aperture": "1.799",
+        "range": "0",
+        "tier": "2",
+        "scroll": 861,
+        "stagePicture": "http://127.0.0.1:4207/variable/work-compact.webp",
+        "hash": ""
+      }
+    },
+    {
+      "step": "Client proposal",
+      "at": 15.851000000000003,
+      "state": {
+        "stop": "process",
+        "mode": "live",
+        "progress": "1.832",
+        "aperture": "1.900",
+        "range": "0",
+        "tier": "2",
+        "scroll": 1732,
+        "stagePicture": "http://127.0.0.1:4207/variable/process.webp",
+        "hash": ""
+      }
+    },
+    {
+      "step": "Contact",
+      "at": 19.418000000000003,
+      "state": {
+        "stop": "contact",
+        "mode": "live",
+        "progress": "2.832",
+        "aperture": "3.160",
+        "range": "0",
+        "tier": "2",
+        "scroll": 3255,
+        "stagePicture": "http://127.0.0.1:4207/variable/contact.webp",
+        "hash": ""
+      }
+    }
+  ]
+}

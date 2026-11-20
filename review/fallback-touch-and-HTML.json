@@ -1,0 +1,157 @@
+{
+  "revision": "335c284",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "checks": {
+    "server-first-response": {
+      "title": "Muhammed Favas K, Freelance Web Developer | Fazhere Studio",
+      "openingPosters": [
+        {
+          "url": "http://127.0.0.1:4207/variable/arrival-mobile.webp",
+          "pixels": 780
+        },
+        {
+          "url": "http://127.0.0.1:4207/variable/arrival-mobile.webp",
+          "pixels": 780
+        },
+        {
+          "url": "http://127.0.0.1:4207/variable/work-mobile.webp",
+          "pixels": 780
+        },
+        {
+          "url": "http://127.0.0.1:4207/variable/process-mobile.webp",
+          "pixels": 780
+        },
+        {
+          "url": "http://127.0.0.1:4207/variable/contact-mobile.webp",
+          "pixels": 780
+        }
+      ],
+      "caseHref": "/projects/gymdrobe/"
+    },
+    "single-thumb-on-grip": {
+      "vertical": {
+        "scroll": [
+          1180,
+          1297
+        ],
+        "range": [
+          50,
+          50
+        ]
+      },
+      "horizontal": {
+        "scroll": [
+          1180,
+          1180
+        ],
+        "range": [
+          50,
+          100
+        ]
+      }
+    },
+    "reduced-motion": {
+      "views": [
+        {
+          "src": "http://127.0.0.1:4207/variable/arrival-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/work-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/process-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/contact-mobile.webp",
+          "width": 780,
+          "visible": true
+        }
+      ],
+      "widths": [
+        304,
+        610
+      ],
+      "contact": {
+        "number": "918156805806",
+        "text": "Hi Favas, I’d like to discuss a project for my business."
+      },
+      "attempted": 0
+    },
+    "no-webgl": {
+      "views": [
+        {
+          "src": "http://127.0.0.1:4207/variable/arrival-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/work-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/process-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/contact-mobile.webp",
+          "width": 780,
+          "visible": true
+        }
+      ],
+      "widths": [
+        304,
+        610
+      ],
+      "contact": {
+        "number": "918156805806",
+        "text": "Hi Favas, I’d like to discuss a project for my business."
+      },
+      "attempted": 2
+    },
+    "context-loss": {
+      "views": [
+        {
+          "src": "http://127.0.0.1:4207/variable/arrival-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/work-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/process-mobile.webp",
+          "width": 780,
+          "visible": true
+        },
+        {
+          "src": "http://127.0.0.1:4207/variable/contact-mobile.webp",
+          "width": 780,
+          "visible": true
+        }
+      ],
+      "widths": [
+        304,
+        610
+      ],
+      "contact": {
+        "number": "918156805806",
+        "text": "Hi Favas, I’d like to discuss a project for my business."
+      },
+      "attempted": null
+    }
+  },
+  "errors": []
+}

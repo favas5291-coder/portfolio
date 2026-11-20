@@ -1,0 +1,85 @@
+{
+  "engine": "chromium-desktop",
+  "version": "156.0.8078.79",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "dpr": 1,
+  "build": "335c284",
+  "endpoint": "http://127.0.0.1:4207/",
+  "configuration": "Chromium ANGLE SwiftShader software rendering.",
+  "network": "Uncompressed local HTTP, cold browser contexts, no network/CPU shaping, no recording during measurements.",
+  "host": "Debian 13 KVM, Intel Xeon Platinum 8573C, 4-vCPU quota, no /dev/dri.",
+  "buffers": [
+    {
+      "time": 1883,
+      "width": 536,
+      "height": 335,
+      "tier": "0"
+    },
+    {
+      "time": 4542,
+      "width": 304,
+      "height": 190,
+      "tier": "2"
+    }
+  ],
+  "modes": [
+    {
+      "time": 632,
+      "mode": "still"
+    },
+    {
+      "time": 2600,
+      "mode": "live"
+    },
+    {
+      "time": 4932,
+      "mode": "still"
+    }
+  ],
+  "html": 632,
+  "poster": 632,
+  "live": 2600,
+  "started": 2612,
+  "stop": "work",
+  "finish": 9296,
+  "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "navigation": {
+    "fcp": 1648,
+    "domContentLoaded": 374,
+    "load": 657.1999999992549,
+    "requestsByFirstLive": 19,
+    "transferKiBByFirstLive": 1087
+  },
+  "animationFrameIntervals": {
+    "live": {
+      "samples": 8,
+      "p50ms": 250,
+      "p95ms": 1099.9,
+      "maxMs": 1099.9,
+      "above50ms": 4
+    },
+    "still": {
+      "samples": 153,
+      "p50ms": 16.7,
+      "p95ms": 66.6,
+      "maxMs": 500,
+      "above50ms": 12
+    }
+  },
+  "webglDrawIntervals": {
+    "samples": 4,
+    "p50ms": 19,
+    "p95ms": 780,
+    "maxMs": 780,
+    "above50ms": 1
+  },
+  "interaction": {
+    "method": "Fresh separate context, navigate directly to #work and click View details as soon as Playwright can act. Measure navigation start to observed details state.",
+    "firstAttemptMs": 1340,
+    "acknowledgedMs": 2997,
+    "attempts": 1
+  }
+}

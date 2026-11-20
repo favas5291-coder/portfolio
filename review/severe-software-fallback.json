@@ -1,0 +1,17 @@
+{
+  "build": "335c284",
+  "browser": "151.0.7922.34",
+  "viewport": "390x844",
+  "conditions": "Chromium with software SwiftShader, 2350ms callback delays while the page scrolls in the foreground.",
+  "visibility": "visible",
+  "widths": [
+    288,
+    163
+  ],
+  "gaps": [
+    2534,
+    2221
+  ],
+  "mode": "still",
+  "canvas": false
+}

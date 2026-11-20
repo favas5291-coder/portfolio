@@ -1,0 +1,376 @@
+{
+  "scenario": "webkit-desktop",
+  "origin": "http://127.0.0.1:4207/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "revision": "335c284",
+  "checks": {
+    "opening": {
+      "heading": "Muhammed\nFavas K.",
+      "offer": "I build websites, online stores, and web apps for businesses.",
+      "mode": "still"
+    },
+    "small-scroll-and-reverse": {
+      "before": {
+        "stop": "home",
+        "mode": "live",
+        "progress": "0.000",
+        "aperture": "1.400",
+        "range": "100",
+        "tier": "0",
+        "scroll": 0,
+        "stagePicture": "http://127.0.0.1:4207/variable/arrival.webp",
+        "hash": ""
+      },
+      "crossed": {
+        "stop": "home",
+        "mode": "live",
+        "progress": "0.252",
+        "aperture": "1.699",
+        "range": "100",
+        "tier": "2",
+        "scroll": 120,
+        "stagePicture": "http://127.0.0.1:4207/variable/arrival.webp",
+        "hash": ""
+      },
+      "back": {
+        "stop": "home",
+        "mode": "live",
+        "progress": "0.000",
+        "aperture": "1.400",
+        "range": "100",
+        "tier": "2",
+        "scroll": 0,
+        "stagePicture": "http://127.0.0.1:4207/variable/arrival.webp",
+        "hash": ""
+      }
+    },
+    "entrance-whatsapp": {
+      "number": "918156805806",
+      "text": "Hi Favas, I’d like to discuss a project for my business."
+    },
+    "selected-product-responsive-reflow": {
+      "wide": {
+        "width": 880,
+        "container": {
+          "x": 485,
+          "y": 236,
+          "width": 880,
+          "height": 382,
+          "gridArea": "auto",
+          "order": "0"
+        },
+        "product": {
+          "x": 485,
+          "y": 282,
+          "width": 880,
+          "height": 336,
+          "gridArea": "auto",
+          "order": "0"
+        },
+        "columns": "444.34375px 435.65625px",
+        "rows": "132.75px 87.25px 116px",
+        "areas": "\"photo title\" \"photo specs\" \"photo action\"",
+        "view": "details",
+        "colour": "Red",
+        "img": {
+          "x": 485,
+          "y": 282,
+          "width": 444,
+          "height": 336,
+          "gridArea": "auto",
+          "order": "0"
+        },
+        "cta": {
+          "x": 965,
+          "y": 502,
+          "width": 365,
+          "height": 44,
+          "gridArea": "action",
+          "order": "0"
+        },
+        "children": [
+          {
+            "name": "vw-product-photo",
+            "rect": {
+              "x": 485,
+              "y": 282,
+              "width": 444,
+              "height": 336,
+              "gridArea": "photo",
+              "order": "0"
+            }
+          },
+          {
+            "name": "vw-product-title",
+            "rect": {
+              "x": 965,
+              "y": 282,
+              "width": 365,
+              "height": 133,
+              "gridArea": "title",
+              "order": "0"
+            }
+          },
+          {
+            "name": "vw-product-spec",
+            "rect": {
+              "x": 965,
+              "y": 414,
+              "width": 365,
+              "height": 87,
+              "gridArea": "specs",
+              "order": "0"
+            }
+          },
+          {
+            "name": "vw-product-action",
+            "rect": {
+              "x": 965,
+              "y": 502,
+              "width": 365,
+              "height": 44,
+              "gridArea": "action",
+              "order": "0"
+            }
+          }
+        ],
+        "range": 100,
+        "scrollWidth": 1440,
+        "viewport": 1440
+      },
+      "compact": {
+        "width": 304,
+        "container": {
+          "x": 773,
+          "y": 236,
+          "width": 304,
+          "height": 382,
+          "gridArea": "auto",
+          "order": "0"
+        },
+        "product": {
+          "x": 773,
+          "y": 275,
+          "width": 304,
+          "height": 343,
+          "gridArea": "auto",
+          "order": "0"
+        },
+        "columns": "304px",
+        "rows": "86.140625px 148.3125px 64.546875px 44px",
+        "areas": "\"title\" \"photo\" \"specs\" \"action\"",
+        "view": "details",
+        "colour": "Red",
+        "img": {
+          "x": 773,
+          "y": 361,
+          "width": 304,
+          "height": 148,
+          "gridArea": "auto",
+          "order": "0"
+        },
+        "cta": {
+          "x": 773,
+          "y": 574,
+          "width": 304,
+          "height": 44,
+          "gridArea": "action",
+          "order": "0"
+        },
+        "children": [
+          {
+            "name": "vw-product-photo",
+            "rect": {
+              "x": 773,
+              "y": 361,
+              "width": 304,
+              "height": 148,
+              "gridArea": "photo",
+              "order": "0"
+            }
+          },
+          {
+            "name": "vw-product-title",
+            "rect": {
+              "x": 785,
+              "y": 275,
+              "width": 280,
+              "height": 86,
+              "gridArea": "title",
+              "order": "0"
+            }
+          },
+          {
+            "name": "vw-product-spec",
+            "rect": {
+              "x": 785,
+              "y": 509,
+              "width": 280,
+              "height": 65,
+              "gridArea": "specs",
+              "order": "0"
+            }
+          },
+          {
+            "name": "vw-product-action",
+            "rect": {
+              "x": 773,
+              "y": 574,
+              "width": 304,
+              "height": 44,
+              "gridArea": "action",
+              "order": "0"
+            }
+          }
+        ],
+        "range": 0,
+        "scrollWidth": 1440,
+        "viewport": 1440
+      },
+      "sceneWide": {
+        "progress": "1.000",
+        "renderTier": "2",
+        "sceneProgress": "1.000",
+        "aperture": "5.205"
+      },
+      "sceneNarrow": {
+        "progress": "1.000",
+        "renderTier": "2",
+        "sceneProgress": "1.000",
+        "aperture": "5.205"
+      },
+      "selected": "/images/projects/gymdrobe-shirt-red.webp",
+      "keyboardEnd": 100
+    },
+    "case-Back-close-focus-scroll": {
+      "initialY": 900,
+      "backY": 900,
+      "closeY": 900,
+      "selected": "Red",
+      "width": 304
+    },
+    "drag-grip": {
+      "start": 100,
+      "end": 24,
+      "before": {
+        "stop": "work",
+        "mode": "still",
+        "progress": "1.000",
+        "aperture": "5.205",
+        "range": "100",
+        "tier": "2",
+        "scroll": 900,
+        "stagePicture": "http://127.0.0.1:4207/variable/work.webp",
+        "hash": "#work"
+      },
+      "after": {
+        "stop": "work",
+        "mode": "still",
+        "progress": "1.000",
+        "aperture": "5.205",
+        "range": "24",
+        "tier": "2",
+        "scroll": 900,
+        "stagePicture": "http://127.0.0.1:4207/variable/work-compact.webp",
+        "hash": "#work"
+      }
+    },
+    "perpendicular-wall-proposals": {
+      "inline": {
+        "x": 673.90625,
+        "y": 315.921875,
+        "width": 240,
+        "height": 300
+      },
+      "pinned": {
+        "x": 936.578125,
+        "y": 315.921875,
+        "width": 240,
+        "height": 300
+      },
+      "synchronizedInspection": [
+        "image",
+        "details"
+      ],
+      "text": "Design review\n\nReview the layout.\n\nWhen the product image fills a phone screen, where should the shopping action go? Compare two illustrative proposals and choose the placement you’d approve for your store.\n\nProduct image\nProduct details\nGymDrobe\nCompression Half Sleeves T-shirt\nCoitonic · Black\n\nClose-fitting nylon–spandex. 180 GSM.\n\nShop this tee\nAfter the details\n\nRead the fit and fabric before reaching the shop link.\n\nGymDrobe\nCompression Half Sleeves T-shirt\nCoitonic · Black\n\nClose-fitting nylon–spandex. 180 GSM.\n\nShop this tee\nAt the screen edge\n\nKeep the shop link in reach while reading.\n\nServices\nBusiness websites\nHelp customers understand your business and take the next step.\nE-commerce development\nConnect product browsing, selection and checkout in one store.\nLanding pages\nGive one offer one focused page and a clear enquiry action.\nWebsite redesign\nImprove an existing site’s clarity, mobile layout and enquiry flow.\nOther projects\nFABEA\nAn editorial bags and heels storefront concept.\nLuxvibe\nA boutique shopping concept with a WhatsApp enquiry bag."
+    },
+    "services-project-routes": [
+      [
+        "Business websitesHelp customers understand your business and take the next step.",
+        "/services/business-websites/"
+      ],
+      [
+        "E-commerce developmentConnect product browsing, selection and checkout in one store.",
+        "/services/ecommerce-development/"
+      ],
+      [
+        "Landing pagesGive one offer one focused page and a clear enquiry action.",
+        "/services/landing-pages/"
+      ],
+      [
+        "Website redesignImprove an existing site’s clarity, mobile layout and enquiry flow.",
+        "/services/website-redesign/"
+      ],
+      [
+        "FABEAAn editorial bags and heels storefront concept.",
+        "/projects/fabea/"
+      ],
+      [
+        "LuxvibeA boutique shopping concept with a WhatsApp enquiry bag.",
+        "/projects/luxvibe/"
+      ]
+    ],
+    "editable-contact-drafts": {
+      "drafts": {
+        "initial": {
+          "number": "918156805806",
+          "text": "Hi Favas, I’d like to discuss a project for my business."
+        },
+        "Website": "Hi Favas, I’d like to discuss a website for my business.",
+        "Online store": "Hi Favas, I’d like to discuss an online store for my business.",
+        "Web app": "Hi Favas, I’d like to discuss a web app for my business.",
+        "selected": {
+          "number": "918156805806",
+          "text": "Hi Favas, I’d like to discuss a web app for my business."
+        }
+      },
+      "email": "mailto:favas5291@gmail.com"
+    },
+    "fresh-fragments-and-keyboard": {
+      "work": {
+        "stop": "work",
+        "mode": "still",
+        "progress": "1.000",
+        "range": "100",
+        "scroll": 900,
+        "stagePicture": "http://127.0.0.1:4207/variable/work.webp",
+        "hash": "#work"
+      },
+      "process": {
+        "stop": "process",
+        "mode": "still",
+        "progress": "2.000",
+        "range": "100",
+        "scroll": 1800,
+        "stagePicture": "http://127.0.0.1:4207/variable/process.webp",
+        "hash": "#process"
+      },
+      "contact": {
+        "stop": "contact",
+        "mode": "still",
+        "progress": "3.000",
+        "range": "100",
+        "scroll": 3323,
+        "stagePicture": "http://127.0.0.1:4207/variable/contact.webp",
+        "hash": "#contact"
+      }
+    }
+  },
+  "failures": [],
+  "pageErrors": [],
+  "resourceErrors": [],
+  "browser": "26.5"
+}

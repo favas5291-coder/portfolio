@@ -1,0 +1,20 @@
+{
+  "commit": "335c28482ed1b299e144ce1c550cc7b7963e852b",
+  "renderBuild": "scene-DBW9sesC.js",
+  "hashes": {
+    "index.html": "8fff4fad49f9cb18915455c6fb1e9a13fb37261d7b856ae3ee7833201044af3a",
+    "assets/scene-DBW9sesC.js": "8c700ce169411bf52ddc80af41f3223e0a91c2a77f36545da8370ed37a846504",
+    "assets/App-BB0pEB-X.js": "e0fa78aeb2adb41ea488513ed6a4ba8935c50f7907df601954fc13d9cfef8746",
+    "variable/contact-mobile.webp": "e76189b247a08473b7748db143e27937b26e456aa7029069ab99b7f3c8324abf",
+    "variable/contact.webp": "294aa2e550f2330f00e00712253191d90ac76c0e5b4a1b4206e4a4452a326f17",
+    "variable/arrival.webp": "13ebb3c5ff7a7e25ce6ecff7697d079bf13994ac50f88625b17cef444aa14e9e",
+    "variable/work-wide-mobile.webp": "1774ca084f84b2412f69712d7fd0ea2c78b2ef0c6ee4b2d203908bc20e6cca72",
+    "variable/arrival-mobile.webp": "9659c68b0ac99ea66d4be516ff3189e679e4df22f8954b468ac10df65903619c",
+    "variable/linoleum.webp": "ce14d0e6ffa95c478952d74c3e38e15735a46e6fc5a74a2962a0afd9e4490436",
+    "variable/work-mobile.webp": "c8b9e03841268e5cad559b0aec9e4531b0d70043df26b301eda4aa9c99fb934e",
+    "variable/process-mobile.webp": "dfc6089ebf18ba8824566fd9dcc43e3a1ff4e9531991356f106cff15c81ceb8b",
+    "variable/process.webp": "f911ac962950d9ae8c9296cc1c4461f1acdf2859bfba05191f8f0a7d4ab04edf",
+    "variable/work.webp": "6394950b91d5862015ea06d23056e6a850ca395a2b9afea31bc7021fea11206d",
+    "variable/work-compact.webp": "688aab12db5e51970466041b886f1ca8932b061895075c53f7869ab81779897f"
+  }
+}

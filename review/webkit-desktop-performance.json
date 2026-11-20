@@ -1,0 +1,85 @@
+{
+  "engine": "webkit-desktop",
+  "version": "26.5",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "dpr": 1,
+  "build": "335c284",
+  "endpoint": "http://127.0.0.1:4207/",
+  "configuration": "WPE WebKit Linux, forced Mesa llvmpipe software rendering. WebKit may mask its GPU string.",
+  "network": "Uncompressed local HTTP, cold browser contexts, no network/CPU shaping, no recording during measurements.",
+  "host": "Debian 13 KVM, Intel Xeon Platinum 8573C, 4-vCPU quota, no /dev/dri.",
+  "buffers": [
+    {
+      "time": 2082,
+      "width": 1440,
+      "height": 900,
+      "tier": "0"
+    },
+    {
+      "time": 3779,
+      "width": 536,
+      "height": 335,
+      "tier": "2"
+    }
+  ],
+  "modes": [
+    {
+      "time": 269,
+      "mode": "still"
+    },
+    {
+      "time": 3068,
+      "mode": "live"
+    },
+    {
+      "time": 3888,
+      "mode": "still"
+    }
+  ],
+  "html": 269,
+  "poster": 269,
+  "live": 3068,
+  "started": 3076,
+  "stop": "work",
+  "finish": 9625,
+  "gpu": "Apple GPU",
+  "navigation": {
+    "fcp": 270,
+    "domContentLoaded": 523,
+    "load": 535,
+    "requestsByFirstLive": 18,
+    "transferKiBByFirstLive": 1084
+  },
+  "animationFrameIntervals": {
+    "live": {
+      "samples": 4,
+      "p50ms": 274,
+      "p95ms": 337,
+      "maxMs": 337,
+      "above50ms": 3
+    },
+    "still": {
+      "samples": 258,
+      "p50ms": 17,
+      "p95ms": 47,
+      "maxMs": 117,
+      "above50ms": 9
+    }
+  },
+  "webglDrawIntervals": {
+    "samples": 2,
+    "p50ms": 488,
+    "p95ms": 488,
+    "maxMs": 488,
+    "above50ms": 2
+  },
+  "interaction": {
+    "method": "Fresh separate context, navigate directly to #work and click View details as soon as Playwright can act. Measure navigation start to observed details state.",
+    "firstAttemptMs": 364,
+    "acknowledgedMs": 612,
+    "attempts": 1
+  }
+}

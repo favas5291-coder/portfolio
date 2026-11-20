@@ -1,0 +1,82 @@
+[
+  {
+    "path": "/",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "79fb3937-ede5-4ec9",
+    "cache": "HIT"
+  },
+  {
+    "path": "/contact/",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "be9b9826-1c98-4a6c",
+    "cache": "MISS"
+  },
+  {
+    "path": "/projects/gymdrobe/",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "fadd6480-fbb3-42bc",
+    "cache": "MISS"
+  },
+  {
+    "path": "/services/",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "695dfd20-a6c2-492d",
+    "cache": "MISS"
+  },
+  {
+    "path": "/privacy/",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "efc9d470-8571-4f9c",
+    "cache": "MISS"
+  },
+  {
+    "path": "/assets/index-DGlxrnIU.js",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "42d88d4f-f179-4a44",
+    "cache": "MISS"
+  },
+  {
+    "path": "/variable/arrival.webp",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "1b111ec4-53b3-455e",
+    "cache": "MISS"
+  },
+  {
+    "path": "/variable/arrival-mobile.webp",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "beeb2626-aa5e-4593",
+    "cache": "MISS"
+  },
+  {
+    "path": "/variable/work.webp",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "94a54fa6-6671-465e",
+    "cache": "MISS"
+  },
+  {
+    "path": "/variable/studio-mark.svg",
+    "HTTP": 200,
+    "confirmed": true,
+    "servedBy": "envoy",
+    "renderId": "139ecbdd-2c01-4db2",
+    "cache": "MISS"
+  }
+]

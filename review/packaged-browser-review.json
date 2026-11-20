@@ -1,0 +1,160 @@
+{
+  "commit": "51a8ecf27c1996162f4a2bbb4e8214b4fa4f52c3",
+  "origin": "http://127.0.0.1:4191",
+  "sessions": [
+    {
+      "name": "chromium-desktop",
+      "browser": "151.0.7922.34",
+      "width": 1440,
+      "height": 900,
+      "errors": [],
+      "hydratedInteractiveControlsMs": 578,
+      "opening": {
+        "firstContentfulPaintMs": 664,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "mode": "live",
+        "scrollWidth": 1440,
+        "viewport": 1440
+      },
+      "initialWhatsApp": "Hi Favas, I’d like to discuss a project for my business.",
+      "scrollFrames": {
+        "samples": 10,
+        "medianMs": 66.7,
+        "p95Ms": 250,
+        "worstMs": 433.3
+      },
+      "wide": {
+        "width": 880,
+        "columns": 2,
+        "sideBySide": true,
+        "stacked": false,
+        "view": "details",
+        "colour": "Red"
+      },
+      "compact": {
+        "width": 304,
+        "columns": 1,
+        "sideBySide": false,
+        "stacked": true,
+        "view": "details",
+        "colour": "Red"
+      },
+      "contactDrafts": {
+        "initial": "Hi Favas, I’d like to discuss a project for my business.",
+        "Website": "Hi Favas, I’d like to discuss a website for my business.",
+        "Online store": "Hi Favas, I’d like to discuss an online store for my business.",
+        "Web app": "Hi Favas, I’d like to discuss a web app for my business."
+      },
+      "result": "pass"
+    },
+    {
+      "name": "touch-rail",
+      "browser": "151.0.7922.34",
+      "width": 390,
+      "height": 844,
+      "errors": [],
+      "touchHit": {
+        "start": {
+          "x": 115.4375,
+          "y": 422
+        },
+        "end": {
+          "x": 299.5625,
+          "y": 422
+        },
+        "startTarget": "vw-touch-grip",
+        "endTarget": "vw-touch-grip",
+        "scroll": 1180
+      },
+      "draggedValue": 100,
+      "result": "pass"
+    },
+    {
+      "name": "context-loss",
+      "browser": "151.0.7922.34",
+      "width": 1440,
+      "height": 900,
+      "errors": [],
+      "liveAperture": {
+        "wide": 5.205,
+        "compact": 1.799
+      },
+      "result": "pass"
+    },
+    {
+      "name": "no-webgl",
+      "browser": "151.0.7922.34",
+      "width": 390,
+      "height": 844,
+      "errors": [],
+      "result": "pass"
+    },
+    {
+      "name": "slow-renderer",
+      "browser": "151.0.7922.34",
+      "width": 390,
+      "height": 844,
+      "errors": [],
+      "bufferWidths": [
+        288,
+        220,
+        163
+      ],
+      "result": "pass"
+    },
+    {
+      "name": "webkit-mobile-emulation",
+      "browser": "26.5",
+      "width": 390,
+      "height": 844,
+      "errors": [],
+      "hydratedInteractiveControlsMs": 464,
+      "opening": {
+        "firstContentfulPaintMs": 264,
+        "renderer": null,
+        "mode": "still",
+        "scrollWidth": 390,
+        "viewport": 390
+      },
+      "initialWhatsApp": "Hi Favas, I’d like to discuss a project for my business.",
+      "scrollFrames": {
+        "samples": 11,
+        "medianMs": 126,
+        "p95Ms": 165,
+        "worstMs": 169
+      },
+      "wide": {
+        "width": 610,
+        "columns": 2,
+        "sideBySide": true,
+        "stacked": false,
+        "view": "details",
+        "colour": "Red"
+      },
+      "compact": {
+        "width": 304,
+        "columns": 1,
+        "sideBySide": false,
+        "stacked": true,
+        "view": "details",
+        "colour": "Red"
+      },
+      "contactDrafts": {
+        "initial": "Hi Favas, I’d like to discuss a project for my business.",
+        "Website": "Hi Favas, I’d like to discuss a website for my business.",
+        "Online store": "Hi Favas, I’d like to discuss an online store for my business.",
+        "Web app": "Hi Favas, I’d like to discuss a web app for my business."
+      },
+      "result": "pass"
+    },
+    {
+      "name": "reduced-motion",
+      "browser": "26.5",
+      "width": 390,
+      "height": 844,
+      "errors": [],
+      "result": "pass"
+    }
+  ],
+  "conditions": "Headless Linux, fresh contexts, DPR 1, no simulated network or CPU throttling. Video recording enabled for journey sessions. Frame samples include the first 95 CSS pixels of scrolling. The vw-interactive mark records hydrated HTML controls. A missing paint entry is reported as null. Mobile viewports are emulated."
+}
