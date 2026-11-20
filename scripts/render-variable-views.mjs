@@ -20,6 +20,7 @@ const harness = `<!doctype html><html><head><meta charset="utf-8"><link rel="ico
   import { mountScene } from '/src/variable/scene.js';
   let state = {progress:0, width:1};
   const engine = await mountScene(document.getElementById('stage'), {
+    capture: true,
     readState: () => state,
     onReady() { window.sceneReady = true; },
     onSlow() {},
