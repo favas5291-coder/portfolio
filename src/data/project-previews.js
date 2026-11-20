@@ -2,8 +2,8 @@
 export const projectPreviews = {
   "gymdrobe": {
     "website": "https://www.gymdrobe.com/",
-    "screenshot": "/images/projects/gymdrobe-628d4cdddea49303.webp",
-    "capturedAt": "2026-11-19T02:52:58.751Z",
+    "screenshot": "/images/projects/gymdrobe-a03a41e1c5336f32.webp",
+    "capturedAt": "2026-11-20T03:12:22.937Z",
     "width": 1348,
     "height": 926,
     "mobile": {
