@@ -1,0 +1,168 @@
+{
+  "build": "e5ca84b",
+  "engine": "chromium",
+  "scenario": "chromium-fallback",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "network": "Local HTTP production preview; unthrottled network and CPU. Fresh context; DPR 1.",
+  "checks": {
+    "reduced-motion": [
+      "/studio/entrance-mobile.webp",
+      "/studio/reception-mobile.webp",
+      "/studio/project-room-mobile.webp",
+      "/studio/development-studio-mobile.webp",
+      "/studio/client-review-mobile.webp",
+      "/studio/founder-office-mobile.webp"
+    ],
+    "no-webgl": [
+      "/studio/entrance-mobile.webp",
+      "/studio/reception-mobile.webp",
+      "/studio/project-room-mobile.webp",
+      "/studio/development-studio-mobile.webp",
+      "/studio/client-review-mobile.webp",
+      "/studio/founder-office-mobile.webp"
+    ],
+    "forced-context-loss": [
+      "/studio/entrance-mobile.webp",
+      "/studio/reception-mobile.webp",
+      "/studio/project-room-mobile.webp",
+      "/studio/development-studio-mobile.webp",
+      "/studio/client-review-mobile.webp",
+      "/studio/founder-office-mobile.webp"
+    ]
+  },
+  "errors": [],
+  "failure": [],
+  "performance": {},
+  "version": "156.0.8078.79",
+  "productTrace": [
+    {
+      "label": "before case",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155194518
+    },
+    {
+      "label": "before Back",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 910,
+      "dt": 1795155194570
+    },
+    {
+      "label": "after Back",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155194587
+    },
+    {
+      "label": "before Close",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 910,
+      "dt": 1795155195071
+    },
+    {
+      "label": "after Close",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155195169
+    },
+    {
+      "label": "before Escape",
+      "url": "http://127.0.0.1:4189/?exhibit=fabea#project-room",
+      "y": 1142,
+      "dt": 1795155195396
+    },
+    {
+      "label": "after Escape",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1142,
+      "dt": 1795155195434
+    },
+    {
+      "label": "before case",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155198685
+    },
+    {
+      "label": "before Back",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 910,
+      "dt": 1795155198727
+    },
+    {
+      "label": "after Back",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155198742
+    },
+    {
+      "label": "before Close",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 910,
+      "dt": 1795155198954
+    },
+    {
+      "label": "after Close",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155199065
+    },
+    {
+      "label": "before Escape",
+      "url": "http://127.0.0.1:4189/?exhibit=fabea#project-room",
+      "y": 1142,
+      "dt": 1795155199171
+    },
+    {
+      "label": "after Escape",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1142,
+      "dt": 1795155199332
+    },
+    {
+      "label": "before case",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155208418
+    },
+    {
+      "label": "before Back",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 910,
+      "dt": 1795155208488
+    },
+    {
+      "label": "after Back",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155208504
+    },
+    {
+      "label": "before Close",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 910,
+      "dt": 1795155208689
+    },
+    {
+      "label": "after Close",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 910,
+      "dt": 1795155208794
+    },
+    {
+      "label": "before Escape",
+      "url": "http://127.0.0.1:4189/?exhibit=fabea#project-room",
+      "y": 1142,
+      "dt": 1795155208922
+    },
+    {
+      "label": "after Escape",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1142,
+      "dt": 1795155208975
+    }
+  ]
+}

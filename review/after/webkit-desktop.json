@@ -1,0 +1,205 @@
+{
+  "build": "e5ca84b",
+  "engine": "webkit",
+  "scenario": "webkit-desktop",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "network": "Local HTTP production preview; unthrottled network and CPU. Fresh context; DPR 1.",
+  "checks": {
+    "opening": {
+      "#entrance h1": "Muhammed Favas K",
+      "#entrance .studio-role": "Full-stack developer and founder of GymDrobe.",
+      "#entrance .studio-lead": "I build websites, online stores, and web apps for businesses.",
+      "#entrance a[href=\"#reception\"]": "Scroll to enter",
+      "#entrance [data-contact=\"whatsapp\"]": "Talk to Favas",
+      ".studio-viewport": ""
+    },
+    "wheel-120-and-reverse": {
+      "room": "reception",
+      "mode": "still",
+      "motion": "limited",
+      "y": 120
+    },
+    "entrance-whatsapp": {
+      "activation": "Request intercepted locally, matched verified wa.me number and exact editable draft.",
+      "returnedTo": {
+        "room": "entrance",
+        "mode": "still",
+        "motion": "auto",
+        "y": 0
+      }
+    },
+    "all-keyboard-room-links": true,
+    "filmstrip-links": true,
+    "services": [
+      "/services/business-websites/",
+      "/services/ecommerce-development/",
+      "/services/landing-pages/",
+      "/services/website-redesign/",
+      "/services/"
+    ],
+    "swatches-case-back-close-focus": {
+      "original": "/images/projects/gymdrobe-shirt-black.webp",
+      "changed": "/images/projects/gymdrobe-shirt-red.webp",
+      "blackView": "http://127.0.0.1:4189/studio/project-room.webp",
+      "redView": "http://127.0.0.1:4189/studio/project-room-red.webp",
+      "back": {
+        "before": 1668,
+        "after": 1668
+      },
+      "close": {
+        "before": 1668,
+        "after": 1668
+      }
+    },
+    "actual-store": true,
+    "five-review-stages": true,
+    "three-client-questions": true,
+    "founder-contact": {
+      "activation": "Request intercepted locally, matched verified wa.me number and exact editable draft.",
+      "returnedTo": {
+        "room": "founder-office",
+        "mode": "still",
+        "motion": "auto",
+        "y": 4170
+      }
+    },
+    "all-deep-links-fresh-navigation": true,
+    "deep-link-reload": true
+  },
+  "errors": [],
+  "failure": [],
+  "performance": {
+    "open": {
+      "fcpMs": 470,
+      "domContentLoadedMs": 522,
+      "loadMs": 598,
+      "liveMs": 2756,
+      "resources": 27,
+      "bytesTransferred": 2433411
+    },
+    "scroll": {
+      "samples": 132,
+      "medianMs": 16,
+      "p95Ms": 24,
+      "maxMs": 46,
+      "over50ms": 0,
+      "before": {
+        "room": "reception",
+        "mode": "still",
+        "motion": "limited",
+        "y": 834
+      },
+      "after": {
+        "room": "reception",
+        "mode": "still",
+        "motion": "limited",
+        "y": 1234
+      }
+    }
+  },
+  "version": "26.5",
+  "gpu": "Apple GPU",
+  "opening": {
+    "room": "entrance",
+    "mode": "live",
+    "motion": "auto",
+    "y": 0
+  },
+  "captureModes": {
+    "entrance": {
+      "room": "entrance",
+      "mode": "live",
+      "motion": "auto",
+      "y": 0
+    },
+    "first-stride": {
+      "room": "reception",
+      "mode": "still",
+      "motion": "limited",
+      "y": 120
+    },
+    "reception": {
+      "room": "reception",
+      "mode": "still",
+      "motion": "limited",
+      "y": 834
+    },
+    "project-room": {
+      "room": "project-room",
+      "mode": "still",
+      "motion": "limited",
+      "y": 1668
+    },
+    "development-studio": {
+      "room": "development-studio",
+      "mode": "still",
+      "motion": "limited",
+      "y": 2502
+    },
+    "client-review": {
+      "room": "client-review",
+      "mode": "still",
+      "motion": "limited",
+      "y": 3336
+    },
+    "founder-office": {
+      "room": "founder-office",
+      "mode": "still",
+      "motion": "limited",
+      "y": 4170
+    }
+  },
+  "productTrace": [
+    {
+      "label": "before case",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1668,
+      "dt": 1795155224524
+    },
+    {
+      "label": "before Back",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 1668,
+      "dt": 1795155224580
+    },
+    {
+      "label": "after Back",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1668,
+      "dt": 1795155224590
+    },
+    {
+      "label": "before Close",
+      "url": "http://127.0.0.1:4189/?exhibit=gymdrobe#project-room",
+      "y": 1668,
+      "dt": 1795155224788
+    },
+    {
+      "label": "after Close",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1668,
+      "dt": 1795155224879
+    },
+    {
+      "label": "before Escape",
+      "url": "http://127.0.0.1:4189/?exhibit=fabea#project-room",
+      "y": 1668,
+      "dt": 1795155224961
+    },
+    {
+      "label": "after Escape",
+      "url": "http://127.0.0.1:4189/#project-room",
+      "y": 1668,
+      "dt": 1795155225048
+    }
+  ],
+  "finished": {
+    "room": "client-review",
+    "mode": "still",
+    "motion": "auto",
+    "y": 3336
+  }
+}
