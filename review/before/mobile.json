@@ -1,0 +1,75 @@
+{
+  "source": "https://fazhere.com/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "browser": "156.0.8078.79",
+  "report": [
+    {
+      "room": "entrance",
+      "render": "live",
+      "motion": "auto",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "stage": {
+        "x": 0,
+        "y": 55,
+        "width": 390,
+        "height": 286.953125,
+        "top": 55,
+        "right": 390,
+        "bottom": 341.953125,
+        "left": 0
+      }
+    },
+    {
+      "room": "reception",
+      "render": "live",
+      "motion": "auto",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "stage": {
+        "x": 0,
+        "y": 55,
+        "width": 390,
+        "height": 286.953125,
+        "top": 55,
+        "right": 390,
+        "bottom": 341.953125,
+        "left": 0
+      }
+    },
+    {
+      "room": "project-room",
+      "render": "still",
+      "motion": "limited",
+      "renderer": null,
+      "stage": {
+        "x": 0,
+        "y": 55,
+        "width": 390,
+        "height": 286.953125,
+        "top": 55,
+        "right": 390,
+        "bottom": 341.953125,
+        "left": 0
+      }
+    },
+    {
+      "room": "founder-office",
+      "render": "still",
+      "motion": "limited",
+      "renderer": null,
+      "stage": {
+        "x": 0,
+        "y": 55,
+        "width": 390,
+        "height": 286.953125,
+        "top": 55,
+        "right": 390,
+        "bottom": 341.953125,
+        "left": 0
+      }
+    }
+  ],
+  "logs": []
+}
