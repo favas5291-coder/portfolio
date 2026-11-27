@@ -1,0 +1,154 @@
+{
+  "opening": {
+    "scrollY": 0,
+    "progress": 0,
+    "chapter": "arrival",
+    "renderer": "live",
+    "viewOrigin": [
+      480,
+      76
+    ],
+    "display": [
+      960,
+      750
+    ],
+    "buffer": [
+      619,
+      484
+    ],
+    "overflow": 0,
+    "assets": [
+      {
+        "file": "/appointment/models/shell.glb",
+        "bytes": 5496444
+      },
+      {
+        "file": "/appointment/models/car.glb",
+        "bytes": 1326784
+      },
+      {
+        "file": "/appointment/models/tree.glb",
+        "bytes": 2616136
+      }
+    ]
+  },
+  "openingHTML": [
+    {
+      "text": "Muhammed Favas K \u00b7 Full-stack developer",
+      "bounds": {
+        "x": 51.828125,
+        "y": 267.09375,
+        "width": 376.34375,
+        "height": 178.953125,
+        "top": 267.09375,
+        "right": 428.171875,
+        "bottom": 446.046875,
+        "left": 51.828125
+      },
+      "href": null
+    },
+    {
+      "text": "I build websites and apps that help businesses grow.",
+      "bounds": {
+        "x": 51.828125,
+        "y": 468.046875,
+        "width": 376.34375,
+        "height": 68.34375,
+        "top": 468.046875,
+        "right": 428.171875,
+        "bottom": 536.390625,
+        "left": 51.828125
+      },
+      "href": null
+    },
+    {
+      "text": "View GymDrobeThe fitness store I founded",
+      "bounds": {
+        "x": 51.828125,
+        "y": 563.390625,
+        "width": 376.34375,
+        "height": 124.5,
+        "top": 563.390625,
+        "right": 428.171875,
+        "bottom": 687.890625,
+        "left": 51.828125
+      },
+      "href": "http://127.0.0.1:4173/projects/gymdrobe/"
+    },
+    {
+      "text": "Chat on WhatsApp",
+      "bounds": {
+        "x": 51.828125,
+        "y": 701.890625,
+        "width": 196.578125,
+        "height": 45,
+        "top": 701.890625,
+        "right": 248.40625,
+        "bottom": 746.890625,
+        "left": 51.828125
+      },
+      "href": "https://wa.me/918156805806?text=Hi%20Favas%2C%20I%E2%80%99d%20like%20to%20discuss%20a%20project%20for%20my%20business."
+    },
+    {
+      "text": "Scroll to step outside",
+      "bounds": {
+        "x": 266.40625,
+        "y": 702.390625,
+        "width": 152.265625,
+        "height": 44,
+        "top": 702.390625,
+        "right": 418.671875,
+        "bottom": 746.390625,
+        "left": 266.40625
+      },
+      "href": "http://127.0.0.1:4173/#pavement"
+    }
+  ],
+  "roomOffsets": {
+    "arrival": 0,
+    "pavement": 824,
+    "reception": 1648,
+    "studio": 2472,
+    "landing": 3296,
+    "office": 4120
+  },
+  "office": {
+    "scrollY": 4120,
+    "progress": 1,
+    "chapter": "office",
+    "renderer": "live",
+    "viewOrigin": [
+      480,
+      76
+    ],
+    "display": [
+      960,
+      750
+    ],
+    "buffer": [
+      619,
+      484
+    ],
+    "overflow": 0,
+    "assets": [
+      {
+        "file": "/appointment/models/shell.glb",
+        "bytes": 5496444
+      },
+      {
+        "file": "/appointment/models/car.glb",
+        "bytes": 1326784
+      },
+      {
+        "file": "/appointment/models/tree.glb",
+        "bytes": 2616136
+      }
+    ]
+  },
+  "pageErrors": [],
+  "failedResources": [],
+  "browser": "156.0.8078.79",
+  "phoneEmulation": false,
+  "devicePixelRatio": 1,
+  "graphics": "ANGLE SwiftShader, Chromium headless"
+}

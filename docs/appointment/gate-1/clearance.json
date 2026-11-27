@@ -1,0 +1,398 @@
+{
+  "models": [
+    {
+      "asset": "car",
+      "sha256": "9206d9b08817449ecfec6f67c477c995b6ced1b5678a9174c705ae55b67f1b98",
+      "triangles": 78312
+    },
+    {
+      "asset": "shell",
+      "sha256": "56b7e09169e5907fabf144dc0b75ba85f7f8f5a995f70c7fcc0db3e4af714187",
+      "triangles": 117546
+    },
+    {
+      "asset": "tree",
+      "sha256": "f42eb45a13bfc4498c0056ae94615fb91ea198cc910fabf18b327d1b912932c3",
+      "triangles": 99804
+    }
+  ],
+  "samples": 2001,
+  "progressStep": 0.0005,
+  "maxReversePoseDelta": 0,
+  "eyeSphereRadiusM": 0.12,
+  "minimumEyeCentreToMesh": {
+    "fixedUpperCarTriangles": {
+      "distanceM": 0.28716179814768344,
+      "progress": 0,
+      "mesh": "Fixed car at or above +1.36 m"
+    },
+    "fullPath": {
+      "distanceM": 0.12992672700573582,
+      "progress": 0.6695,
+      "mesh": "Shell_Lime"
+    },
+    "exit": {
+      "distanceM": 0.2871618001413955,
+      "progress": 0,
+      "mesh": "ArrivalCar__Warm_grey_seat_textile"
+    },
+    "fixedCar": {
+      "distanceM": 0.2871618001413955,
+      "progress": 0,
+      "mesh": "ArrivalCar__Warm_grey_seat_textile"
+    },
+    "movingPassengerDoor": {
+      "distanceM": 0.30415576009525824,
+      "progress": 0,
+      "mesh": "PassengerHinge__Graphite_grained_trim"
+    },
+    "pavementAndKerb": {
+      "distanceM": 0.9761134736002474,
+      "progress": 0.1035,
+      "mesh": "Site_DryStone"
+    },
+    "entrance": {
+      "distanceM": 0.5270807963531844,
+      "progress": 0.45,
+      "mesh": "Door_FazhereOrange"
+    },
+    "movingEntranceDoor": {
+      "distanceM": 0.5270807963531844,
+      "progress": 0.45,
+      "mesh": "Door_FazhereOrange"
+    },
+    "return": {
+      "distanceM": 0.12992672700573582,
+      "progress": 0.6695,
+      "mesh": "Shell_Lime"
+    }
+  },
+  "maxNearCornerRadiusM": 0.03746883486815362,
+  "conservativeNearPlaneClearanceM": 0.09245789213758221,
+  "conservativeEyeVolumeClearanceM": 0.009926727005735825,
+  "sightlines": {
+    "passengerToEntrance": {
+      "pointENU": [
+        4.03,
+        0,
+        1.56
+      ],
+      "projections": {
+        "desktop": [
+          0.1774,
+          0.5115
+        ],
+        "phone": [
+          0.1134,
+          0.5109
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Kerb_front_side_glass",
+          "asset": "car",
+          "material": "Car | Barely tinted laminated glass",
+          "passThrough": true,
+          "distanceM": 0.4312
+        }
+      ]
+    },
+    "passengerToLitOffice": {
+      "pointENU": [
+        6.64,
+        0,
+        4.65
+      ],
+      "projections": {
+        "desktop": [
+          0.4285,
+          0.1664
+        ],
+        "phone": [
+          0.4144,
+          0.1845
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Kerb_front_side_glass",
+          "asset": "car",
+          "material": "Car | Barely tinted laminated glass",
+          "passThrough": true,
+          "distanceM": 0.4463
+        }
+      ]
+    },
+    "westHub": {
+      "pointENU": [
+        5.03,
+        -5.79,
+        0.32
+      ],
+      "projections": {
+        "desktop": [
+          0.7696,
+          0.7761
+        ],
+        "phone": [
+          0.8087,
+          0.7495
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3551
+        }
+      ]
+    },
+    "westHubFace": {
+      "pointENU": [
+        5.051,
+        -5.79,
+        0.33
+      ],
+      "projections": {
+        "desktop": [
+          0.7676,
+          0.7747
+        ],
+        "phone": [
+          0.8064,
+          0.7483
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3536
+        },
+        {
+          "mesh": "ArrivalCar__Satin_anodized_aluminium",
+          "asset": "car",
+          "material": "Car | Satin anodized aluminium",
+          "passThrough": false,
+          "distanceM": 8.4086
+        },
+        {
+          "mesh": "ArrivalCar__Graphite_wheel_barrel",
+          "asset": "car",
+          "material": "Car | Graphite wheel barrel",
+          "passThrough": false,
+          "distanceM": 8.4111
+        }
+      ]
+    },
+    "westTyreFoot": {
+      "pointENU": [
+        5.03,
+        -5.79,
+        0.03
+      ],
+      "projections": {
+        "desktop": [
+          0.7668,
+          0.8067
+        ],
+        "phone": [
+          0.8054,
+          0.7771
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3794
+        },
+        {
+          "mesh": "Site_Asphalt",
+          "asset": "shell",
+          "material": "Asphalt",
+          "passThrough": false,
+          "distanceM": 8.6381
+        }
+      ]
+    },
+    "westLowerTyre": {
+      "pointENU": [
+        5.03,
+        -5.84,
+        0.038
+      ],
+      "projections": {
+        "desktop": [
+          0.7662,
+          0.8023
+        ],
+        "phone": [
+          0.8047,
+          0.7732
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3757
+        },
+        {
+          "mesh": "ArrivalCar__Black_EPDM",
+          "asset": "car",
+          "material": "Car | Black EPDM",
+          "passThrough": false,
+          "distanceM": 8.5489
+        }
+      ]
+    },
+    "eastHub": {
+      "pointENU": [
+        7.75,
+        -5.79,
+        0.32
+      ],
+      "projections": {
+        "desktop": [
+          0.5156,
+          0.7428
+        ],
+        "phone": [
+          0.5178,
+          0.7194
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3467
+        }
+      ]
+    },
+    "eastHubFace": {
+      "pointENU": [
+        7.771,
+        -5.79,
+        0.33
+      ],
+      "projections": {
+        "desktop": [
+          0.5137,
+          0.7415
+        ],
+        "phone": [
+          0.5157,
+          0.7182
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3464
+        },
+        {
+          "mesh": "ArrivalCar__Satin_anodized_aluminium",
+          "asset": "car",
+          "material": "Car | Satin anodized aluminium",
+          "passThrough": false,
+          "distanceM": 8.3635
+        },
+        {
+          "mesh": "ArrivalCar__Graphite_wheel_barrel",
+          "asset": "car",
+          "material": "Car | Graphite wheel barrel",
+          "passThrough": false,
+          "distanceM": 8.366
+        }
+      ]
+    },
+    "eastTyreFoot": {
+      "pointENU": [
+        7.75,
+        -5.79,
+        0.03
+      ],
+      "projections": {
+        "desktop": [
+          0.5154,
+          0.7718
+        ],
+        "phone": [
+          0.5176,
+          0.7456
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3712
+        },
+        {
+          "mesh": "Site_Asphalt",
+          "asset": "shell",
+          "material": "Asphalt",
+          "passThrough": false,
+          "distanceM": 8.5868
+        },
+        {
+          "mesh": "RoadFilm_PuddleWater",
+          "asset": "shell",
+          "material": "PuddleWater",
+          "passThrough": false,
+          "distanceM": 8.5873
+        }
+      ]
+    },
+    "eastLowerTyre": {
+      "pointENU": [
+        7.75,
+        -5.84,
+        0.038
+      ],
+      "projections": {
+        "desktop": [
+          0.5162,
+          0.7679
+        ],
+        "phone": [
+          0.5185,
+          0.7421
+        ]
+      },
+      "hits": [
+        {
+          "mesh": "Upper_ClearSafetyGlass",
+          "asset": "shell",
+          "material": "ClearSafetyGlass",
+          "passThrough": true,
+          "distanceM": 1.3675
+        },
+        {
+          "mesh": "ArrivalCar__Black_EPDM",
+          "asset": "car",
+          "material": "Car | Black EPDM",
+          "passThrough": false,
+          "distanceM": 8.4987
+        }
+      ]
+    }
+  }
+}

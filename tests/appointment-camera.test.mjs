@@ -1,66 +1,122 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
-import { buildCar } from '../src/appointment/car.js';
-import { positionCamera } from '../src/appointment/visit.js';
+import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
+import { readGeometry } from '../scripts/gate1/read-geometry.mjs';
+import { positionCamera, doorPose } from '../src/appointment/visit.js';
+import { focalTargets, sceneScale, studioAssets } from '../src/appointment/scene.config.ts';
 
-// Includes the seated hold, the door swing, movement across the sill and closure.
-const exitSamples = Array.from({ length: 57 }, (_, index) => index / 250);
+async function geometryOnly(url) {
+  const file = await readFile(new URL('../public' + url, import.meta.url));
+  const scene = await readGeometry(file);
+  scene.traverse((node) => {
+    if (!node.isMesh) return;
+    node.geometry.boundsTree = new MeshBVH(node.geometry);
+    node.raycast = acceleratedRaycast;
+  });
+  return scene;
+}
 
-for (const [layout, aspect, compact] of [
-  ['phone', 390 / 338, true],
-  ['desktop', 885 / 822, false],
-]) {
-  test(`passenger exit clears the actual car and reverses in the ${layout} camera`, (t) => {
-    const scene = new THREE.Scene();
-    const car = buildCar(THREE, scene);
-    t.after(() => car.dispose());
-    const door = scene.getObjectByName('Front passenger door');
-    const camera = new THREE.PerspectiveCamera(61, aspect, 0.035, 100);
-    const ray = new THREE.Raycaster();
-    const aim = new THREE.Vector2();
-    const poseAt = (progress) => {
-      positionCamera(camera, progress, compact);
-      camera.updateMatrixWorld();
-      car.update(progress);
-      scene.updateMatrixWorld();
-      return [camera.matrixWorld.toArray(), camera.fov, door.matrixWorld.toArray()];
-    };
+const toThree = ([east, north, up]) => new THREE.Vector3(east, up, -north);
+const car = await geometryOnly(studioAssets.car);
+const shell = await geometryOnly(studioAssets.shell);
+const tree = await geometryOnly(studioAssets.tree);
+const hinge = car.getObjectByName(sceneScale.passengerHinge);
+const door = shell.getObjectByName(sceneScale.entranceHinge);
+assert.ok(hinge && door, 'Both exported hinge nodes must survive mesh compression');
+const rest = [hinge.rotation.y, door.rotation.y];
 
-    const solid = [];
-    scene.traverse((item) => {
-      if (item.isMesh && !item.material.transparent) solid.push(item);
-    });
-    const forward = exitSamples.map((progress) => {
-      const pose = poseAt(progress);
-      ray.setFromCamera(aim.set(0, 0), camera);
-      const centered = ray.intersectObjects(solid, false);
-      assert.equal(centered.length, 0, `Car blocks the central sightline at ${progress}`);
+function applyPose(camera, p, compact) {
+  positionCamera(camera, p, compact);
+  const pose = doorPose(p);
+  hinge.rotation.y = rest[0] + pose.passenger;
+  door.rotation.y = rest[1] + pose.entrance;
+  car.updateMatrixWorld(true);
+  shell.updateMatrixWorld(true);
+  return [camera.matrixWorld.toArray(), camera.fov, hinge.matrixWorld.toArray(), door.matrixWorld.toArray()];
+}
 
-      // View-space depth catches geometry slicing the near plane at the
-      // edges as well as anything that would fill the center of the view.
-      for (const x of [-0.95, 0, 0.95]) {
-        for (const y of [-0.95, 0, 0.95]) {
-          ray.setFromCamera(aim.set(x, y), camera);
-          const [hit] = ray.intersectObjects(solid, false);
-          if (hit) {
-            const depth = -hit.point.applyMatrix4(camera.matrixWorldInverse).z;
-            assert.ok(depth > camera.near, `Car clips the view at ${progress} (${x}, ${y})`);
-          }
-        }
-      }
-      return pose;
-    });
-
-    poseAt(0);
-    const closed = door.rotation.y;
-    poseAt(0.1);
-    assert.ok(Math.abs(door.rotation.y - closed) > 1, 'Passenger door opens wide enough to exit');
-    poseAt(exitSamples.at(-1));
-    assert.equal(door.rotation.y, closed, 'Door is closed after the visitor steps away');
-
-    for (let i = exitSamples.length - 1; i >= 0; i--) {
-      assert.deepEqual(poseAt(exitSamples[i]), forward[i], `Reverse diverges at ${exitSamples[i]}`);
-    }
+const solids = (root) => {
+  const result = [];
+  root.traverse((node) => {
+    if (node.isMesh && !node.material.transparent) result.push(node);
+  });
+  return result;
+};
+const enclosed = [...solids(car), ...solids(shell)];
+const exitSurfaces = [];
+for (const model of [car, shell]) {
+  model.traverse((node) => {
+    if (node.isMesh) exitSurfaces.push(node);
   });
 }
+const ray = new THREE.Raycaster();
+ray.firstHitOnly = true;
+
+for (const [layout, compact, aspect] of [
+  ['phone', true, 390 / 386],
+  ['desktop', false, 960 / 750],
+]) {
+  test(`authored doors, car and threshold clear the ${layout} camera near plane in both directions`, () => {
+    const camera = new THREE.PerspectiveCamera(65, aspect, 0.025, 140);
+    const samples = Array.from({ length: 126 }, (_, i) => i * 0.004);
+    const forward = samples.map((p) => {
+      const pose = applyPose(camera, p, compact);
+      // A 5×5 ray grid covers the centre, edges and corners of the frustum.
+      // Each ray stops just beyond its near-plane intersection.
+      for (const x of [-1, -0.5, 0, 0.5, 1])
+        for (const y of [-1, -0.5, 0, 0.5, 1]) {
+          ray.setFromCamera({ x, y }, camera);
+          ray.near = 0;
+          const corner = new THREE.Vector3(x, y, -1).unproject(camera);
+          ray.far = camera.position.distanceTo(corner) + 0.012;
+          const hit = ray.intersectObjects(exitSurfaces, false)[0];
+          assert.ok(!hit, `p=${p} at (${x}, ${y}) clips ${hit?.object.name}`);
+        }
+      return pose;
+    });
+    for (let i = samples.length - 1; i >= 0; i--) {
+      assert.deepEqual(
+        applyPose(camera, samples[i], compact),
+        forward[i],
+        `Reverse differs at ${samples[i]}`,
+      );
+    }
+    assert.ok(Math.abs(doorPose(0.12).passenger) > 1.1);
+    assert.ok(doorPose(0.39).entrance > 1.4);
+    assert.deepEqual(doorPose(0.99), { passenger: -0, entrance: 0 });
+    assert.deepEqual(
+      applyPose(camera, 0.984, compact),
+      applyPose(camera, 1, compact),
+      'Office must be motionless',
+    );
+  });
+}
+
+test('authored bookend apertures give a clear ray to both wheel hubs and the lit upstairs bay', () => {
+  const camera = new THREE.PerspectiveCamera(65, 390 / 386, 0.025, 140);
+  const shoot = (p, target, exclude) => {
+    applyPose(camera, p, true);
+    const point = toThree(target);
+    ray.set(camera.position, point.clone().sub(camera.position).normalize());
+    ray.near = 0.025;
+    ray.far = camera.position.distanceTo(point) - 0.05;
+    const hits = ray.intersectObjects(
+      [...enclosed, ...solids(tree)].filter((mesh) => !exclude(mesh)),
+      false,
+    );
+    assert.deepEqual(
+      hits.map((hit) => hit.object.name),
+      [],
+      `Unexpected obstruction on ray to ${target}`,
+    );
+    const screen = point.project(camera);
+    assert.ok(Math.abs(screen.x) < 0.99 && Math.abs(screen.y) < 0.99, 'Anchor cropped in portrait');
+  };
+  // Wheel hub positions lie a few centimetres inside the actual rim and tyre.
+  const carMeshes = new Set(solids(car));
+  shoot(1, focalTargets.westWheel, (mesh) => carMeshes.has(mesh));
+  shoot(1, focalTargets.eastWheel, (mesh) => carMeshes.has(mesh));
+  shoot(0, focalTargets.officeLight, () => false);
+});

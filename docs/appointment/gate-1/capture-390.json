@@ -1,0 +1,371 @@
+{
+  "opening": {
+    "scrollY": 0,
+    "progress": 0,
+    "chapter": "arrival",
+    "renderer": "live",
+    "viewOrigin": [
+      0,
+      54
+    ],
+    "display": [
+      390,
+      386
+    ],
+    "buffer": [
+      390,
+      386
+    ],
+    "overflow": 0,
+    "assets": [
+      {
+        "file": "/appointment/models/shell.glb",
+        "bytes": 5496444
+      },
+      {
+        "file": "/appointment/models/car.glb",
+        "bytes": 1326784
+      },
+      {
+        "file": "/appointment/models/tree.glb",
+        "bytes": 2616136
+      }
+    ]
+  },
+  "openingHTML": [
+    {
+      "text": "Muhammed Favas K \u00b7 Full-stack developer",
+      "bounds": {
+        "x": 22,
+        "y": 523,
+        "width": 346,
+        "height": 60.25,
+        "top": 523,
+        "right": 368,
+        "bottom": 583.25,
+        "left": 22
+      },
+      "href": null
+    },
+    {
+      "text": "I build websites and apps that help businesses grow.",
+      "bounds": {
+        "x": 22,
+        "y": 593.25,
+        "width": 338.265625,
+        "height": 48.53125,
+        "top": 593.25,
+        "right": 360.265625,
+        "bottom": 641.78125,
+        "left": 22
+      },
+      "href": null
+    },
+    {
+      "text": "View GymDrobeThe fitness store I founded",
+      "bounds": {
+        "x": 22,
+        "y": 653.78125,
+        "width": 346,
+        "height": 92.125,
+        "top": 653.78125,
+        "right": 368,
+        "bottom": 745.90625,
+        "left": 22
+      },
+      "href": "http://127.0.0.1:4173/projects/gymdrobe/"
+    },
+    {
+      "text": "Chat on WhatsApp",
+      "bounds": {
+        "x": 22,
+        "y": 752.90625,
+        "width": 174.9375,
+        "height": 44,
+        "top": 752.90625,
+        "right": 196.9375,
+        "bottom": 796.90625,
+        "left": 22
+      },
+      "href": "https://wa.me/918156805806?text=Hi%20Favas%2C%20I%E2%80%99d%20like%20to%20discuss%20a%20project%20for%20my%20business."
+    },
+    {
+      "text": "Scroll to step outside",
+      "bounds": {
+        "x": 210.9375,
+        "y": 752.90625,
+        "width": 138.015625,
+        "height": 44,
+        "top": 752.90625,
+        "right": 348.953125,
+        "bottom": 796.90625,
+        "left": 210.9375
+      },
+      "href": "http://127.0.0.1:4173/#pavement"
+    }
+  ],
+  "roomOffsets": {
+    "arrival": 0,
+    "pavement": 360,
+    "reception": 720,
+    "studio": 1142,
+    "landing": 1502,
+    "office": 1950
+  },
+  "recording": {
+    "compositorFrames": 53,
+    "durationSeconds": 60.71,
+    "bytes": 1431582,
+    "encodedSeconds": 63.4,
+    "encodedFrames": 1585,
+    "framesPerSecondInFile": 25,
+    "captureFramesPerSecond": 0.87,
+    "lastFramePaddingSeconds": 2.69,
+    "longestDetectedHoldSeconds": 4.32,
+    "holdDetection": "FFmpeg freezedetect, n=-50dB, d=0.5 on encoded full viewport. Includes deliberate holds, software stalls and recorder effects."
+  },
+  "route": [
+    {
+      "scrollY": 189,
+      "progress": 0.105,
+      "chapter": "pavement",
+      "renderer": "live",
+      "viewOrigin": [
+        0,
+        54
+      ],
+      "display": [
+        390,
+        386
+      ],
+      "buffer": [
+        390,
+        386
+      ],
+      "overflow": 0,
+      "assets": [
+        {
+          "file": "/appointment/models/shell.glb",
+          "bytes": 5496444
+        },
+        {
+          "file": "/appointment/models/car.glb",
+          "bytes": 1326784
+        },
+        {
+          "file": "/appointment/models/tree.glb",
+          "bytes": 2616136
+        }
+      ],
+      "landmark": "crossing-sill"
+    },
+    {
+      "scrollY": 72,
+      "progress": 0.04,
+      "chapter": "arrival",
+      "renderer": "live",
+      "viewOrigin": [
+        0,
+        54
+      ],
+      "display": [
+        390,
+        386
+      ],
+      "buffer": [
+        390,
+        386
+      ],
+      "overflow": 0,
+      "assets": [
+        {
+          "file": "/appointment/models/shell.glb",
+          "bytes": 5496444
+        },
+        {
+          "file": "/appointment/models/car.glb",
+          "bytes": 1326784
+        },
+        {
+          "file": "/appointment/models/tree.glb",
+          "bytes": 2616136
+        }
+      ],
+      "landmark": "reverse-into-seat"
+    },
+    {
+      "scrollY": 189,
+      "progress": 0.105,
+      "chapter": "pavement",
+      "renderer": "live",
+      "viewOrigin": [
+        0,
+        54
+      ],
+      "display": [
+        390,
+        386
+      ],
+      "buffer": [
+        390,
+        386
+      ],
+      "overflow": 0,
+      "assets": [
+        {
+          "file": "/appointment/models/shell.glb",
+          "bytes": 5496444
+        },
+        {
+          "file": "/appointment/models/car.glb",
+          "bytes": 1326784
+        },
+        {
+          "file": "/appointment/models/tree.glb",
+          "bytes": 2616136
+        }
+      ],
+      "landmark": "same-crossing"
+    },
+    {
+      "scrollY": 360,
+      "progress": 0.2,
+      "chapter": "pavement",
+      "renderer": "live",
+      "viewOrigin": [
+        0,
+        54
+      ],
+      "display": [
+        390,
+        386
+      ],
+      "buffer": [
+        390,
+        386
+      ],
+      "overflow": 0,
+      "assets": [
+        {
+          "file": "/appointment/models/shell.glb",
+          "bytes": 5496444
+        },
+        {
+          "file": "/appointment/models/car.glb",
+          "bytes": 1326784
+        },
+        {
+          "file": "/appointment/models/tree.glb",
+          "bytes": 2616136
+        }
+      ],
+      "landmark": "pavement"
+    },
+    {
+      "scrollY": 558,
+      "progress": 0.31,
+      "chapter": "reception",
+      "renderer": "live",
+      "viewOrigin": [
+        0,
+        54
+      ],
+      "display": [
+        390,
+        386
+      ],
+      "buffer": [
+        390,
+        386
+      ],
+      "overflow": 0,
+      "assets": [
+        {
+          "file": "/appointment/models/shell.glb",
+          "bytes": 5496444
+        },
+        {
+          "file": "/appointment/models/car.glb",
+          "bytes": 1326784
+        },
+        {
+          "file": "/appointment/models/tree.glb",
+          "bytes": 2616136
+        }
+      ],
+      "landmark": "threshold"
+    },
+    {
+      "scrollY": 720,
+      "progress": 0.4,
+      "chapter": "reception",
+      "renderer": "live",
+      "viewOrigin": [
+        0,
+        54
+      ],
+      "display": [
+        390,
+        386
+      ],
+      "buffer": [
+        390,
+        386
+      ],
+      "overflow": 0,
+      "assets": [
+        {
+          "file": "/appointment/models/shell.glb",
+          "bytes": 5496444
+        },
+        {
+          "file": "/appointment/models/car.glb",
+          "bytes": 1326784
+        },
+        {
+          "file": "/appointment/models/tree.glb",
+          "bytes": 2616136
+        }
+      ],
+      "landmark": "entered"
+    }
+  ],
+  "office": {
+    "scrollY": 1950,
+    "progress": 1,
+    "chapter": "office",
+    "renderer": "live",
+    "viewOrigin": [
+      0,
+      54
+    ],
+    "display": [
+      390,
+      386
+    ],
+    "buffer": [
+      390,
+      386
+    ],
+    "overflow": 0,
+    "assets": [
+      {
+        "file": "/appointment/models/shell.glb",
+        "bytes": 5496444
+      },
+      {
+        "file": "/appointment/models/car.glb",
+        "bytes": 1326784
+      },
+      {
+        "file": "/appointment/models/tree.glb",
+        "bytes": 2616136
+      }
+    ]
+  },
+  "pageErrors": [],
+  "browser": "156.0.8078.79",
+  "phoneEmulation": true,
+  "devicePixelRatio": 1,
+  "graphics": "ANGLE SwiftShader, Chromium headless"
+}

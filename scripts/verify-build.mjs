@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, stat, writeFile, mkdir } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { loadEnv } from 'vite';
-import { chapters as visitChapters } from '../src/appointment/visit.js';
+import { chapters as visitChapters, studioAssets } from '../src/appointment/scene.config.ts';
 import { profile, chapters, project } from '../src/data/portfolio.js';
 import { SITE_ORIGIN } from '../src/data/site.js';
 import { pages, normalizePath } from '../src/seo/pages.js';
@@ -18,6 +18,10 @@ for (const id of new Set([...chapters.map(chapter => chapter.id), 'work', 'proce
 }
 for (const url of [`mailto:${profile.email}`, profile.github, profile.linkedin, project.website, project.repository, 'tel:+918156805806', 'https://wa.me/918156805806']) assert.ok(home.includes(url), `Missing contact/project link: ${url}`);
 for (const asset of [project.screenshot, ...visitChapters.flatMap(chapter => [chapter.wide, chapter.compact]), '/variable/studio-mark.svg', '/social-card.png', '/favicon.svg']) assert.ok((await stat(`dist${asset}`)).size > 0);
+for (const url of [
+  studioAssets.shell, studioAssets.car, studioAssets.tree, studioAssets.sky,
+  studioAssets.basis + 'basis_transcoder.js', studioAssets.basis + 'basis_transcoder.wasm',
+]) assert.ok((await stat('dist' + url)).size > 0, 'Missing renderer asset ' + url);
 const rendered = new Map();
 for (const page of pages) {
   const file = page.path === '/' ? 'dist/index.html' : `dist${page.path}index.html`;

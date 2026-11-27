@@ -8,17 +8,19 @@ import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { build } from 'vite';
 import { projectPreviews } from '../src/data/project-previews.js';
+import { chapters, sceneScale } from '../src/appointment/scene.config.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.STILL_OUTPUT || resolve(root, 'public/appointment');
 const origin = 'https://appointment-authoring.test';
-const ids = ['arrival', 'pavement', 'reception', 'studio', 'landing', 'office'];
+const ids = chapters.map((chapter) => chapter.id);
 const selected = process.argv.slice(2);
 for (const id of selected) assert(ids.includes(id), 'Unknown studio room ' + id);
 const sizes = [
-  { name: 'compact', width: 390, height: 844, sceneWidth: 390, sceneHeight: 338, dpr: 1.5 },
-  { name: 'wide', width: 1440, height: 900, sceneWidth: 885, sceneHeight: 822, dpr: 1.5 },
+  { name: 'compact', width: 390, height: 844, dpr: 1.5 },
+  { name: 'wide', width: 1440, height: 900, dpr: 1.5 },
 ];
+const motion = process.env.MOTION_OUTPUT;
 const entry = 'author-appointment-camera';
 const bundleSource = `
   import { mountStudio } from '/src/appointment/scene.js';
@@ -70,6 +72,10 @@ const browser = await chromium.launch({
 const metadataFile = process.env.PROJECTION_OUTPUT || resolve(root, 'src/appointment/stillProjection.json');
 const screens = JSON.parse(await readFile(metadataFile, 'utf8').catch(() => '{}'));
 const types = {
+  '.glb': 'model/gltf-binary',
+  '.ktx2': 'image/ktx2',
+  '.wasm': 'application/wasm',
+  '.js': 'application/javascript',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.webp': 'image/webp',
@@ -79,9 +85,11 @@ const types = {
 try {
   await mkdir(output, { recursive: true });
   for (const size of sizes) {
+    if (motion && process.env.MOTION_LAYOUT && process.env.MOTION_LAYOUT !== size.name) continue;
+    const [sceneWidth, sceneHeight] = sceneScale.composition[size.name];
     const context = await browser.newContext({
       viewport: { width: size.width, height: size.height },
-      deviceScaleFactor: size.dpr,
+      deviceScaleFactor: motion ? (size.name === 'compact' ? 1 : 0.75) : size.dpr,
       isMobile: size.name === 'compact',
       hasTouch: size.name === 'compact',
     });
@@ -94,7 +102,7 @@ try {
       if (url.pathname === '/')
         return route.fulfill({
           contentType: 'text/html',
-          body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body,canvas{margin:0}canvas{display:block;width:${size.sceneWidth}px;height:${size.sceneHeight}px}</style><canvas></canvas><script type="module" src="/shot.js"></script>`,
+          body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body,canvas{margin:0}canvas{display:block;width:${sceneWidth}px;height:${sceneHeight}px}</style><canvas></canvas><script type="module" src="/shot.js"></script>`,
         });
       if (url.pathname === '/shot.js')
         return route.fulfill({ contentType: 'text/javascript', body: chunk.code });
@@ -112,12 +120,28 @@ try {
     await page.goto(origin);
     await page.waitForFunction(() => typeof window.showRoom === 'function');
     await page.evaluate(() => window.firstFrame);
+    if (motion) {
+      const { renderExit } = await import('./gate1/render-motion.mjs');
+      await renderExit(page, motion, size.name);
+      assert.deepEqual(errors, []);
+      await context.close();
+      continue;
+    }
     for (let i = 0; i < ids.length; i++) {
       if (selected.length && !selected.includes(ids[i])) continue;
-      await page.evaluate((p) => window.showRoom(p), i / (ids.length - 1));
+      await page.evaluate((p) => window.showRoom(p), chapters[i].progress);
       await page.waitForLoadState('networkidle');
       const file = resolve(output, ids[i] + '-' + size.name + '.webp');
       const projected = await page.locator('canvas').evaluate((el) => el.appointmentStillScreens);
+      if (ids[i] === 'office') assert.equal(projected?.office?.points?.length, 4, 'Missing office monitor corners');
+      // A replacement room can have fewer physical displays than its predecessor.
+      const screenNames = { reception: ['reception'], studio: ['studio', 'phone'], office: ['office'] };
+      for (const name of screenNames[ids[i]] || []) {
+        if (screens[name]) {
+          delete screens[name][size.name];
+          if (!Object.keys(screens[name]).length) delete screens[name];
+        }
+      }
       for (const [id, projection] of Object.entries(projected || {})) {
         screens[id] ||= {};
         screens[id][size.name] = projection;
@@ -129,7 +153,7 @@ try {
     }
     await context.close();
   }
-  await writeFile(metadataFile, JSON.stringify(screens, null, 2) + '\n');
+  if (!motion) await writeFile(metadataFile, JSON.stringify(screens, null, 2) + '\n');
 } finally {
   await browser.close();
 }

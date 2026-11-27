@@ -1,0 +1,279 @@
+{
+  "testedUTC": "2026-11-27T14:23:18Z",
+  "browser": "156.0.8078.79",
+  "hostCpu": "AMD EPYC 9V74 80-Core Processor",
+  "viewport": [
+    390,
+    844
+  ],
+  "emulation": "Linux headless Chromium, touch enabled, DPR 1, local HTTP range server, no throttling. Warm seeks after initial buffering.",
+  "latencyMethod": "Native scroll event to requestVideoFrameCallback matching requested frame. 40 discrete scrollTo steps with a hold until presentation.",
+  "latencyP95ms": 16.7,
+  "reverseP95ms": 16.7,
+  "reverseSamples": 21,
+  "matchedDecodedFrame48": "27ec9a9cd87282be8a037db8417ede145f43b6fa50f56544035e0b1bb51023d3",
+  "measuredSeeks": [
+    {
+      "frame": 8,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 16,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 24,
+      "direction": "forward",
+      "ms": 16.4
+    },
+    {
+      "frame": 32,
+      "direction": "forward",
+      "ms": 16.2
+    },
+    {
+      "frame": 40,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 48,
+      "direction": "forward",
+      "ms": 16.3
+    },
+    {
+      "frame": 56,
+      "direction": "forward",
+      "ms": 15.6
+    },
+    {
+      "frame": 60,
+      "direction": "forward",
+      "ms": 16.6
+    },
+    {
+      "frame": 51,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 43,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 35,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 27,
+      "direction": "reverse",
+      "ms": 16.5
+    },
+    {
+      "frame": 19,
+      "direction": "reverse",
+      "ms": 16.4
+    },
+    {
+      "frame": 11,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 3,
+      "direction": "reverse",
+      "ms": 16.7
+    },
+    {
+      "frame": 0,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 29,
+      "direction": "forward",
+      "ms": 16.6
+    },
+    {
+      "frame": 55,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 30,
+      "direction": "reverse",
+      "ms": 16.5
+    },
+    {
+      "frame": 4,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 34,
+      "direction": "forward",
+      "ms": 16.4
+    },
+    {
+      "frame": 58,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 23,
+      "direction": "reverse",
+      "ms": 16.5
+    },
+    {
+      "frame": 0,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 18,
+      "direction": "forward",
+      "ms": 16.8
+    },
+    {
+      "frame": 36,
+      "direction": "forward",
+      "ms": 16.4
+    },
+    {
+      "frame": 54,
+      "direction": "forward",
+      "ms": 16.6
+    },
+    {
+      "frame": 48,
+      "direction": "reverse",
+      "ms": 16.5
+    },
+    {
+      "frame": 31,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 11,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 33,
+      "direction": "forward",
+      "ms": 16.6
+    },
+    {
+      "frame": 6,
+      "direction": "reverse",
+      "ms": 16.5
+    },
+    {
+      "frame": 39,
+      "direction": "forward",
+      "ms": 16.6
+    },
+    {
+      "frame": 16,
+      "direction": "reverse",
+      "ms": 16.4
+    },
+    {
+      "frame": 49,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 26,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 57,
+      "direction": "forward",
+      "ms": 16.5
+    },
+    {
+      "frame": 37,
+      "direction": "reverse",
+      "ms": 16.6
+    },
+    {
+      "frame": 12,
+      "direction": "reverse",
+      "ms": 16.5
+    },
+    {
+      "frame": 0,
+      "direction": "reverse",
+      "ms": 17.2
+    }
+  ],
+  "touchStops": [
+    {
+      "frame": 17,
+      "scrollY": 390,
+      "time": 0.710416
+    },
+    {
+      "frame": 30,
+      "scrollY": 707,
+      "time": 1.252083
+    },
+    {
+      "frame": 14,
+      "scrollY": 320,
+      "time": 0.585416
+    },
+    {
+      "frame": 31,
+      "scrollY": 712,
+      "time": 1.29375
+    },
+    {
+      "frame": 47,
+      "scrollY": 1094,
+      "time": 1.960416
+    }
+  ],
+  "evidenceRecording": {
+    "compositorFrames": 186,
+    "durationSeconds": 9.9,
+    "bytes": 1809313
+  },
+  "video": {
+    "source": "compact.mp4",
+    "width": 390,
+    "height": 386,
+    "duration": 2.541667,
+    "canPlayType": "probably",
+    "devicePixelRatio": 1,
+    "resourceTiming": [
+      {
+        "encodedBodySize": 741811,
+        "transferSize": 742111
+      }
+    ]
+  },
+  "httpBodyBytesActuallyServed": {
+    "index.html": 2207,
+    "gymdrobe.webp": 4770,
+    "capture-source.js": 1188,
+    "scroll.js": 1115,
+    "compact.mp4": 741811
+  },
+  "encodedBytes": {
+    "compact.mp4": 741811,
+    "wide.mp4": 1576514
+  },
+  "desktopSelected": {
+    "file": "wide.mp4",
+    "width": 720,
+    "height": 562
+  }
+}

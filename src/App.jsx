@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDown, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react';
 import AnalyticsPreference from './components/AnalyticsPreference.jsx';
 import { project, profile } from './data/portfolio.js';
 import { whatsappHref } from './data/site.js';
@@ -35,9 +35,9 @@ const aliases = {
 const views = [
   'The passenger window frames the studio and its upstairs office.',
   'A sheltered entrance and timber screens face the wet pavement.',
-  'The GymDrobe storefront is on the project table next to the courtyard.',
-  'A desktop layout and phone are under review at the studio workbench.',
-  'The courtyard rain tree comes level with the upstairs landing.',
+  'From the sheltered threshold, the open glass door leads into reception.',
+  'The working floor looks across to the courtyard stair.',
+  'The stair landing brings the courtyard branches to eye level.',
   'From the guest chair the office window looks back toward the parked car.',
 ];
 const whatsApp = whatsappHref('Hi Favas, I’d like to discuss a project for my business.');
@@ -84,10 +84,10 @@ function Header() {
               if (e.target.closest('a')) menu.current.open = false;
             }}
           >
-            <a href="#reception">Selected projects</a>
+            <a href="#reception">Skip to GymDrobe</a>
             <a href="/services/">Services</a>
             <a href="#landing">How I work</a>
-            <a href="#office">Founder’s office</a>
+            <a href="#office">Go to founder’s office</a>
             <a href="/contact/">Project enquiry</a>
           </nav>
         </details>
@@ -139,27 +139,29 @@ function Room({ chapter, children }) {
 function Arrival() {
   return (
     <div className="ap-invitation">
-      <p className="ap-byline">
-        Muhammed Favas K <span aria-hidden="true">·</span> Full-stack developer
-      </p>
-      <h1>
-        The <br />
-        <em>Appointment.</em>
+      <p className="ap-place">The Appointment <span aria-hidden="true">/</span> Virtual studio, Kozhikode</p>
+      <h1 className="ap-byline">
+        Muhammed Favas K <span className="ap-role">· Full-stack developer</span>
       </h1>
       <p className="ap-offer">I build websites and apps that help businesses grow.</p>
       <div className="ap-opening-links">
-        <ProjectLink id="gymdrobe" className="ap-action ap-featured-link">
-          <img src={project.screenshot} alt="" width="54" height="37" />
-          View GymDrobe
+        <ProjectLink id="gymdrobe" className="ap-featured-link" aria-label="View GymDrobe">
+          <img src={project.screenshot} alt={project.screenshotAlt} width="1348" height="926" />
+          <span>
+            <strong>View GymDrobe</strong>
+            <small>The fitness store I founded</small>
+          </span>
+          <ArrowUpRight size={18} aria-hidden="true" />
         </ProjectLink>
-        <a className="ap-link" href={whatsApp} data-contact="whatsapp">
+        <a className="ap-action ap-chat" href={whatsApp} data-contact="whatsapp">
+          <MessageCircle size={17} aria-hidden="true" />
           Chat on WhatsApp
         </a>
+        <a className="ap-cue" href="#pavement">
+          <ArrowDown size={15} aria-hidden="true" />
+          Scroll to step outside
+        </a>
       </div>
-      <a className="ap-cue" href="#pavement">
-        <ArrowDown size={15} aria-hidden="true" />
-        Scroll to step outside
-      </a>
     </div>
   );
 }
@@ -383,7 +385,7 @@ export default function App() {
     <AppointmentRooms onProjectChange={setProject} onInspecting={setInspecting}>
       <div className="ap-visit" data-render={render} data-chapter={chapter.id}>
         <a className="skip-link" href="#reception">
-          Skip to projects
+          Skip to GymDrobe
         </a>
         <Header />
         <div className="ap-layout">

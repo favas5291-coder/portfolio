@@ -20,8 +20,12 @@ function projectPoint([a, b, c, d], u, v) {
   return [0, 1].map((i) => ((b[i] * (1 + g) - a[i]) * u + (d[i] * (1 + h) - a[i]) * v + a[i]) / k);
 }
 
-function ScreenImage({ frame, src, layout, token }) {
-  if (!frame || !src) return null;
+function ScreenImage({ frame, capture, layout, token }) {
+  if (!frame || !capture) return null;
+  const imageAspect = capture.width / capture.height;
+  const glassAspect = frame.aspect || imageAspect;
+  const imageWidth = Math.min(1, imageAspect / glassAspect);
+  const imageHeight = Math.min(1, glassAspect / imageAspect);
   const { points, width, height } = frame;
   const fragments = [];
   const count = 2,
@@ -43,8 +47,17 @@ function ScreenImage({ frame, src, layout, token }) {
           d = (q[1] - o[1]) / du;
         const e = o[0] - a * u - c * v,
           f = o[1] - b * u - d * v;
+        // Independently antialiased clip paths can reveal hairlines between
+        // triangles. Overlap by a pixel and clip once at the actual glass edge.
+        const vertices = [o, p, q];
+        const center = [(o[0] + p[0] + q[0]) / 3, (o[1] + p[1] + q[1]) / 3];
+        const triangle = vertices.map(([x, y]) => {
+          const dx = x - center[0], dy = y - center[1];
+          const length = Math.hypot(dx, dy) || 1;
+          return [x + 1.8 * dx / length, y + 1.8 * dy / length].join(',');
+        }).join(' ');
         fragments.push({
-          triangle: [o, p, q].map((point) => point.join(',')).join(' '),
+          triangle,
           transform: `matrix(${a} ${b} ${c} ${d} ${e} ${f})`,
         });
       }
@@ -58,18 +71,31 @@ function ScreenImage({ frame, src, layout, token }) {
       preserveAspectRatio="xMidYMid slice"
     >
       <defs>
-        <image id={token} href={src} width="1" height="1" preserveAspectRatio="none" />
+        <image
+          id={token}
+          href={capture.screenshot}
+          x={(1 - imageWidth) / 2}
+          y={(1 - imageHeight) / 2}
+          width={imageWidth}
+          height={imageHeight}
+          preserveAspectRatio="none"
+        />
+        <clipPath id={token + '-glass'}>
+          <polygon points={points.map((point) => point.join(',')).join(' ')} />
+        </clipPath>
         {fragments.map(({ triangle }, i) => (
           <clipPath id={token + '-clip' + i} key={i}>
             <polygon points={triangle} />
           </clipPath>
         ))}
       </defs>
-      {fragments.map(({ transform }, i) => (
-        <g key={i} clipPath={'url(#' + token + '-clip' + i + ')'}>
-          <use href={'#' + token} transform={transform} />
-        </g>
-      ))}
+      <g clipPath={'url(#' + token + '-glass)'}>
+        {fragments.map(({ transform }, i) => (
+          <g key={i} clipPath={'url(#' + token + '-clip' + i + ')'}>
+            <use href={'#' + token} transform={transform} />
+          </g>
+        ))}
+      </g>
     </svg>
   );
 }
@@ -81,20 +107,20 @@ export function ScreenStill({ chapter, projectUrl }) {
   const images =
     id === 'studio'
       ? [
-          ['studio', paired?.screenshot || projectPreviews.gymdrobe.screenshot],
-          ['phone', paired?.mobile.screenshot],
+          ['studio', paired || projectPreviews.gymdrobe],
+          ['phone', paired?.mobile],
         ]
       : id === 'reception'
-        ? [['reception', projectPreviews.gymdrobe.screenshot]]
+        ? [['reception', projectPreviews.gymdrobe]]
         : id === 'office'
-          ? [['office', projectUrl || projectPreviews.gymdrobe.screenshot]]
+          ? [['office', Object.values(projectPreviews).find((item) => item.screenshot === projectUrl) || projectPreviews.gymdrobe]]
           : [];
-  return images.flatMap(([name, src]) =>
+  return images.flatMap(([name, capture]) =>
     ['compact', 'wide'].map((layout) => (
       <ScreenImage
         key={name + layout}
         frame={projections[name]?.[layout]}
-        src={src}
+        capture={capture}
         token={'screen' + token + name + layout}
         layout={layout}
       />

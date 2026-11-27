@@ -1,0 +1,100 @@
+{
+  "localOrigin": "http://127.0.0.1:4184",
+  "server": "vite preview, existing verified dist and current static file routing",
+  "mode": "Local production build, Linux Chromium headless, ANGLE SwiftShader, mouse/keyboard, DPR 1",
+  "runs": [
+    {
+      "size": [
+        390,
+        844
+      ],
+      "prefersReducedMotion": false,
+      "initialMode": "still",
+      "endMode": "live",
+      "endProgress": "1.0000",
+      "assets": {
+        "/appointment/models/car.glb": {
+          "status": 200,
+          "mime": "model/gltf-binary",
+          "sha256": "9206d9b08817449ecfec6f67c477c995b6ced1b5678a9174c705ae55b67f1b98"
+        },
+        "/appointment/models/tree.glb": {
+          "status": 200,
+          "mime": "model/gltf-binary",
+          "sha256": "f42eb45a13bfc4498c0056ae94615fb91ea198cc910fabf18b327d1b912932c3"
+        },
+        "/appointment/models/shell.glb": {
+          "status": 200,
+          "mime": "model/gltf-binary",
+          "sha256": "56b7e09169e5907fabf144dc0b75ba85f7f8f5a995f70c7fcc0db3e4af714187"
+        },
+        "/appointment/environment/after-rain.hdr": {
+          "status": 200,
+          "mime": ""
+        },
+        "/appointment/basis/basis_transcoder.wasm": {
+          "status": 200,
+          "mime": "application/wasm"
+        },
+        "/appointment/basis/basis_transcoder.js": {
+          "status": 200,
+          "mime": "text/javascript"
+        }
+      },
+      "browserErrors": []
+    },
+    {
+      "size": [
+        1440,
+        900
+      ],
+      "prefersReducedMotion": false,
+      "initialMode": "still",
+      "endMode": "live",
+      "endProgress": "1.0000",
+      "assets": {
+        "/appointment/models/shell.glb": {
+          "status": 200,
+          "mime": "model/gltf-binary",
+          "sha256": "56b7e09169e5907fabf144dc0b75ba85f7f8f5a995f70c7fcc0db3e4af714187"
+        },
+        "/appointment/models/car.glb": {
+          "status": 200,
+          "mime": "model/gltf-binary",
+          "sha256": "9206d9b08817449ecfec6f67c477c995b6ced1b5678a9174c705ae55b67f1b98"
+        },
+        "/appointment/models/tree.glb": {
+          "status": 200,
+          "mime": "model/gltf-binary",
+          "sha256": "f42eb45a13bfc4498c0056ae94615fb91ea198cc910fabf18b327d1b912932c3"
+        },
+        "/appointment/environment/after-rain.hdr": {
+          "status": 200,
+          "mime": ""
+        },
+        "/appointment/basis/basis_transcoder.wasm": {
+          "status": 200,
+          "mime": "application/wasm"
+        },
+        "/appointment/basis/basis_transcoder.js": {
+          "status": 200,
+          "mime": "text/javascript"
+        }
+      },
+      "browserErrors": []
+    },
+    {
+      "size": [
+        390,
+        844
+      ],
+      "prefersReducedMotion": true,
+      "initialMode": "still",
+      "endMode": "still",
+      "endProgress": "0.0533",
+      "assets": {},
+      "browserErrors": []
+    }
+  ],
+  "browser": "156.0.8078.79"
+}
