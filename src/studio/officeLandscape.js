@@ -1,6 +1,6 @@
 // Original courtyard planting. Each stand shares one coloured mesh, so the trees
 // outside the glass do not add draw calls per leaf or per frond.
-export function buildLandscape(T, root, { streetGarden = false } = {}) {
+export function buildLandscape(T, root, { streetGarden = false, lowDetail = false } = {}) {
   const garden = new T.Group();
   garden.name = 'Courtyard garden';
   root.add(garden);
@@ -51,10 +51,12 @@ export function buildLandscape(T, root, { streetGarden = false } = {}) {
         neck = ring(t - 0.007, 1),
         rim = ring(t, 1.055);
       const shadeValue = 0.58 + random() * 0.32;
-      for (let i = 0; i < sides; i++) {
-        const k = (i + 1) % sides;
+      if (lowDetail && j % 3 !== 0) continue;
+      const stride = lowDetail ? 2 : 1;
+      for (let i = 0; i < sides; i += stride) {
+        const k = (i + stride) % sides;
         quad(prior[i], prior[k], neck[k], neck[i], earth, shadeValue);
-        quad(neck[i], neck[k], rim[k], rim[i], earth, shadeValue * 1.22);
+        if (!lowDetail) quad(neck[i], neck[k], rim[k], rim[i], earth, shadeValue * 1.22);
       }
       prior = rim;
     }
@@ -80,8 +82,9 @@ export function buildLandscape(T, root, { streetGarden = false } = {}) {
       }
       for (let k = 0; k < repeats; k++) {
         const t = k / repeats,
-          next = (k + 1) / repeats;
-        quad(
+          next = Math.min(1, (k + (lowDetail ? 2 : 1)) / repeats);
+        const include = !lowDetail || (j % 2 === 0 && k % 2 === 0);
+        if (include) quad(
           point(t, -0.024, 0),
           point(t, 0.024, 0),
           point(next, 0.016, 0.002),
@@ -95,7 +98,8 @@ export function buildLandscape(T, root, { streetGarden = false } = {}) {
             shoulder = point(t + 0.15 / repeats, sign * width * 0.45, 0.04);
           const tip = point(Math.min(1, t + 0.13), sign * width, width * (0.38 + random() * 0.5));
           const edge = point(Math.min(1, next), sign * width * 0.18, 0.035);
-          quad(base, shoulder, tip, edge, green, 0.84 + random() * 0.26);
+          const value = 0.84 + random() * 0.26;
+          if (include) quad(base, shoulder, tip, edge, green, value);
         }
       }
     }
@@ -140,15 +144,21 @@ export function buildLandscape(T, root, { streetGarden = false } = {}) {
       }
       for (let n = 0; n < 15; n++) {
         const t = n / 15,
-          end = (n + 1) / 15;
+          end = Math.min(1, (n + (lowDetail ? 3 : 1)) / 15);
+        const include = !lowDetail || (i % 2 === 0 && n % 3 === 0);
         for (const sign of [-1, 1]) {
           const ridge = point(t, 0),
             edge = point(t, sign),
             next = point(end, sign);
           if (n > 3 && n % 3 === 0) {
-            triangle(ridge, edge, mix(ridge, next, 0.86), fold, sign < 0 ? 0.86 : 1.04);
-            triangle(ridge, next, point(end, 0), fold, sign < 0 ? 0.9 : 1.09);
-          } else quad(ridge, edge, next, point(end, 0), fold, (sign < 0 ? 0.84 : 1.0) + random() * 0.15);
+            if (include) {
+              triangle(ridge, edge, mix(ridge, next, 0.86), fold, sign < 0 ? 0.86 : 1.04);
+              triangle(ridge, next, point(end, 0), fold, sign < 0 ? 0.9 : 1.09);
+            }
+          } else {
+            const value = (sign < 0 ? 0.84 : 1.0) + random() * 0.15;
+            if (include) quad(ridge, edge, next, point(end, 0), fold, value);
+          }
         }
       }
     }
@@ -186,7 +196,8 @@ export function buildLandscape(T, root, { streetGarden = false } = {}) {
   leaves.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
   leaves.computeVertexNormals();
   const foliage = new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide });
-  garden.add(new T.Mesh(leaves, foliage));
+  const crowns = new T.Mesh(leaves, foliage);
+  garden.add(crowns);
   geometries.push(leaves);
   materials.push(foliage);
 
@@ -272,6 +283,7 @@ export function buildLandscape(T, root, { streetGarden = false } = {}) {
   materials.push(skyline);
   return {
     horizonMap: map,
+    showPlanting(visible) { crowns.visible = stand.visible = visible; },
     dispose() {
       garden.removeFromParent();
       garden.traverse(part => { if (part.isInstancedMesh) part.dispose(); });

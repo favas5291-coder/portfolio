@@ -2,6 +2,8 @@
 
 A prospective client visits Favas’s virtual studio in Kozhikode. Native scroll leads from the passenger seat across a shaded threshold to the GymDrobe project room, a working studio, the courtyard landing and the founder’s desk. Every room also has a direct link. The portfolio can be read with stills, JavaScript disabled or sound off.
 
+[Review preview, screenshots, walkthrough and measurements](docs/appointment/README.md)
+
 ## Run and review
 
 Use Node 22.12 or later. Run `npm ci`, then `npm run verify` for unit tests, the Vite production build, prerender validation for all public routes, internal links and the initial JavaScript budget. Use `npm run dev` to edit and `npm run preview` to inspect the production output. For an isolated review build, set `SITE_ENV=preview` before building. To package that build run `node scripts/build-fit-preview.mjs visual-checks/appointment-preview.tar.gz`.

@@ -12,7 +12,7 @@ function daylight(scene, compact) {
   sun.target.position.set(0, 0, 0);
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(compact ? 1024 : 2048);
-  Object.assign(sun.shadow.camera, { left:-14, right:14, top:13, bottom:-13, near:1, far:53 });
+  Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 13, bottom: -13, near: 1, far: 53 });
   sun.shadow.camera.updateProjectionMatrix();
   sun.shadow.normalBias = 0.021;
   sun.shadow.bias = -0.00018;
@@ -35,9 +35,9 @@ function ambientReflection(panorama) {
 
 function projectScreen(camera, corners, width, height) {
   if (!corners) return null;
-  const projected = corners.map(point => point.project(camera));
-  if (projected.some(point => point.z > 1 || point.z < -1)) return null;
-  const points = projected.map(point => [
+  const projected = corners.map((point) => point.project(camera));
+  if (projected.some((point) => point.z > 1 || point.z < -1)) return null;
+  const points = projected.map((point) => [
     Math.round((1 + point.x) * width * 50) / 100,
     Math.round((1 - point.y) * height * 50) / 100,
   ]);
@@ -45,9 +45,16 @@ function projectScreen(camera, corners, width, height) {
 }
 
 function publishScreenPositions(canvas, camera, architecture, p, capture) {
-  const width = canvas.clientWidth, height = canvas.clientHeight;
-  const names = p > .95 ? ['office'] : p >= .53 && p <= .63 ? ['studio','phone'] :
-    p > .35 && p < .46 ? ['reception'] : [];
+  const width = canvas.clientWidth,
+    height = canvas.clientHeight;
+  const names =
+    p > 0.95
+      ? ['office']
+      : p >= 0.53 && p <= 0.63
+        ? ['studio', 'phone']
+        : p > 0.35 && p < 0.46
+          ? ['reception']
+          : [];
   const screens = {};
   for (const name of names) {
     const projected = projectScreen(camera, architecture.getScreenCorners(name), width, height);
@@ -60,15 +67,30 @@ function publishScreenPositions(canvas, camera, architecture, p, capture) {
   canvas.appointmentMonitorBounds = null;
   if (screens.reception) {
     const rect = canvas.getBoundingClientRect();
-    const xs = screens.reception.points.map(point => point[0]);
-    const ys = screens.reception.points.map(point => point[1]);
-    canvas.appointmentMonitorBounds = {left:rect.left + Math.min(...xs), top:rect.top + Math.min(...ys),
-      width:Math.max(...xs) - Math.min(...xs), height:Math.max(...ys) - Math.min(...ys)};
+    const xs = screens.reception.points.map((point) => point[0]);
+    const ys = screens.reception.points.map((point) => point[1]);
+    canvas.appointmentMonitorBounds = {
+      left: rect.left + Math.min(...xs),
+      top: rect.top + Math.min(...ys),
+      width: Math.max(...xs) - Math.min(...xs),
+      height: Math.max(...ys) - Math.min(...ys),
+    };
   }
 }
 
-export function mountStudio(canvas, { progress, project, isPaused = () => false,
-  onReady = () => {}, onFailure = () => {}, onSlow, capture = false, blankScreens = false }) {
+export function mountStudio(
+  canvas,
+  {
+    progress,
+    project,
+    isPaused = () => false,
+    onReady = () => {},
+    onFailure = () => {},
+    onSlow,
+    capture = false,
+    blankScreens = false,
+  },
+) {
   const narrow = matchMedia('(max-width: 760px)');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   if (!capture && reduced.matches) {
@@ -78,9 +100,11 @@ export function mountStudio(canvas, { progress, project, isPaused = () => false,
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
-      canvas, alpha:false, antialias:true,
-      powerPreference:narrow.matches ? 'low-power' : 'high-performance',
-      preserveDrawingBuffer:capture,
+      canvas,
+      alpha: false,
+      antialias: true,
+      powerPreference: narrow.matches ? 'low-power' : 'high-performance',
+      preserveDrawingBuffer: capture,
     });
   } catch {
     onFailure('webgl-unavailable');
@@ -88,25 +112,42 @@ export function mountStudio(canvas, { progress, project, isPaused = () => false,
   }
   const gl = renderer.getContext();
   const debugInfo = !capture && gl.getExtension('WEBGL_debug_renderer_info');
-  const software = Boolean(debugInfo && /swiftshader|llvmpipe|softpipe|software rasterizer/i.test(
-    gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)));
+  const software = Boolean(
+    debugInfo &&
+      /swiftshader|llvmpipe|softpipe|software rasterizer/i.test(
+        gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
+      ),
+  );
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(61, 1, 0.035, 100);
   const manager = new THREE.LoadingManager();
   // Give each visit a separate texture queue. A disposed/restarted visit cannot
   // mark its replacement ready, even when an earlier image finishes later.
   class VisitTextureLoader extends THREE.TextureLoader {
-    constructor() { super(manager); }
+    constructor() {
+      super(manager);
+    }
   }
   const kit = { ...THREE, TextureLoader: VisitTextureLoader };
   const resources = [];
   let architecture, car, landscape, sunlight, reflection;
-  let active = true, inView = true, loaded = true, ready = false;
-  let frame = 0, timer = 0, clock = 0, previousTime = 0, lastProgress = -1;
+  let active = true,
+    inView = true,
+    loaded = true,
+    ready = false;
+  let frame = 0,
+    timer = 0,
+    clock = 0,
+    previousTime = 0,
+    lastProgress = -1;
   let pixelRatio = Math.min(devicePixelRatio || 1, narrow.matches ? 1.25 : 1.5);
-  let previousUrl = project(), shadowStep, furnished = false;
-  let pixelBudget = capture ? 2400000 : (software ? 64000 : 1300000);
-  let movingFrames = 0, slowFrames = 0, offerSent = false;
+  let previousUrl = project(),
+    shadowStep,
+    furnished = false;
+  let pixelBudget = capture ? 2400000 : software ? 64000 : 1300000;
+  let movingFrames = 0,
+    slowFrames = 0,
+    offerSent = false;
   let resizeObserver, viewportObserver;
 
   function stopFrames() {
@@ -132,7 +173,7 @@ export function mountStudio(canvas, { progress, project, isPaused = () => false,
 
   function resize() {
     if (!active) return;
-    const { clientWidth:width, clientHeight:height } = canvas;
+    const { clientWidth: width, clientHeight: height } = canvas;
     if (!width || !height) return;
     renderer.setPixelRatio(Math.min(pixelRatio, Math.sqrt(pixelBudget / (width * height))));
     renderer.setSize(width, height, false);
@@ -182,13 +223,17 @@ export function mountStudio(canvas, { progress, project, isPaused = () => false,
         scene.environmentRotation.y = 2.15;
       }
       positionCamera(camera, p, narrow.matches);
+      landscape.showPlanting(p < 0.335 || p > 0.714);
       car.update(p, clock);
       architecture.update(p, clock);
+      // A deep link or scroll restoration can start on the upper floor.
+      // Keep its furnished plate visible until its live counterpart is ready.
+      if (!ready && (!loaded || (p > 0.34 && !architecture.getScreenCorners('office')))) return;
       // Static sun occlusion can be reused at rest. Refresh while either
       // hinged door is moving and on entering the furnished upper room.
-      const doorStep = (p > 0.008 && p < 0.22) || (p > 0.25 && p < 0.48)
-        ? Math.floor(p * 92) : (p > 0.58 ? 100 : 0);
-      const newFurnishings = !furnished && p > .34 && architecture.getScreenCorners('office');
+      const doorStep =
+        (p > 0.008 && p < 0.22) || (p > 0.25 && p < 0.48) ? Math.floor(p * 92) : p > 0.58 ? 100 : 0;
+      const newFurnishings = !furnished && p > 0.34 && architecture.getScreenCorners('office');
       if ((!software && doorStep !== shadowStep) || newFurnishings) {
         shadowStep = doorStep;
         if (newFurnishings) furnished = true;
@@ -258,16 +303,26 @@ export function mountStudio(canvas, { progress, project, isPaused = () => false,
     sunlight = daylight(scene, narrow.matches);
     if (software) sunlight.shadow.mapSize.setScalar(512);
     renderer.shadowMap.needsUpdate = true;
-    manager.onStart = () => { if (!ready) loaded = false; };
-    manager.onLoad = () => { loaded = true; invalidate(); };
-    landscape = buildLandscape(kit, scene, {streetGarden:true});
+    manager.onStart = () => {
+      if (!ready) loaded = false;
+    };
+    manager.onLoad = () => {
+      loaded = true;
+      invalidate();
+    };
+    landscape = buildLandscape(kit, scene, { streetGarden: true, lowDetail: software });
     resources.push(landscape);
     architecture = buildArchitecture(kit, scene, {
-      previewUrl:previousUrl, mobile:narrow.matches, horizonMap:landscape.horizonMap, blankScreens,
-      onInvalidate:invalidate,
+      previewUrl: previousUrl,
+      mobile: narrow.matches,
+      horizonMap: landscape.horizonMap,
+      blankScreens,
+      lowPower: software,
+      onFailure: fail,
+      onInvalidate: invalidate,
     });
     resources.push(architecture);
-    car = buildCar(kit, scene, {mobile:narrow.matches});
+    car = buildCar(kit, scene, { mobile: narrow.matches });
     resources.push(car);
     resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(canvas);
@@ -276,7 +331,7 @@ export function mountStudio(canvas, { progress, project, isPaused = () => false,
       invalidate();
     });
     viewportObserver.observe(canvas);
-    window.addEventListener('scroll', invalidate, {capture:true, passive:true});
+    window.addEventListener('scroll', invalidate, { capture: true, passive: true });
     document.addEventListener('visibilitychange', invalidate);
     narrow.addEventListener('change', resize);
     reduced.addEventListener('change', motionChange);

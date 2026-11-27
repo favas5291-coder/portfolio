@@ -21,6 +21,9 @@ async function pageFor(browser, width, height, opts={}) {
   return {context,page};
 }
 async function chapter(page,id){
+  // Browser history can restore a previous scroll offset on the frame after a modal closes.
+  // Begin the next scroll only after the host has applied focus and cleared its overlay.
+  await page.evaluate(async()=>{await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);});
   await page.locator('#'+id).evaluate(el => el.scrollIntoView({behavior:'instant',block:'start'}));
   await page.waitForFunction(want=>document.querySelector('.ap-visit')?.dataset.chapter===want,id);
 }
@@ -29,6 +32,8 @@ async function entrance(page,width){
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.locator('.ap-poster').first().evaluate(img=>img.decode());
   await page.evaluate(()=>document.fonts.ready);
+  // This toolbar control is inserted only after the client has mounted and attached navigation listeners.
+  await page.getByRole('button',{name:'Ambient sound'}).waitFor({state:'attached'});
   const state = await page.evaluate(()=>{
     const inView=sel=>{
       const b=document.querySelector(sel).getBoundingClientRect();
@@ -79,6 +84,7 @@ async function inspect(page) {
       assert.equal(await sheet.locator('.ap-image-button img').getAttribute('src'),saved.mobile.screenshot);
     }
     await page.keyboard.press('Escape');await sheet.waitFor({state:'hidden'});
+    await page.waitForFunction(slug=>document.activeElement?.dataset.inspect===slug,id);
   }
 }
 async function desk(page) {
@@ -105,21 +111,49 @@ async function testEngine(name, type) {
       const info=await entrance(page,width);
       assert.equal(await page.locator('.ap-visit').getAttribute('data-render'),'still');
       if(width===390 || width===1440) await screen(page,name+'-'+width+'-opening-still');
-      if(width===390){await inspect(page);await desk(page);await page.setViewportSize({width:844,height:390});await chapter(page,'reception');}
-      session.widths.push({width,...info});await context.close();
+      if(width===390){await inspect(page);await desk(page);await page.setViewportSize({width:844,height:390});await chapter(page,'reception');await page.setViewportSize({width:390,height:844});}
+      // Switch back to the regular visit and exercise the same layout with a live or fallback renderer.
+      await page.emulateMedia({reducedMotion:'no-preference'});
+      await chapter(page,'arrival');
+      await page.keyboard.press('ArrowDown');
+      if(name==='chromium') await page.locator('.ap-visit[data-render="live"]').waitFor({timeout:60000});
+      if(width===1440){
+        await screen(page,name+'-1440-opening');
+        await chapter(page,'reception');await screen(page,name+'-1440-project-room');
+        await chapter(page,'office');await screen(page,name+'-1440-office');
+      }
+      session.widths.push({width,...info,regularMode:await page.locator('.ap-visit').getAttribute('data-render')});await context.close();
     }
     const {page,context}=await pageFor(browser,390,844);
     await entrance(page,390);
+    await page.keyboard.press('ArrowDown');
     if(name==='chromium') await page.locator('.ap-visit[data-render="live"]').waitFor({timeout:60000});
     await screen(page,name+'-390-opening');
+    // Reverse the same native scroll offset inside the passenger-door swing.
+    const previous = await page.evaluate(async () => {
+      const at = async y => {scrollTo({top:y,behavior:'instant'});await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);return Number(document.querySelector('.ap-stage').dataset.progress);};
+      return [await at(110),await at(205),await at(110)];
+    });
+    assert(previous[0]>0 && previous[1]>previous[0] && previous[0]===previous[2]);
+    session.reverseDoor=previous;
+    if(name==='chromium'){
+      const cdp=await context.newCDPSession(page);
+      await cdp.send('Page.setWebLifecycleState',{state:'frozen'});
+      await cdp.send('Page.setWebLifecycleState',{state:'active'});
+      await page.bringToFront();
+      session.emulatedFreezeResume=true;
+    }
     await chapter(page,'pavement');await screen(page,name+'-390-pavement');
     await chapter(page,'reception');
+    await screen(page,name+'-390-project-room');
     await chapter(page,'office');await screen(page,name+'-390-office');
     session.renderMode=await page.locator('.ap-visit').getAttribute('data-render');
     await context.close();
     const blocked=await pageFor(browser,430,844);
-    await blocked.page.addInitScript(()=>{const old=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(k,...args){return k.includes('webgl')?null:old.call(this,k,...args)}});
-    await entrance(blocked.page,430);await chapter(blocked.page,'reception');await inspect(blocked.page);
+    await blocked.page.addInitScript(()=>{const old=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(k,...args){if(k.includes('webgl')){window.__appointmentGLAttempt=true;return null;}return old.call(this,k,...args)}});
+    await entrance(blocked.page,430);await blocked.page.keyboard.press('PageDown');
+    await blocked.page.waitForFunction(()=>window.__appointmentGLAttempt);
+    await chapter(blocked.page,'reception');await inspect(blocked.page);
     assert.equal(await blocked.page.locator('.ap-visit').getAttribute('data-render'),'still');
     await blocked.context.close();session.unavailableWebGL='passed';
   } finally {

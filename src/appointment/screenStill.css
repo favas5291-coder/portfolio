@@ -1,6 +1,19 @@
-.ap-screen-layer { position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden; }
-.ap-screen-compact { display:none; }
-@media (max-width:760px) {
-  .ap-screen-compact { display:block; }
-  .ap-screen-wide { display:none; }
+.ap-screen-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ap-screen-compact {
+  display: none;
+}
+@media (max-width: 760px) {
+  .ap-screen-compact {
+    display: block;
+  }
+  .ap-screen-wide {
+    display: none;
+  }
 }
