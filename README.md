@@ -1,24 +1,34 @@
-# Fazhere Studio · Variable Width
+# Fazhere Studio · The Appointment
 
-A scroll-guided visit to Muhammed Favas K’s software practice in Kozhikode, Kerala. Scroll from the studio entrance to the GymDrobe projection, try the responsive storefront, compare two proposed mobile layouts, and start a project brief.
+A prospective client visits Favas’s virtual studio in Kozhikode. Native scroll leads from the passenger seat across a shaded threshold to the GymDrobe project room, a working studio, the courtyard landing and the founder’s desk. Every room also has a direct link. The portfolio can be read with stills, JavaScript disabled or sound off.
 
-## Run and verify
+[Review preview, screenshots, walkthrough and measurements](docs/appointment/README.md)
 
-Use Node 22.12 or later. Install the locked dependencies with `npm ci`. Run `npm run dev` for development. Run `npm run verify` for the unit tests, production build, prerendered pages, internal links, metadata, and initial JavaScript budget. Run `npm run preview` to serve the generated site.
+## Run and review
 
-The visual review workflow exercises the production build in Chromium and WebKit. For a portable preview, run `node scripts/build-fit-preview.mjs visual-checks/variable-width-preview.tar.gz` after building. Extract the archive and run `node serve.mjs` inside it.
+Use Node 22.12 or later. Run `npm ci`, then `npm run verify` for unit tests, the Vite production build, prerender validation for all public routes, internal links and the initial JavaScript budget. Use `npm run dev` to edit and `npm run preview` to inspect the production output. For an isolated review build, set `SITE_ENV=preview` before building. To package that build run `node scripts/build-fit-preview.mjs visual-checks/appointment-preview.tar.gz`.
 
-## Maintain the visit
+## Maintain the studio
 
-- The homepage and native scroll choreography live in `src/App.jsx`. The primary links are `/#work`, `/#process`, and `/#contact`. Production renders the opening image, title, offer, and direct contact links into HTML.
-- The instrument and its camera live in `src/variable/`. To regenerate its WebP stills, install the Playwright tooling named in the visual review workflow and run `node scripts/render-variable-views.mjs`. Set `CHROME_PATH` if using system Chromium.
-- The working storefront and design review live in `src/variable/Exhibit.jsx` and `Process.jsx`. The verified business and project facts, project imagery, and contact destinations come from `src/data/`.
-- Geometry and the HTML exhibit share a width value. Check both ends of travel, both viewports, and the vertical scroll gesture after changing the instrument. Also test the same tasks in still mode.
-- Public routes are prerendered into `dist`. The production site uses the existing Render service for https://fazhere.com. Run `node scripts/check-deployment.mjs https://fazhere.com` after a release to check public pages, redirects, and crawl information.
+- **Move a camera stop.** Edit `src/appointment/visit.js`. It holds the ordered room IDs, normalised progress, eye positions and focal targets in metres, plus a separate lens for compact views. Check both ends of the visit, the open door during reverse scrolling and stair clearance after moving a stop. Keep the upper window and car on the same sightline.
+- **Change the architecture.** The courtyard, floors, glazing and stairs live in `src/appointment/architecture.js`; the car body, door hinge, seat and trim in `car.js`; the upper room and review furniture in `furnishings.js`. Keep passageways clear at the configured camera positions when replacing a model. The courtyard tree has its own seeded geometry. The material credits live alongside the finishes in `public/appointment/finishes/`.
+- **Regenerate architectural stills.** Use the version of Playwright from the browser-review workflow and install Chromium. Run `node scripts/render-appointment-stills.mjs` from the project root. The same scene and camera generate six rooms in two compositions. Set `CHROME_PATH` to select another installed Chromium. Recheck phone and desktop after changing the geometry, cameras, lighting or panel aspect ratio.
+- **Change quality or motion.** `src/appointment/scene.js` sets pixel-ratio limits, shadow sizes, idle rendering and slow-device fallback. The homepage defers the renderer until someone starts exploring. Native scroll, buttons and direct links remain available. `StudioSound.jsx` provides optional synthesized ambience; it starts off.
+- **Update a project, service or contact.** Edit the verified records in `src/data/portfolio.js`, the preview manifest via the helper below, and the configured services, process and WhatsApp destination in `src/data/site.js`. The project room reads the existing exhibit catalogue. At the desk, service and enquiry text carry through to the contact form or WhatsApp. An unfinished brief is saved only in the visitor’s tab session.
+- **Run the visit checks.** With the production preview serving, run `node scripts/review-appointment.mjs` using the Playwright version and browsers from `.github/workflows/cinematic-visual.yml`. The workflow runs the checks and uploads the evidence on a pull request.
+
+## Art direction and exhibit sources
+
+The building is a fictional virtual studio. The external architecture informed three original decisions made for this visit.
+
+- The courtyard links the street, project table and landing. Timber screens shade the upper floor. [Stapati’s Team Thai Corporate Office](https://stapati.com/projects/team-thai/)
+- Shallow eaves and a long canopy separate the wet kerb from the dry, indirectly lit reception. [Renzo Piano Pavilion at the Kimbell](https://kimbellart.org/art-architecture/architecture/renzo-piano-pavilion)
+- The camera settles before the project opens as a readable exhibit. [Undream Studio’s The Silence Museum](https://www.undreamstudio.com/projects/the-silence-museum/)
+- The local shopping example uses the original GymDrobe shirt photos. On the live product, selecting red changed the gallery and set the colour in the address; reopening the link restored that choice. The displayed size labels were identical in the two colours checked. The portfolio excerpt demonstrates the photo and link. [Product source](https://github.com/favas5291-coder/gym-store/blob/6e93a5643feb745c673936cb16e5937b9f8761db/src/pages/ProductPage.jsx#L160-L238) · [Live red variant](https://www.gymdrobe.com/product/6ad2351ed8f991271e3d1a8b?colour=RED)
 
 ## Refresh project previews
 
-Project previews are registered in `src/data/project-previews.js`. The storefront capture appears on the case-study and service pages. The exhibit uses the registered product imagery. Capture dates remain separate from code-review dates.
+Project previews are registered in `src/data/project-previews.js`. The visit, project viewer and case studies read the registered captures. The colour demonstration uses the registered product imagery. Capture dates remain separate from code-review dates.
 
 Inspect the actual public homepage, dismiss optional overlays, wait for visible images/fonts, and capture a clean desktop screenshot at 1348 × 926 or larger with the same aspect ratio. Confirm that it shows the current design rather than a login, error, popup or loading state.
 

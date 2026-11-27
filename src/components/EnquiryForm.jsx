@@ -2,6 +2,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { services, whatsappHref } from '../data/site.js';
 import { readEnquiry, validateEnquiry, formEndpoint, enquiryMessage, submitEnquiry } from '../enquiries/form.js';
+import { readDraft, updateDraft, clearDraft } from '../enquiries/draft.js';
 import { trackContact } from '../seo/analytics.js';
 
 export default function EnquiryForm() {
@@ -10,13 +11,27 @@ export default function EnquiryForm() {
   const [status, setStatus] = useState('');
   const [pending, setPending] = useState(false);
   const [handoff, setHandoff] = useState('');
+  const formRef = useRef(null);
   const controller = useRef(null), busy = useRef(false), statusNode = useRef(null);
   useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
     const slug = new URLSearchParams(window.location.search).get('service');
     const selected = services.find(item => item.slug === slug);
-    const field = document.getElementById('enquiry-service');
-    if (selected && field && !field.value) field.value = selected.name;
+    const restore = () => {
+      const draft = readDraft();
+      if (selected && history.state?.enquiryPrefill !== selected.slug) {
+        draft.service = selected.name;
+        updateDraft({ service: selected.name });
+        history.replaceState({ ...history.state, enquiryPrefill: selected.slug }, '', location.href);
+      }
+      for (const [name, value] of Object.entries(draft)) {
+        const field = formRef.current?.elements.namedItem(name);
+        if (field && (!field.value || name === 'service' || name === 'message')) field.value = value;
+      }
+    };
+    restore();
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
   }, []);
   const submit = async event => {
     event.preventDefault();
@@ -40,13 +55,13 @@ export default function EnquiryForm() {
     try {
       await submitEnquiry(endpoint, data, { signal: abort.signal });
       setStatus('Your enquiry was accepted by the form service. Thank you for sharing your project.');
-      form.reset(); trackContact('enquiry_submitted');
+      form.reset(); clearDraft(); trackContact('enquiry_submitted');
     } catch (error) {
       setStatus(error.name === 'AbortError' ? 'Confirmation timed out. Delivery is unconfirmed. Your details are still here; contact me on WhatsApp before sending again.' : error.message);
     } finally { clearTimeout(timeout); busy.current = false; setPending(false); }
   };
   const field = (name, label, props = {}) => <div className="form-field"><label htmlFor={`enquiry-${name}`}>{label}</label><input id={`enquiry-${name}`} name={name} aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `error-${name}` : undefined} {...props}/>{errors[name] && <p className="field-error" id={`error-${name}`}>{errors[name]}</p>}</div>;
-  return <form className="enquiry-form" onSubmit={submit} noValidate aria-describedby="form-help" aria-busy={pending}>
+  return <form ref={formRef} className="enquiry-form" onInput={({ target }) => updateDraft({ [target.name]: target.value })} onSubmit={submit} noValidate aria-describedby="form-help" aria-busy={pending}>
     <p id="form-help">Share a short brief. Add at least one contact method. {endpoint ? 'Enquiries are delivered through Formspree.' : 'This form prepares a WhatsApp message for you to review and send.'}</p>
     <fieldset disabled={pending}><legend className="sr-only">Your project enquiry</legend>
       {field('name', 'Your name', { autoComplete: 'name', required: true, minLength: 2, maxLength: 100 })}

@@ -638,10 +638,18 @@ function buildArm(THREE, common, person, side) {
       '#302d29',
     );
   }
-  return batch.finish();
+  const mesh = batch.finish();
+  if (phone) {
+    const screen = new THREE.Object3D();
+    screen.name = 'Handset screen';
+    screen.position.set(x + .025, y + .061, z + .087);
+    screen.rotation.set(-.3,-.18,.035);
+    mesh.add(screen);
+  }
+  return mesh;
 }
 
-export function buildPeople(THREE, scene, { mobile = false } = {}) {
+export function buildPeople(THREE, scene, { mobile = false, placements } = {}) {
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0 });
   const common = {
     material,
@@ -651,7 +659,10 @@ export function buildPeople(THREE, scene, { mobile = false } = {}) {
   };
   const group = new THREE.Group();
   group.name = 'Studio occupants';
-  const figures = cast.map((person, i) => {
+  const occupants = placements ? placements.map(placement => ({
+    ...cast.find(person => person.role === placement.role), ...placement,
+  })) : cast;
+  const figures = occupants.map((person, i) => {
     const hip = person.standing ? 0.935 : 0.5;
     const root = new THREE.Group();
     root.name = person.role;
@@ -728,6 +739,7 @@ export function buildPeople(THREE, scene, { mobile = false } = {}) {
   update({ progress: 0, time: 0 });
   return {
     update,
+    figure: role => figures.find(({person}) => person.role === role),
     dispose() {
       scene.remove(group);
       group.traverse((object) => object.geometry?.dispose());
