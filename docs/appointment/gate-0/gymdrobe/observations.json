@@ -1,0 +1,44 @@
+{
+  "url": "https://www.gymdrobe.com/product/6ad2351ed8f991271e3d1a8b",
+  "viewport": [
+    390,
+    844
+  ],
+  "isMobile": false,
+  "dpr": 1,
+  "browser": "156.0.8078.79",
+  "before": {
+    "url": "https://www.gymdrobe.com/product/6ad2351ed8f991271e3d1a8b",
+    "selected": "true",
+    "gallery": {
+      "alt": "Compression Half Sleeves T-shirt \u00b7 BLACK",
+      "url": "https://coitonic.com/cdn/shop/files/70_76158701-9e0b-42fa-8752-1c8ba720b9b3.jpg?v=1774514502&width=480",
+      "width": 389,
+      "height": 584
+    },
+    "thumbnails": 5
+  },
+  "after": {
+    "url": "https://www.gymdrobe.com/product/6ad2351ed8f991271e3d1a8b?colour=RED",
+    "selected": "true",
+    "gallery": {
+      "alt": "Compression Half Sleeves T-shirt \u00b7 RED",
+      "url": "https://coitonic.com/cdn/shop/files/coitonic-compression-half-sleeves-t-shirt-red-front.jpg?v=1785168395&width=480",
+      "width": 389,
+      "height": 519
+    },
+    "thumbnails": 5
+  },
+  "share_button_clipboard": "https://www.gymdrobe.com/product/6ad2351ed8f991271e3d1a8b",
+  "reopened": {
+    "url": "https://www.gymdrobe.com/product/6ad2351ed8f991271e3d1a8b?colour=RED",
+    "selected": "true",
+    "gallery": {
+      "alt": "Compression Half Sleeves T-shirt \u00b7 RED",
+      "url": "https://coitonic.com/cdn/shop/files/coitonic-compression-half-sleeves-t-shirt-red-front.jpg?v=1785168395&width=480",
+      "width": 389,
+      "height": 519
+    },
+    "thumbnails": 5
+  }
+}
