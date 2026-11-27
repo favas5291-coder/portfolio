@@ -1,4 +1,4 @@
-name: Variable Width browser review
+name: Appointment browser review
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,27 +30,23 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci && npm run verify
-      - name: Package the production review
-        run: node scripts/build-fit-preview.mjs visual-checks/variable-width-preview.tar.gz
       - name: Prepare Chromium and WebKit
         run: |
           npm install --prefix "$RUNNER_TEMP/browser-tools" --no-audit --no-fund playwright@1.62.1
           ln -s "$RUNNER_TEMP/browser-tools/node_modules/playwright" node_modules/playwright
           "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium webkit
-      - name: Exercise the packaged studio
+      - name: Exercise the production build
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          mkdir "$RUNNER_TEMP/variable-width"
-          tar -xzf visual-checks/variable-width-preview.tar.gz -C "$RUNNER_TEMP/variable-width"
-          node "$RUNNER_TEMP/variable-width/serve.mjs" > "$RUNNER_TEMP/review-server.log" 2>&1 &
+          npm run preview > "$RUNNER_TEMP/appointment-preview.log" 2>&1 &
           curl --retry 18 --retry-delay 1 --retry-connrefused --fail --silent --output /dev/null http://127.0.0.1:4173/
-          node scripts/review-studio.mjs
-      - name: Upload production preview and browser evidence
+          node scripts/review-appointment.mjs
+      - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: variable-width-review
+          name: appointment-browser-review
           path: visual-checks/
           compression-level: 0
           if-no-files-found: error

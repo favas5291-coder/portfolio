@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, stat, writeFile, mkdir } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { loadEnv } from 'vite';
+import { chapters as visitChapters } from '../src/appointment/visit.js';
 import { profile, chapters, project } from '../src/data/portfolio.js';
 import { SITE_ORIGIN } from '../src/data/site.js';
 import { pages, normalizePath } from '../src/seo/pages.js';
@@ -12,11 +13,11 @@ import { pageEntry } from './page-entry.mjs';
 const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
 const preview = isPreview(env);
 const home = await readFile('dist/index.html', 'utf8');
-for (const id of new Set([...chapters.map(chapter => chapter.id), 'work', 'process'])) {
+for (const id of new Set([...chapters.map(chapter => chapter.id), 'work', 'process', ...visitChapters.map(chapter => chapter.id)])) {
   assert.ok(home.includes(`id="${id}"`), `Missing visit anchor ${id}`);
 }
 for (const url of [`mailto:${profile.email}`, profile.github, profile.linkedin, project.website, project.repository, 'tel:+918156805806', 'https://wa.me/918156805806']) assert.ok(home.includes(url), `Missing contact/project link: ${url}`);
-for (const asset of [project.screenshot, '/variable/arrival.webp', '/variable/arrival-mobile.webp', '/variable/studio-mark.svg', '/social-card.png', '/favicon.svg']) assert.ok((await stat(`dist${asset}`)).size > 0);
+for (const asset of [project.screenshot, ...visitChapters.flatMap(chapter => [chapter.wide, chapter.compact]), '/variable/studio-mark.svg', '/social-card.png', '/favicon.svg']) assert.ok((await stat(`dist${asset}`)).size > 0);
 const rendered = new Map();
 for (const page of pages) {
   const file = page.path === '/' ? 'dist/index.html' : `dist${page.path}index.html`;

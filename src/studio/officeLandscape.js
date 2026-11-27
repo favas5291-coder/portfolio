@@ -1,6 +1,6 @@
 // Original courtyard planting. Each stand shares one coloured mesh, so the trees
 // outside the glass do not add draw calls per leaf or per frond.
-export function buildLandscape(T, root) {
+export function buildLandscape(T, root, { streetGarden = false } = {}) {
   const garden = new T.Group();
   garden.name = 'Courtyard garden';
   root.add(garden);
@@ -171,6 +171,16 @@ export function buildLandscape(T, root) {
     for (let z = 1; z > -30; z -= 2.45 + random() * 2.25) {
       banana(side * (8.8 + random() * 1.85), z, 2.1 + random() * 1.4);
     }
+  // The street opposite the appointment studio appears again from its upper
+  // window. Reuse this same planting mesh for the far verge of that view.
+  if (streetGarden) {
+    for (const [x, z, height, leanX] of [
+      [-12.5,23.8,7.8,0.85], [-7.4,26.2,5.9,-0.65], [2.9,27.0,6.8,0.75],
+      [7.2,23.5,6.3,-0.72], [12.6,26.1,8.1,0.35],
+    ]) coconut(x, z, height, leanX, -0.55);
+    for (let x = -18; x < 18; x += 1.45 + random()*1.7)
+      banana(x, 22.4 + random()*2.2, 1.8 + random()*1.3);
+  }
   const leaves = new T.BufferGeometry();
   leaves.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
   leaves.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
@@ -188,6 +198,32 @@ export function buildLandscape(T, root) {
   garden.add(lawn);
   geometries.push(soil);
   materials.push(grass);
+
+  if (streetGarden) {
+    // A real planted verge and plaster compound wall establish a far edge
+    // for the road when seen downward through the office window.
+    const box = new T.BoxGeometry();
+    geometries.push(box);
+    const unit = new T.Object3D();
+    function layer(colour, boxes) {
+      const material = new T.MeshLambertMaterial({ color: colour });
+      const mesh = new T.InstancedMesh(box, material, boxes.length);
+      boxes.forEach(([x,y,z,w,h,d], i) => {
+        unit.position.set(x,y,z);
+        unit.scale.set(w,h,d);
+        unit.updateMatrix();
+        mesh.setMatrixAt(i, unit.matrix);
+      });
+      mesh.computeBoundingSphere();
+      garden.add(mesh);
+      materials.push(material);
+    }
+    layer('#777c56', [[0,.025,30,54,.05,17]]);
+    layer('#a08a6a', [[1,-.015,21.04,48,.18,.82]]);
+    layer('#d8c6a3', [[-16.4,.44,21.60,12.4,.91,.24],[7.8,.44,21.6,31.5,.91,.24]]);
+    layer('#686555', [[-16.4,.924,21.6,12.45,.07,.32],[7.8,.924,21.6,31.54,.07,.32]]);
+    layer('#6e6350', [[-9.12,.44,21.6,2.13,.90,.14]]);
+  }
 
   const shrubMap = new T.TextureLoader().load('/studio/undergrowth.webp');
   shrubMap.colorSpace = T.SRGBColorSpace;
@@ -238,6 +274,7 @@ export function buildLandscape(T, root) {
     horizonMap: map,
     dispose() {
       garden.removeFromParent();
+      garden.traverse(part => { if (part.isInstancedMesh) part.dispose(); });
       map.dispose();
       shrubMap.dispose();
       for (const geometry of geometries) geometry.dispose();

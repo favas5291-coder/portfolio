@@ -1,480 +1,233 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, MapPin, MessageCircle, Pause, Play } from 'lucide-react';
-import { fabea, luxvibe, profile, project } from './data/portfolio.js';
-import { PHONE_DISPLAY, PHONE_HREF, services, whatsappHref } from './data/site.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowDown, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react';
 import AnalyticsPreference from './components/AnalyticsPreference.jsx';
-import Exhibit, { LayoutReview } from './variable/Exhibit.jsx';
-import './variable/visit.css';
+import { project, profile } from './data/portfolio.js';
+import { whatsappHref } from './data/site.js';
+import { AppointmentRooms, ProjectLink, ReceptionRoom, StudioRoom, LandingRoom, OfficeRoom } from './appointment/Rooms.jsx';
+import { ScreenStill } from './appointment/ScreenStill.jsx';
+import { StudioSound } from './appointment/StudioSound.jsx';
+import { chapters, chapterAt } from './appointment/visit.js';
+import './appointment/visit.css';
 
-const stops = ['home', 'work', 'process', 'contact'];
-const pictures = [
-  ['/variable/arrival.webp', '/variable/arrival-mobile.webp'],
-  ['/variable/work.webp', '/variable/work-mobile.webp'],
-  ['/variable/process.webp', '/variable/process-mobile.webp'],
-  ['/variable/contact.webp', '/variable/contact-mobile.webp'],
-];
-const narrowWork = '/variable/work-compact.webp';
-const wideMobileWork = '/variable/work-wide-mobile.webp';
-const views = [
-  'A suspended cobalt fin curves above the orange width control in the projection studio.',
-  'The operator’s table faces a luminous project surface between two cobalt fins.',
-  'The review wall sits at a right angle to the project surface.',
-  'A sheet for your brief sits between the blue fins of the studio.',
-];
-const enquiries = {
-  Website: 'a website',
-  'Online store': 'an online store',
-  'Web app': 'a web app',
-};
-const contactURL = (choice) =>
-  whatsappHref(
-    choice
-      ? 'Hi Favas, I’d like to discuss ' + enquiries[choice] + ' for my business.'
-      : 'Hi Favas, I’d like to discuss a project for my business.',
-  );
 const aliases = {
-  home: ['entrance', 'about'],
-  work: ['projects', 'project-room', 'demonstration', 'drive-gymdrobe'],
-  process: [
-    'skills',
-    'reception',
-    'development-studio',
-    'client-review',
-    'drive-map',
-    'drive-controls',
-    'drive-workshop',
-  ],
-  contact: ['founder-office', 'drive-office'],
+  arrival: ['home', 'entrance'], pavement: ['about'],
+  reception: ['work', 'projects', 'project-room', 'demonstration', 'drive-gymdrobe'],
+  studio: ['skills', 'services', 'development-studio', 'client-review', 'drive-map', 'drive-controls', 'drive-workshop'],
+  landing: ['process'], office: ['contact', 'founder-office', 'drive-office'],
 };
+const views = [
+  'The passenger window frames the studio and its upstairs office.',
+  'A sheltered entrance and timber screens face the wet pavement.',
+  'The GymDrobe storefront is on the project table next to the courtyard.',
+  'A desktop layout and phone are under review at the studio workbench.',
+  'The courtyard rain tree comes level with the upstairs landing.',
+  'From the guest chair the office window looks back toward the parked car.',
+];
+const whatsApp = whatsappHref('Hi Favas, I’d like to discuss a project for my business.');
 
-function Still({ stop, width, first = false }) {
-  const [desktop, mobile] = pictures[stop];
-  return (
-    <picture>
-      <source media="(max-width: 740px)" srcSet={stop === 1 && width >= 0.5 ? wideMobileWork : mobile} />
-      <img
-        className="vw-scene-poster"
-        src={stop === 1 && width < 0.5 ? narrowWork : desktop}
-        alt={views[stop]}
-        fetchPriority={first ? 'high' : 'auto'}
-      />
-    </picture>
-  );
+function Wordmark() {
+  return <a className="ap-mark" href="#arrival" aria-label="Fazhere Studio home"><img src="/variable/studio-mark.svg" alt="" width="27" height="27" />Fazhere Studio</a>;
 }
 
-// Let the selected poster and text settle before the optional renderer competes
-// for the main thread. A stalled image or font cannot prevent a live visit.
-function afterPosterPaint(poster, start) {
-  let pending = true;
-  let frame, idle, timer;
-  function paint() {
-    if (!pending) return;
-    pending = false;
-    clearTimeout(timer);
-    frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        // Leave a short input window for a visitor arriving directly at an exhibit.
-        timer = setTimeout(() => {
-          if ('requestIdleCallback' in window) {
-            idle = window.requestIdleCallback(start, { timeout: 1000 });
-          } else {
-            start();
-          }
-        }, 400);
-      });
-    });
-  }
-  timer = setTimeout(paint, 1000);
-  Promise.allSettled([poster?.decode?.(), document.fonts?.ready]).then(paint);
-  return () => {
-    pending = false;
-    clearTimeout(timer);
-    cancelAnimationFrame(frame);
-    if (idle !== undefined) window.cancelIdleCallback(idle);
-  };
-}
-
-function Signature() {
-  return (
-    <span className="vw-signature">
-      <img src="/variable/studio-mark.svg" alt="" width="31" height="31" />
-      Fazhere Studio
-    </span>
-  );
-}
-
-function Navigation({ stop }) {
-  return (
-    <header className="vw-header">
-      <a href="#home" aria-label="Fazhere Studio, home">
-        <Signature />
-      </a>
-      <nav aria-label="Studio visit">
-        {stops.slice(1).map((id, index) => (
-          <a key={id} href={'#' + id} aria-current={stop === index + 1 ? 'location' : undefined}>
-            {id}
-          </a>
-        ))}
-      </nav>
-      <a className="vw-header-contact" href={contactURL()} data-contact="whatsapp">
-        <MessageCircle size={16} aria-hidden="true" />
-        <span>Talk to Favas</span>
-      </a>
-    </header>
-  );
-}
-
-function VisitSection({ id, children }) {
-  return (
-    <section className={'vw-chapter vw-' + id} id={id} tabIndex={-1} data-visit-chapter>
-      {aliases[id].map((alias) => (
-        <span className="vw-anchor" id={alias} key={alias} aria-hidden="true" />
-      ))}
-      <noscript>
-        <div className="vw-noscript-scene">
-          <Still stop={stops.indexOf(id)} width={0} />
-        </div>
-      </noscript>
-      {children}
-    </section>
-  );
-}
-
-function Offerings() {
-  return (
-    <div className="vw-directory">
-      <div>
-        <h3 id="services">Services</h3>
-        <ul>
-          {services.map(({ name, slug, short }) => (
-            <li key={slug}>
-              <a href={'/services/' + slug + '/'}>
-                <span>
-                  <strong>{name}</strong>
-                  <small>{short}</small>
-                </span>
-                <ArrowUpRight size={18} aria-hidden="true" />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h3>Other projects</h3>
-        <ul>
-          {[fabea, luxvibe].map((item, i) => (
-            <li key={item.name} id={'drive-' + item.name.toLowerCase()}>
-              <a href={item.caseStudy}>
-                <span>
-                  <strong>{item.name}</strong>
-                  <small>
-                    {i === 0
-                      ? 'An editorial bags and heels storefront concept.'
-                      : 'A boutique shopping concept with a WhatsApp enquiry bag.'}
-                  </small>
-                </span>
-                <ArrowUpRight size={18} aria-hidden="true" />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function Brief() {
-  const [choice, setChoice] = useState(null);
-  return (
-    <div className="vw-brief">
-      <p className="vw-kicker">Start a conversation</p>
-      <h2>
-        Your project<span>.</span>
-      </h2>
-      <p className="vw-question">What would you like your customers to be able to do?</p>
-      <fieldset>
-        <legend>
-          Project type <span>(optional)</span>
-        </legend>
-        {Object.keys(enquiries).map((type) => (
-          <label key={type}>
-            <input
-              type="radio"
-              name="brief-type"
-              value={type}
-              checked={choice === type}
-              onChange={() => setChoice(type)}
-            />
-            <span>{type}</span>
-          </label>
-        ))}
-      </fieldset>
-      <a className="vw-button" data-contact="whatsapp" href={contactURL(choice)}>
-        <MessageCircle size={18} aria-hidden="true" />
-        Talk to Favas on WhatsApp
-      </a>
-      <a className="vw-email" href={'mailto:' + profile.email} data-contact="email">
-        {profile.email}
-      </a>
-    </div>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="vw-footer">
-      <a href="#home">
-        <Signature />
-      </a>
-      <div>
-        <a href="/contact/">Project enquiry</a>
-        <a href={PHONE_HREF}>{PHONE_DISPLAY}</a>
-        <a href={profile.github}>GitHub</a>
-        <a href={profile.linkedin}>LinkedIn</a>
-        <a href={project.repository}>GymDrobe source</a>
-        <a href="/privacy/">Privacy</a>
-      </div>
-      <AnalyticsPreference />
-    </footer>
-  );
-}
-
-export default function App() {
-  const host = useRef(null);
-  const main = useRef(null);
-  const pose = useRef({ progress: 0, width: 1 });
-  const [width, setWidth] = useState(1);
-  const [stop, setStop] = useState(0);
-  const [render, setRender] = useState('still');
-  const [paused, setPaused] = useState(false);
-  const [canToggle, setCanToggle] = useState(false);
-  const explicitMotion = useRef(false);
-
+function Header() {
+  const menu = useRef(null);
   useEffect(() => {
-    const oldExhibit = new URLSearchParams(location.search).get('exhibit');
-    const legacyProject = [fabea, luxvibe].find((item) => item.name.toLowerCase() === oldExhibit);
-    if (legacyProject) {
-      location.replace(legacyProject.caseStudy);
-      return;
-    }
-    performance.mark('vw-interactive');
-    const restored = history.state?.variableProof?.width;
-    setWidth(Number.isFinite(restored) ? restored : matchMedia('(max-width:740px)').matches ? 0 : 1);
+    const close = e => { if (!menu.current?.contains(e.target)) menu.current.open = false; };
+    const escape = e => { if (e.key === 'Escape' && menu.current?.open) {menu.current.open = false; menu.current.querySelector('summary').focus();} };
+    window.addEventListener('pointerdown', close); window.addEventListener('keydown', escape);
+    return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', escape); };
   }, []);
-  useEffect(() => {
-    pose.current.width = width;
-  }, [width]);
+  return <header className="ap-header">
+    <Wordmark />
+    <div className="ap-nav">
+      <details ref={menu} className="ap-browse">
+        <summary aria-label="Browse portfolio">Browse<span className="ap-long">&nbsp;portfolio</span> <ChevronDown size={14}/></summary>
+        <nav aria-label="Portfolio" onClick={e => {if(e.target.closest('a')) menu.current.open = false;}}>
+          <a href="#reception">Selected projects</a><a href="/services/">Services</a><a href="#landing">How I work</a><a href="#office">Founder’s office</a><a href="/contact/">Project enquiry</a>
+        </nav>
+      </details>
+      <a className="ap-header-chat" aria-label="Chat on WhatsApp" href={whatsApp} data-contact="whatsapp"><MessageCircle size={16} aria-hidden="true"/><span><span className="ap-long">Chat on </span>WhatsApp</span></a>
+    </div>
+  </header>;
+}
 
+function Still({ chapter, projectUrl, first = false }) {
+  const index = chapters.indexOf(chapter);
+  return <><picture>
+    <source media="(max-width: 760px)" srcSet={chapter.compact} />
+    <img className="ap-poster" src={chapter.wide} alt={views[index]} fetchPriority={first ? 'high' : 'auto'} />
+  </picture><ScreenStill chapter={chapter} projectUrl={projectUrl}/></>;
+}
+
+function Room({ chapter, children }) {
+  return <section id={chapter.id} className={'ap-room ap-' + chapter.id} data-room={chapter.id} tabIndex={-1}>
+    {aliases[chapter.id]?.map(id => <span key={id} className="ap-anchor" id={id} aria-hidden="true"/>)}
+    <noscript><div className="ap-static-view"><Still chapter={chapter} /></div></noscript>
+    <div className="ap-room-inner">{children}</div>
+  </section>;
+}
+
+function Arrival() {
+  return <div className="ap-invitation">
+    <p className="ap-byline">Muhammed Favas K <span aria-hidden="true">·</span> Full-stack developer</p>
+    <h1>The <br/><em>Appointment.</em></h1>
+    <p className="ap-offer">I build websites and apps that help businesses grow.</p>
+    <div className="ap-opening-links">
+      <ProjectLink id="gymdrobe" className="ap-action ap-featured-link"><img src={project.screenshot} alt="" width="54" height="37"/>View GymDrobe</ProjectLink>
+      <a className="ap-link" href={whatsApp} data-contact="whatsapp">Chat on WhatsApp</a>
+    </div>
+    <a className="ap-cue" href="#pavement"><ArrowDown size={15} aria-hidden="true"/>Scroll to step outside</a>
+  </div>;
+}
+
+function Outside() {
+  return <div>
+    <p className="ap-eyebrow">The entrance</p><h2>Come <em>inside.</em></h2>
+    <p className="ap-copy">Welcome to my virtual studio in Kozhikode. The window above the rain tree is my office. On the way up, I’ll show you the store I founded and built.</p>
+    <div className="ap-route-links"><a href="#reception">See the project room</a><a href="#office">Go to founder’s office</a></div>
+  </div>;
+}
+
+function useVisit(main, stage, engine, position, setChapter) {
   useEffect(() => {
-    const sections = Array.from(main.current.querySelectorAll('[data-visit-chapter]'));
-    let anchors = [];
-    let frame;
+    const sections = Array.from(main.current.querySelectorAll('[data-room]'));
+    const media = window.matchMedia('(max-width: 760px)');
+    let frame = 0, offsets = [];
     function update() {
       frame = 0;
       const y = window.scrollY;
-      let index = 0;
-      while (index + 1 < anchors.length && y + 1 >= anchors[index + 1]) index++;
-      let amount = 0;
-      if (index + 1 < anchors.length) {
-        if (index === 0) {
-          const stride = Math.min(anchors[1] - anchors[0], Math.max(240, innerHeight * 0.53));
-          amount = Math.min(1, Math.max(0, (y - anchors[0]) / stride));
-        } else {
-          // Hold the working surface until the final part of the chapter leaves view.
-          const stride = Math.min(innerHeight * 0.45, anchors[index + 1] - anchors[index]);
-          amount = Math.min(1, Math.max(0, (y - anchors[index + 1] + stride) / stride));
-        }
-      }
-      pose.current.progress = index + amount;
-      host.current.dataset.progress = pose.current.progress.toFixed(3);
-      setStop(Math.round(pose.current.progress));
+      let i = 0;
+      while (i < offsets.length - 1 && y >= offsets[i + 1] - 1) i++;
+      const part = i < offsets.length - 1 ? Math.max(0, Math.min(1, (y - offsets[i]) / Math.max(1, offsets[i + 1] - offsets[i]))) : 0;
+      // Hold the work and service screens for reading; the final length of their rooms moves the camera on.
+      const travel = i < 2 ? part : Math.max(0, (part - .48) / .52);
+      position.current = chapters[i].progress + travel * ((chapters[i + 1]?.progress ?? 1) - chapters[i].progress);
+      stage.current.dataset.progress = position.current.toFixed(4);
+      setChapter(chapterAt(position.current));
+      engine.current?.invalidate();
     }
     function measure() {
-      anchors = sections.map((el) => el.getBoundingClientRect().top + scrollY);
+      const top = parseFloat(getComputedStyle(sections[0]).scrollMarginTop) || 0;
+      offsets = sections.map(el => Math.max(0, el.getBoundingClientRect().top + scrollY - top));
       update();
     }
-    function schedule() {
-      if (!frame) frame = requestAnimationFrame(update);
-    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
     const observer = new ResizeObserver(measure);
-    sections.forEach((el) => observer.observe(el));
+    sections.forEach(el => observer.observe(el));
+    observer.observe(stage.current);
     measure();
-    const linked = location.hash && document.getElementById(location.hash.slice(1));
-    if (linked && !window.scrollY) {
-      linked.scrollIntoView({ behavior: 'instant' });
-      schedule();
-    }
-    window.addEventListener('scroll', schedule, { passive: true });
-    // WebKit can scroll to a keyboard-activated fragment without dispatching scroll.
-    window.addEventListener('hashchange', schedule);
-    window.addEventListener('pageshow', measure);
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', schedule);
-      window.removeEventListener('hashchange', schedule);
-      window.removeEventListener('pageshow', measure);
-    };
-  }, []);
+    if (location.hash && !window.scrollY) document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior:'instant'});
+    window.addEventListener('scroll', schedule, {passive:true});
+    window.addEventListener('pageshow', measure); window.addEventListener('resize', measure); media.addEventListener('change', measure);
+    return () => {cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('scroll', schedule); window.removeEventListener('pageshow', measure); window.removeEventListener('resize', measure); media.removeEventListener('change', measure);};
+  }, [main, stage, engine, position, setChapter]);
+}
 
+function Footer() {
+  return <footer className="ap-footer"><Wordmark/><nav aria-label="Footer"><a href="/services/">Services</a><a href="/contact/">Project enquiry</a><a href={profile.github}>GitHub</a><a href={profile.linkedin}>LinkedIn</a><a href="/privacy/">Privacy</a></nav><AnalyticsPreference/></footer>;
+}
+
+export default function App() {
+  const main = useRef(null), stage = useRef(null), canvas = useRef(null), engine = useRef(null);
+  const position = useRef(0), currentProject = useRef(project.screenshot), inspecting = useRef(false);
+  const [deskProject, setDeskProject] = useState(project.screenshot);
+  const [isInspecting, showInspecting] = useState(false);
+  const [chapter, setChapter] = useState(chapters[0]);
+  const [motion, setMotion] = useState('auto'), [render, setRender] = useState('still'), [canSwitch, setCanSwitch] = useState(false);
+  const index = chapters.indexOf(chapter);
+  useVisit(main, stage, engine, position, setChapter);
+  const setProject = useCallback(url => {currentProject.current = url; setDeskProject(url); engine.current?.invalidate();}, []);
+  const explore = useRef(false);
+  const setInspecting = useCallback(value => {inspecting.current = value; showInspecting(value); engine.current?.invalidate();}, []);
+  useEffect(() => {
+    try {if (sessionStorage.getItem('appointment-motion') === 'still') setMotion('still');} catch {}
+  }, []);
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
-    let engine,
-      generation = 0,
-      cancelStartup;
-    function stopScene() {
+    let generation = 0, timeout = 0, idle = 0;
+    let removeIntent = () => {};
+    function reset() {
       generation++;
-      cancelStartup?.();
-      engine?.dispose();
-      engine = null;
+      removeIntent();
+      clearTimeout(timeout); window.cancelIdleCallback?.(idle);
+      engine.current?.dispose(); engine.current = null;
       setRender('still');
     }
     function connect() {
-      stopScene();
+      reset();
       const allowed = !preference.matches && !navigator.connection?.saveData;
-      setCanToggle(allowed);
-      if (!allowed || paused) return;
+      setCanSwitch(allowed);
+      if (!allowed || motion === 'still') return;
       const ticket = generation;
-      async function start() {
+      const begin = async () => {
         try {
-          const { mountScene } = await import('./variable/scene.js');
-          if (ticket !== generation || !host.current) return;
-          engine = mountScene(host.current, {
-            readState: () => pose.current,
-            onReady: () => {
-              if (ticket === generation) setRender('live');
-            },
-            onSlow: () => {
-              if (ticket === generation && !explicitMotion.current) setPaused(true);
-            },
-            onFailure: () => {
-              if (ticket !== generation) return;
-              stopScene();
-              setCanToggle(false);
-            },
+          const { mountStudio } = await import('./appointment/scene.js');
+          if (ticket !== generation) return;
+          engine.current = mountStudio(canvas.current, {
+            progress: () => position.current, project: () => currentProject.current, isPaused: () => inspecting.current,
+            onReady: () => {if(ticket === generation) setRender('live');},
+            onFailure: reason => {if(ticket === generation){reset(); if (reason === 'slow-device') setMotion('still'); else setCanSwitch(false);}},
           });
-        } catch {
-          if (ticket === generation) {
-            stopScene();
-            setCanToggle(false);
-          }
-        }
+        } catch {if(ticket === generation){reset(); setCanSwitch(false);}}
+      };
+      function startAfterInput() {
+        if (ticket !== generation || inspecting.current) return;
+        removeIntent();
+        explore.current = true;
+        if ('requestIdleCallback' in window) idle = window.requestIdleCallback(begin, {timeout:180});
+        else timeout = window.setTimeout(begin,0);
       }
-      if (explicitMotion.current) {
-        start();
-      } else {
-        const poster = host.current?.parentElement.querySelector('.vw-scene-poster');
-        cancelStartup = afterPosterPaint(poster, start);
+      function key(event) {
+        if (['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key) && !event.target.closest('input,textarea,select,dialog')) startAfterInput();
+      }
+      if (explore.current || scrollY > 2) startAfterInput();
+      else {
+        window.addEventListener('scroll',startAfterInput,{passive:true});
+        window.addEventListener('wheel',startAfterInput,{passive:true});
+        canvas.current.parentElement.addEventListener('touchmove',startAfterInput,{passive:true});
+        window.addEventListener('keydown',key);
+        const view = canvas.current.parentElement;
+        removeIntent = () => {
+          window.removeEventListener('scroll',startAfterInput);
+          window.removeEventListener('wheel',startAfterInput);
+          view.removeEventListener('touchmove',startAfterInput);
+          window.removeEventListener('keydown',key);
+        };
       }
     }
-    connect();
-    preference.addEventListener('change', connect);
-    return () => {
-      preference.removeEventListener('change', connect);
-      stopScene();
-    };
-  }, [paused]);
-
-  return (
-    <div className="vw-visit" data-stop={stops[stop]} data-render={render}>
-      <a className="skip-link" href="#work">
-        Skip to my work
-      </a>
-      <Navigation stop={stop} />
-      <div className="vw-stage">
-        <Still stop={stop} width={width} first={stop === 0} />
-        <div className="vw-scene" ref={host} data-progress="0" aria-hidden="true" />
+    connect(); preference.addEventListener('change', connect);
+    return () => { preference.removeEventListener('change', connect); reset(); };
+  }, [motion]);
+  function toggleMotion() {
+    const next = motion === 'still' ? 'auto' : 'still';
+    try {sessionStorage.setItem('appointment-motion',next);} catch {}
+    if (next === 'auto') explore.current = true;
+    setMotion(next);
+  }
+  return <AppointmentRooms onProjectChange={setProject} onInspecting={setInspecting}>
+    <div className="ap-visit" data-render={render} data-chapter={chapter.id}>
+      <a className="skip-link" href="#reception">Skip to projects</a><Header/>
+      <div className="ap-layout">
+        <div ref={stage} className="ap-stage" data-progress="0">
+          <div className="ap-view">
+            <Still chapter={chapter} projectUrl={deskProject} first={chapter.id === 'arrival'} />
+            <canvas ref={canvas} className="ap-canvas" aria-hidden="true"/>
+          </div>
+          <div className="ap-viewbar"><p>{chapter.label}</p><div className="ap-controls">
+            <StudioSound chapter={chapter} inspecting={isInspecting}/>
+            {canSwitch && <button type="button" onClick={toggleMotion} aria-label={motion === 'still' ? 'Enable 3D movement' : 'Use still views'} title={motion === 'still' ? 'Enable 3D movement' : 'Use still views'}>{motion === 'still' ? <Play size={16}/> : <Pause size={16}/>}</button>}
+            {index > 0 && <a href={'#'+chapters[index-1].id} aria-label={'Previous room: '+chapters[index-1].label}><ChevronLeft size={18}/></a>}
+            {index < chapters.length - 1 && <a href={'#'+chapters[index+1].id} aria-label={'Next room: '+chapters[index+1].label}><ChevronRight size={18}/></a>}
+          </div></div>
+        </div>
+        <main ref={main} className="ap-main">
+          <Room chapter={chapters[0]}><Arrival/></Room><Room chapter={chapters[1]}><Outside/></Room>
+          <Room chapter={chapters[2]}><ReceptionRoom/></Room><Room chapter={chapters[3]}><StudioRoom/></Room>
+          <Room chapter={chapters[4]}><LandingRoom/></Room><Room chapter={chapters[5]}><OfficeRoom/></Room>
+        </main>
       </div>
-      <main ref={main} className="vw-main">
-        <VisitSection id="home">
-          <div className="vw-opening-copy">
-            <p className="vw-kicker">
-              <span className="vw-stud" aria-hidden="true" />
-              Independent software developer
-            </p>
-            <h1>
-              Muhammed
-              <br />
-              Favas K<span aria-hidden="true">.</span>
-            </h1>
-            <p className="vw-offer">I build websites, online stores, and web apps for businesses.</p>
-            <div className="vw-actions">
-              <a className="vw-button" href="#work">
-                Explore my work
-              </a>
-              <a className="vw-text-action" data-contact="whatsapp" href={contactURL()}>
-                Talk to Favas
-              </a>
-            </div>
-          </div>
-          <p className="vw-location">
-            <MapPin size={15} aria-hidden="true" />
-            Kozhikode, Kerala
-          </p>
-        </VisitSection>
-        <VisitSection id="work">
-          <div className="vw-work-layout">
-            <div className="vw-work-intro">
-              <p className="vw-kicker">Working exhibit</p>
-              <h2>
-                GymDrobe<span>.</span>
-              </h2>
-              <p>I founded GymDrobe and built its storefront, product selection and checkout.</p>
-              <p className="vw-wide-task">
-                Find the compression shirt and open its details. Narrow the projection to see how the same
-                product fits a phone.
-              </p>
-              <p className="vw-compact-task">
-                Open the compression shirt to inspect its details. Choose Wide to compare the desktop layout.
-              </p>
-            </div>
-            <div className="vw-exhibit-slot">
-              <Exhibit width={width} onWidthChange={setWidth} />
-            </div>
-          </div>
-        </VisitSection>
-        <VisitSection id="process">
-          <div className="vw-process-layout">
-            <div className="vw-process-intro">
-              <p className="vw-kicker">Design review</p>
-              <h2>
-                Review the layout<span>.</span>
-              </h2>
-              <p>
-                When the product image fills a phone screen, where should the shopping action go? Compare
-                two illustrative proposals and choose the placement you’d approve for your store.
-              </p>
-            </div>
-            <LayoutReview />
-          </div>
-          <Offerings />
-        </VisitSection>
-        <VisitSection id="contact">
-          <Brief />
-        </VisitSection>
-      </main>
-      {canToggle && (
-        <button
-          className="vw-motion"
-          type="button"
-          aria-label={paused ? 'Resume 3D motion' : 'Use still views'}
-          onClick={() => {
-            if (paused) explicitMotion.current = true;
-            setPaused(!paused);
-          }}
-        >
-          {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
-          <span>{paused ? 'Resume 3D' : 'Still view'}</span>
-        </button>
-      )}
-      <Footer />
-      <noscript>
-        <style>
-          {
-            '.vw-stage,.vw-motion{display:none}.vw-noscript-scene{position:absolute;inset:0;height:100svh;z-index:-1}.vw-noscript-scene img{width:100%;height:100%;object-fit:cover}'
-          }
-        </style>
-      </noscript>
+      <Footer/>
+      <noscript><style>{'.ap-layout{display:block}.ap-stage{display:none}.ap-main{width:100%}.ap-room{min-height:0;display:block;padding-block:2rem}.ap-static-view{display:block;height:min(48vh,420px);margin-bottom:2rem}.ap-cue,.ap-controls{display:none}'}</style></noscript>
     </div>
-  );
+  </AppointmentRooms>;
 }
